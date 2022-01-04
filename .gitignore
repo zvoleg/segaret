@@ -1,0 +1,5 @@
+/target
+/.vscode
+*.md
+Cargo.lock
+/notes
