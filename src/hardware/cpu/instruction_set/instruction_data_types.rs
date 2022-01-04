@@ -18,15 +18,17 @@ impl AddrModeMetadata {
 // addressing_mode immediate_data
 #[derive(Clone)]
 pub(in crate::hardware)struct AddrModeImmediateMetadata {
-    pub(in crate::hardware)addr_mode: AddrMode,
-    pub(in crate::hardware)immediate_data: u32,
+    pub(in crate::hardware) addr_mode: AddrMode,
+    pub(in crate::hardware) immediate_data: u32,
+    pub(in crate::hardware) data_size: Size,
 }
 
 impl AddrModeImmediateMetadata {
-    pub(in crate::hardware)fn new(addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware)fn new(addr_mode: AddrMode, data_size: Size) -> Self {
         Self {
             addr_mode: addr_mode,
             immediate_data: 0,
+            data_size,
         }
     }
 }
@@ -66,7 +68,6 @@ impl RxAddrModeMetadata {
 // move_instruction
 #[derive(Clone)]
 pub(in crate::hardware)struct MoveInstructionMetadata {
-    pub(in crate::hardware)ext_word: u32,
     pub(in crate::hardware)src_addr_mode: AddrMode,
     pub(in crate::hardware)dst_addr_mode: AddrMode,
 }
@@ -74,7 +75,6 @@ pub(in crate::hardware)struct MoveInstructionMetadata {
 impl MoveInstructionMetadata {
     pub(in crate::hardware)fn new(src_addr_mode: AddrMode, dst_addr_mode: AddrMode) -> Self {
         Self {
-            ext_word: 0,
             src_addr_mode,
             dst_addr_mode,
         }

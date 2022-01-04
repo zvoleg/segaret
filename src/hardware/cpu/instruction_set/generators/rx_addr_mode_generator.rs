@@ -79,6 +79,14 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<RxAddrModeMetadata>> {
         RxAddrModeInstPattern {
             name: String::from("lea"), mask: 0b0100000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: String::from("xXL")
         },
+
+        // add 
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 4 /*calc ea addr*/, rx_type_alias: 'd', addr_mode_aliases: String::from(""),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 8 /*calc ea addr*/, rx_type_alias: 'd', addr_mode_aliases: String::from(""),
+        }
     ];
 
     let mut instruction_set = Vec::new();
@@ -128,6 +136,8 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "movea" => Mc68k::MOVEA,
         "movep" => Mc68k::MOVEP,
         "lea" => Mc68k::LEA,
+        "add" => Mc68k::ADD,
+        "adda" => Mc68k::ADDA,
         _ => panic!("rx_addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

@@ -11,26 +11,8 @@ use crate::hardware::{Size, LocationType, Location};
 
 use instruction_data_types::*;
 
-// lazy_static! {
-//     pub static ref OPCODE_TABLE: Vec<Box<dyn InstructionProcess>> = {
-//         let mut table: Vec<Box<dyn InstructionProcess>> = vec![Box::new(Instruction::new(String::new(), 0, Size::Byte, 0, ExplicitMetadata)); 0x10000];
-//         for instruction in generate_addr_mode_instructions() {
-//             let opcode = instruction.operation_word;
-//             table[opcode as usize] = Box::new(instruction);
-//         }
-//         for instruction in generate_move_instructions() {
-//             let opcode = instruction.operation_word;
-//             table[opcode as usize] = Box::new(instruction);
-//         };
-//         table
-//     };
-// }
-
-pub(in crate::hardware) trait InstructionProcess: InstructionBoxedClone {
+pub(in crate::hardware) trait InstructionProcess: InstructionBoxedClone + InstructionData {
     fn fetch_data(&mut self, cpu: &mut Mc68k);
-    fn handler(&self) -> fn(&mut Mc68k);
-    fn size(&self) -> Size;
-    fn as_any(&self) -> &dyn Any;
     fn disassembly(&self) -> String;
 }
 
@@ -50,6 +32,26 @@ impl Clone for Box<dyn InstructionProcess> {
     }
 }
 
+pub(in crate::hardware) trait InstructionData {
+    fn handler(&self) -> fn(&mut Mc68k);
+    fn size(&self) -> Size;
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T> InstructionData for Instruction<T> where T: 'static {
+    fn handler(&self) -> fn(&mut Mc68k) {
+        self.handler
+    }
+
+    fn size(&self) -> Size {
+        self.size
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Instruction<T> {
     name: String,
@@ -61,22 +63,6 @@ pub struct Instruction<T> {
 }
 
 impl<T> Instruction<T> {
-    // pub const OPCODE_TABLE: Vec<Box<dyn InstructionProcess>> = {
-    //     let mut table: Vec<Box<dyn InstructionProcess>> = (0..0x10000)
-    //         .map(|i| Box::new(Instruction::new(String::new(), i, Size::Byte, 0, ExplicitMetadata)))
-    //         .collect();
-
-    //     generate_addr_mode_instructions().iter().for_each(|instruction| {
-    //         let opcode = instruction.operation_word;
-    //         table[opcode as usize] = Box::new(*instruction);
-    //     });
-    //     generate_move_instructions().iter().for_each(|instruction| {
-    //         let opcode = instruction.operation_word;
-    //         table[opcode as usize] = Box::new(*instruction);
-    //     });
-    //     table
-    // };
-
     pub fn new(name: String, operation_word: u16, size: Size, clock: u32, handler: fn(&mut Mc68k), data: T) -> Self {
         Self {
             name: name,
@@ -94,18 +80,6 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
         self.data.addr_mode.fetch_ext_word(cpu);
     }
 
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn disassembly(&self) -> String {
         String::from(format!("{}.{} {}", self.name, self.size(), self.data.addr_mode))
     }
@@ -113,46 +87,18 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
 
 impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
-        let location = Location::new(LocationType::Memory, cpu.pc as usize);
-        let data = cpu.read(location, Size::Word);
-
-        self.data.ext_word = data;
         self.data.src_addr_mode.fetch_ext_word(cpu);
         self.data.dst_addr_mode.fetch_ext_word(cpu);
     }
 
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     fn disassembly(&self) -> String {
-        String::from(format!("{} {} {} {}", self.name, self.data.ext_word, self.data.src_addr_mode, self.data.dst_addr_mode))
+        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.src_addr_mode, self.data.dst_addr_mode))
     }
 }
 
 impl InstructionProcess for Instruction::<ExplicitMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
 
-    }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
     }
 
     fn disassembly(&self) -> String {
@@ -183,18 +129,6 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
             Size::Long => String::from(format!("{}.{} {:08X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
         }
     }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
@@ -212,18 +146,6 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
     fn disassembly(&self) -> String {
         String::from(format!("{}.{} {:04X} {}", self.name, self.size, self.data.ext_word, self.data.addr_mode))
     }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RxAddrModeMetadata> {
@@ -234,35 +156,11 @@ impl InstructionProcess for Instruction<RxAddrModeMetadata> {
     fn disassembly(&self) -> String {
         String::from(format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.addr_mode))
     }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RyMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RyExtWordMetadata> {
@@ -278,103 +176,31 @@ impl InstructionProcess for Instruction<RyExtWordMetadata> {
     fn disassembly(&self) -> String {
         String::from(format!("{}.{} {} {:04X}", self.name, self.size, self.data.reg_y, self.data.ext_word))
     }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<VectorMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<DataAddrModeMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<ConditionAddrModeMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<ConditionRyMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<DisplacementMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
@@ -392,67 +218,19 @@ impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
     fn disassembly(&self) -> String {
         String::from(format!("{} {} {:04X}", self.name, self.data.condition, self.data.displacement))
     }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RxDataMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RxRyMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }
 
 impl InstructionProcess for Instruction<RotationRyMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
-
-    fn handler(&self) -> fn(&mut Mc68k) {
-        self.handler
-    }
-    
-    fn size(&self) -> Size {
-        self.size
-    }
-
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
 }

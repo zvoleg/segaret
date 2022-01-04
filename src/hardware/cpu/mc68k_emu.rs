@@ -1,5 +1,6 @@
 extern crate lazy_static;
 
+use crate::hardware::cpu::instruction_set::instruction_data_types::AddrModeImmediateMetadata;
 use crate::hardware::cpu::instruction_set::generators::*;
 use crate::hardware::cpu::instruction_set::instruction_data_types::ConditionDisplacementMetadata;
 use crate::hardware::cpu::instruction_set::instruction_data_types::RyExtWordMetadata;
@@ -52,7 +53,7 @@ pub struct Mc68k {
     clock_counter: i32,
 
     instruction: Box<dyn InstructionProcess>,
-    current_addr_mode: Option<AddrMode>,
+    current_addr_mode: AddrMode,
     current_ext_word: Option<u16>,
     ea_location: Location,
     ea_operand: u32,
@@ -70,7 +71,7 @@ impl Mc68k {
         let stack_ptr = vector_table.reset_stack_pointer();
         let pc = vector_table.reset_program_counter();
         let mut opcode_table: Vec<Box<dyn InstructionProcess>> = vec![
-            Box::new(Instruction::new(String::new(), 0, Size::Byte, 0, Mc68k::TST, ExplicitMetadata)); 0x10000];
+            Box::new(Instruction::new(String::new(), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
 
         move_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
@@ -105,6 +106,8 @@ impl Mc68k {
         let mut reg = [0; 17];
         reg[16] = stack_ptr;
 
+        // TODO call RESET function
+
         Self {
             opcode_table: opcode_table,
             vector_table: vector_table,
@@ -119,7 +122,7 @@ impl Mc68k {
 
             instruction: instruction,
             
-            current_addr_mode: None,
+            current_addr_mode: AddrMode::new(AddrModeType::Immediate, 0, 0),
             current_ext_word: None,
 
             ea_location: Location::new(LocationType::Memory, 0x1000000),
@@ -286,10 +289,7 @@ impl Mc68k {
     }
 
     fn call_addressing_mode(&mut self) {
-        match self.current_addr_mode
-            .expect("Try to call undefined addressing mode for instruction")
-            .am_type
-        {
+        match self.current_addr_mode.am_type {
             AddrModeType::Data => self.data_reg(),
             AddrModeType::Addr => self.addr_reg(),
             AddrModeType::AddrInd => self.addr_indirect(),
@@ -376,23 +376,33 @@ impl Mc68k {
         }
     }
 
+    fn prepare_exception(&mut self) {
+        self.set_mode(Mode::Supervisor);
+
+        let sr_copy = self.sr as u32;
+        let pc_copy = self.pc;
+
+        self.push(sr_copy, Size::Word);
+        self.push(pc_copy, Size::Word); 
+    }
+
     /* ADDRESSING MODES */
     fn data_reg(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
 
         self.ea_location = Location::new(LocationType::DataReg, reg_idx);
         self.ea_operand = self.read_data_reg(reg_idx, self.instruction.as_ref().size());
     }
 
     fn addr_reg(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
 
         self.ea_location = Location::new(LocationType::AddrReg, reg_idx);
         self.ea_operand = self.read_addr_reg(reg_idx, self.instruction.as_ref().size());
     }
 
     fn addr_indirect(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
         let address = self.read_addr_reg(reg_idx, Size::Long) as usize;
 
         self.ea_location = Location::new(LocationType::Memory, address);
@@ -400,7 +410,7 @@ impl Mc68k {
     }
 
     fn addr_indirect_post_inc(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
         let address = self.read_addr_reg(reg_idx, Size::Long) as usize;
 
         // increment address in address register
@@ -423,7 +433,7 @@ impl Mc68k {
     }
 
     fn addr_indirect_pre_dec(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
         // decrement address in address register
         let decrement = match self.instruction.as_ref().size() {
             Size::Byte => {
@@ -446,10 +456,10 @@ impl Mc68k {
     }
 
     fn addr_indirect_disp(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
 
         let address = self.read_addr_reg(reg_idx, Size::Long);
-        let displacement = self.current_addr_mode.unwrap().ext_word.unwrap();
+        let displacement = self.current_addr_mode.ext_word.unwrap();
 
         let ea_addr = address.wrapping_add(displacement) as usize;
 
@@ -458,10 +468,10 @@ impl Mc68k {
     }
 
     fn addr_indirect_idx(&mut self) {
-        let reg_idx = self.current_addr_mode.unwrap().reg_idx;
+        let reg_idx = self.current_addr_mode.reg_idx;
         let address = self.read_addr_reg(reg_idx, Size::Long);
 
-        let brief_ext_word = self.current_addr_mode.unwrap().brief_ext_word.unwrap();
+        let brief_ext_word = self.current_addr_mode.brief_ext_word.unwrap();
         let idx_reg = brief_ext_word.register;
 
         let idx_reg_data = match idx_reg.reg_type {
@@ -481,7 +491,7 @@ impl Mc68k {
 
     fn pc_indirect_disp(&mut self) {
         let address = self.pc;
-        let displacement = self.current_addr_mode.unwrap().ext_word.unwrap();
+        let displacement = self.current_addr_mode.ext_word.unwrap();
         
         self.increment_pc();
 
@@ -493,7 +503,7 @@ impl Mc68k {
 
     fn pc_indirect_idx(&mut self) {
         let address = self.pc;
-        let brief_ext_word = self.current_addr_mode.unwrap().brief_ext_word.unwrap();
+        let brief_ext_word = self.current_addr_mode.brief_ext_word.unwrap();
         let idx_reg = brief_ext_word.register;
 
         self.increment_pc();
@@ -514,7 +524,7 @@ impl Mc68k {
     }
 
     fn abs_short(&mut self) {
-        let ext_word = self.current_addr_mode.unwrap().ext_word.unwrap();
+        let ext_word = self.current_addr_mode.ext_word.unwrap();
 
         let address = sign_extend(ext_word, Size::Word) as usize;
         self.ea_location = Location::new(LocationType::Memory, address);
@@ -522,7 +532,7 @@ impl Mc68k {
     }
 
     fn abs_long(&mut self) {
-        let address = self.current_addr_mode.unwrap().ext_word.unwrap() as usize;
+        let address = self.current_addr_mode.ext_word.unwrap() as usize;
 
         self.ea_location = Location::new(LocationType::Memory, address);
         self.ea_operand = self.read_memory(address, self.instruction.as_ref().size());
@@ -537,23 +547,24 @@ impl Mc68k {
     // data movement MOVE, MOVE16, MOVEM, MOVEP, MOVEQ, EXG, LEA, PEA, LINK, and UNLK
 
     pub(crate) fn MOVE(&mut self) {
+        let size = self.instruction.as_ref().size();
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<MoveInstructionMetadata>>().unwrap().clone();
 
         let src_addr_mode = instruction.data.src_addr_mode;
-        self.current_addr_mode = Some(src_addr_mode);
+        self.current_addr_mode = src_addr_mode;
         self.call_addressing_mode();
 
         let src_data = self.ea_operand;
 
         let dst_addr_mode = instruction.data.dst_addr_mode;
-        self.current_addr_mode = Some(dst_addr_mode);
+        self.current_addr_mode = dst_addr_mode;
         self.call_addressing_mode();
 
         let dst_address = self.ea_location;
-        self.write(dst_address, src_data, instruction.size());
+        self.write(dst_address, src_data, size);
 
         // set status codes
-        self.set_status(Status::N, is_negate(src_data, instruction.size()));
+        self.set_status(Status::N, is_negate(src_data, size));
         self.set_status(Status::Z, is_zero(src_data));
 
         self.set_status(Status::V, false);
@@ -561,25 +572,27 @@ impl Mc68k {
     }
 
     pub(crate) fn MOVEA(&mut self) {
+        let size = self.instruction.as_ref().size();
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<RxAddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let src_data = self.ea_operand;
 
         let location = Location::register(instruction.data.reg_x);
 
-        self.write(location, src_data, instruction.size());
+        self.write(location, src_data, size);
     }
 
     pub(crate) fn MOVEM(&mut self) {
+        let size = self.instruction.as_ref().size();
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeExtWordMetadata>>().unwrap().clone();
 
         // расчитать затрагиваемые регистры из register_mask
         let register_mask = instruction.data.ext_word;
         let mut affected_registers = Vec::new();
-        if self.current_addr_mode.take().unwrap().am_type == AddrModeType::AddrIndPreDec {
+        if self.current_addr_mode.am_type == AddrModeType::AddrIndPreDec {
             // A7..A0D7..D0
             for i in 0..16 {
                 let bit = (register_mask >> i) & 1;
@@ -604,24 +617,24 @@ impl Mc68k {
             Size::Byte => panic!("MOVEM: wrong size for this instruction"),
         }
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let direction_bit = (instruction.operation_word >> 9) & 0x1;
         let current_addr_mode_type = instruction.data.addr_mode.am_type;
 
-        let operation_size_usize = instruction.size() as usize;
+        let operation_size_usize = size as usize;
 
         if direction_bit == 0 { // Register to memory
             if current_addr_mode_type == AddrModeType::AddrIndPreDec {
                 let address = self.ea_location.address + operation_size_usize;
-                let reg_idx = self.current_addr_mode.take().unwrap().reg_idx;
+                let reg_idx = self.current_addr_mode.reg_idx;
                 self.write_addr_reg(reg_idx, address as u32, Size::Long);
             }
 
             for reg_idx in affected_registers {
                 let data = self.reg[reg_idx];
-                self.write(self.ea_location, data, self.instruction.as_ref().size());
+                self.write(self.ea_location, data, size);
 
                 if current_addr_mode_type != AddrModeType::AddrIndPreDec {
                     self.ea_location = Location::memory(self.ea_location.address + operation_size_usize);
@@ -631,14 +644,14 @@ impl Mc68k {
             }
 
             if current_addr_mode_type == AddrModeType::AddrIndPreDec {
-                let reg_idx = self.current_addr_mode.take().unwrap().reg_idx;
+                let reg_idx = self.current_addr_mode.reg_idx;
                 let address = self.ea_location.address;
                 self.write_addr_reg(reg_idx, address as u32, Size::Long);
             }
         } else { // Memory to register
             for reg_idx in affected_registers {
-                let data = self.read(self.ea_location, self.instruction.as_ref().size());
-                let data = sign_extend(data, self.instruction.as_ref().size());
+                let data = self.read(self.ea_location, size);
+                let data = sign_extend(data, size);
 
                 self.reg[reg_idx] = data;
 
@@ -646,7 +659,7 @@ impl Mc68k {
 
                 if current_addr_mode_type == AddrModeType::AddrIndPostInc {
                     let address = self.ea_location.address;
-                    let reg_idx = self.current_addr_mode.take().unwrap().reg_idx;
+                    let reg_idx = self.current_addr_mode.reg_idx;
                     self.write_addr_reg(reg_idx, address as u32, Size::Long);
                 }
             }
@@ -654,15 +667,16 @@ impl Mc68k {
     }
 
     pub(crate) fn MOVEP(&mut self) {
+        let size = self.instruction.as_ref().size();
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<RxAddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let location = Location::register(instruction.data.reg_x);
-        let data = self.read(location, instruction.size()).to_le();
+        let data = self.read(location, size).to_le();
 
-        let iterations = instruction.size() as usize;
+        let iterations = size as usize;
 
         let direction_bit = (instruction.operation_word >> 7) & 0x1;
         if direction_bit == 1 { // register to memory
@@ -680,7 +694,7 @@ impl Mc68k {
             }
             data = data.to_be();
 
-            self.write(location, data, instruction.size());
+            self.write(location, data, size);
         }
     }
 
@@ -703,13 +717,13 @@ impl Mc68k {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeMetadata>>().unwrap().clone();
 
-            self.current_addr_mode = Some(instruction.data.addr_mode);
+            self.current_addr_mode = instruction.data.addr_mode;
             self.call_addressing_mode();
 
             self.sr = self.ea_operand as u16;
             // TODO clear unused bits
         } else {
-            // TODO call trap
+            // TODO call privilage exception
         }
     }
 
@@ -717,13 +731,13 @@ impl Mc68k {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeMetadata>>().unwrap().clone();
 
-            self.current_addr_mode = Some(instruction.data.addr_mode);
+            self.current_addr_mode = instruction.data.addr_mode;
             self.call_addressing_mode();
 
             let data = self.sr as u32;
             self.write(self.ea_location, data, Size::Word);
         } else {
-            // TODO call trap
+            // TODO call pribilage excaption
         }
     }
 
@@ -742,14 +756,14 @@ impl Mc68k {
                 self.reg[16] = data;
             }
         } else {
-            // TODO call trap
+            // TODO call privilage exception
         }
     }
 
     pub(crate) fn MOVE_to_CCR(&mut self) {
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let data = self.ea_operand & 0xFF;
@@ -781,7 +795,7 @@ impl Mc68k {
 
     pub(crate) fn LEA(&mut self) {
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<RxAddrModeMetadata>>().unwrap().clone();
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let location = Location::register(instruction.data.reg_x);
@@ -791,7 +805,7 @@ impl Mc68k {
 
     pub(crate) fn PEA(&mut self) {
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeMetadata>>().unwrap().clone();
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         self.push(self.ea_location.address as u32, Size::Long);
@@ -826,7 +840,7 @@ impl Mc68k {
     pub(crate) fn TST(&mut self) {
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let is_negate = is_negate(self.ea_operand, self.instruction.as_ref().size());
@@ -849,21 +863,26 @@ impl Mc68k {
         if result {
             self.pc = self.pc.wrapping_add(offset);
         } else {
-            // TODO в зависимости от размера смещения (Byte/Word) нужно либо прибавить 2 к clock counter либо вычесть!!!
-            self.clock_counter -= 2;
+            let clock_corection = match instruction.data.displacement_size {
+                Size::Byte => -2,
+                Size::Word => 2,
+                Size::Long => panic!("Bcc: unexpected displacement size"),
+            };
+            self.clock_counter += clock_corection;
         }
     }
 
     pub(crate) fn ADD(&mut self) {
+        let size = self.instruction.as_ref().size();
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<RxAddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let location = Location::register(instruction.data.reg_x);
-        let data = self.read(location, self.instruction.as_ref().size());
+        let data = self.read(location, size);
 
-        let result = match self.instruction.as_ref().size() {
+        let result = match size {
             Size::Byte => (self.ea_operand + data) & 0xFF,
             Size::Word => (self.ea_operand + data) & 0xFFFF,
             Size::Long => self.ea_operand.wrapping_add(data),
@@ -871,26 +890,26 @@ impl Mc68k {
 
         let direction_bit = (instruction.operation_word >> 8) & 0x1;
         let (carry, overflow) = if direction_bit == 1 { // Memory to register
-            self.write(self.ea_location, result, self.instruction.as_ref().size());
-            let sm = get_msb(data, self.instruction.as_ref().size());
-            let dm = get_msb(self.ea_operand, self.instruction.as_ref().size());
-            let rm = get_msb(result, self.instruction.as_ref().size());
+            self.write(self.ea_location, result, size);
+            let sm = get_msb(data, size);
+            let dm = get_msb(self.ea_operand, size);
+            let rm = get_msb(result, size);
 
             let carry = sm && dm && !rm || !sm && !dm && rm;
             let overflow = sm && dm || !rm && dm || sm && !rm;
             (carry, overflow)
         } else { // Register to memory
-            self.write(location, result, self.instruction.as_ref().size());
-            let sm = get_msb(self.ea_operand, self.instruction.as_ref().size());
-            let dm = get_msb(data, self.instruction.as_ref().size());
-            let rm = get_msb(result, self.instruction.as_ref().size());
+            self.write(location, result, size);
+            let sm = get_msb(self.ea_operand, size);
+            let dm = get_msb(data, size);
+            let rm = get_msb(result, size);
     
             let carry = sm && dm && !rm || !sm && !dm && rm;
             let overflow = sm && dm || !rm && dm || sm && !rm;
             (carry, overflow)
         };
 
-        let is_negate = is_negate(result, self.instruction.as_ref().size());
+        let is_negate = is_negate(result, size);
         let is_zero = is_zero(result);
 
         self.set_status(Status::X, carry);
@@ -903,7 +922,7 @@ impl Mc68k {
     pub(crate) fn ADDA(&mut self) {
         let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<RxAddrModeMetadata>>().unwrap().clone();
 
-        self.current_addr_mode = Some(instruction.data.addr_mode);
+        self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let location = Location::register(instruction.data.reg_x);
@@ -913,7 +932,38 @@ impl Mc68k {
         self.write(location, result, self.instruction.as_ref().size());
     }
 
-    pub(crate) fn ADDI(&mut self) {}
+    pub(crate) fn ADDI(&mut self) {
+        let size = self.instruction.as_ref().size();
+        let instruction = self.instruction.as_ref().as_any().downcast_ref::<Instruction<AddrModeImmediateMetadata>>().unwrap().clone();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let data = instruction.data.immediate_data;
+
+        let result = match size {
+            Size::Byte => (self.ea_operand + data) & 0xFF,
+            Size::Word => (self.ea_operand + data) & 0xFFFF,
+            Size::Long => self.ea_operand.wrapping_add(data),
+        };
+
+        self.write(self.ea_location, result, size);
+        let sm = get_msb(data, size);
+        let dm = get_msb(self.ea_operand, size);
+        let rm = get_msb(result, size);
+
+        let carry = sm && dm && !rm || !sm && !dm && rm;
+        let overflow = sm && dm || !rm && dm || sm && !rm;
+
+        let is_negate = is_negate(result, size);
+        let is_zero = is_zero(result);
+
+        self.set_status(Status::X, carry);
+        self.set_status(Status::N, is_negate);
+        self.set_status(Status::Z, is_zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
 
     pub(crate) fn ADDQ(&mut self) {}
 
@@ -960,6 +1010,11 @@ impl Mc68k {
     pub(crate) fn SUBQ(&mut self) {}
 
     pub(crate) fn SUBX(&mut self) {}
+
+    pub(crate) fn ILLEAGL(&mut self) {
+        self.prepare_exception();
+        self.pc = self.vector_table.illegal_instruction();
+    }
 }
 
 fn is_negate(data: u32, size: Size) -> bool {
