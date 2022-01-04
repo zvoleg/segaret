@@ -3,9 +3,10 @@ use crate::hardware::cpu::addressing_mode::AddrModeType;
 use crate::hardware::cpu::RegisterType;
 
 pub(in crate::hardware) mod addr_mode_generator;
+pub(in crate::hardware) mod addr_mode_ext_word_generator;
+pub(in crate::hardware) mod addr_mode_immediate_generator;
 pub(in crate::hardware) mod move_generator;
 pub(in crate::hardware) mod rx_addr_mode_generator;
-pub(in crate::hardware) mod addr_mode_ext_word_generator;
 pub(in crate::hardware) mod rx_data_generator;
 pub(in crate::hardware) mod rx_ry_generator;
 pub(in crate::hardware) mod condition_displ_generator;

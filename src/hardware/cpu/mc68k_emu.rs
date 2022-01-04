@@ -54,7 +54,6 @@ pub struct Mc68k {
 
     instruction: Box<dyn InstructionProcess>,
     current_addr_mode: AddrMode,
-    current_ext_word: Option<u16>,
     ea_location: Location,
     ea_operand: u32,
 
@@ -71,7 +70,7 @@ impl Mc68k {
         let stack_ptr = vector_table.reset_stack_pointer();
         let pc = vector_table.reset_program_counter();
         let mut opcode_table: Vec<Box<dyn InstructionProcess>> = vec![
-            Box::new(Instruction::new(String::new(), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
+            Box::new(Instruction::new(String::from("illegal"), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
 
         move_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
@@ -81,11 +80,15 @@ impl Mc68k {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
         });
-        rx_addr_mode_generator::generate().iter().for_each(|instruction| {
+        addr_mode_ext_word_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
         });
-        addr_mode_ext_word_generator::generate().iter().for_each(|instruction| {
+        addr_mode_immediate_generator::generate().iter().for_each(|instruction| {
+            let opcode = instruction.operation_word as usize;
+            opcode_table[opcode] = Box::new(instruction.clone());
+        });
+        rx_addr_mode_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
         });
@@ -123,7 +126,6 @@ impl Mc68k {
             instruction: instruction,
             
             current_addr_mode: AddrMode::new(AddrModeType::Immediate, 0, 0),
-            current_ext_word: None,
 
             ea_location: Location::new(LocationType::Memory, 0x1000000),
             ea_operand: 0,
@@ -142,7 +144,7 @@ impl Mc68k {
 
         self.instruction = instruction;
 
-        println!("{:08X} {}", instruction_addr, self.instruction.as_ref().disassembly());
+        println!("{:08X} {:04X}\t{}", instruction_addr, operation_word, self.instruction.as_ref().disassembly());
 
         (self.instruction.as_ref().handler())(self);
     }

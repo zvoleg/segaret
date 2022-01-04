@@ -80,13 +80,151 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<RxAddrModeMetadata>> {
             name: String::from("lea"), mask: 0b0100000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: String::from("xXL")
         },
 
-        // add 
+        // add into data register
         RxAddrModeInstPattern {
-            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 4 /*calc ea addr*/, rx_type_alias: 'd', addr_mode_aliases: String::from(""),
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: String::from("DA"),
         },
         RxAddrModeInstPattern {
-            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 8 /*calc ea addr*/, rx_type_alias: 'd', addr_mode_aliases: String::from(""),
-        }
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: String::from("a+i"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 10, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: String::from("dPW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("xX"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000000000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+        
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: String::from("DA"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: String::from("a+i"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 10, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: String::from("dPW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("xX"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000001000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("DA"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 10, rx_type_alias: 'd', addr_mode_aliases: String::from("a+i"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("dPW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("xX"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000010000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+
+        // add into addr_mode
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: String::from("a+"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("dW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 18, rx_type_alias: 'd', addr_mode_aliases: String::from("x"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000100000000, size: Size::Byte, clock: 20, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000101000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: String::from("a+"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000101000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000101000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("dW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000101000000, size: Size::Word, clock: 18, rx_type_alias: 'd', addr_mode_aliases: String::from("x"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000101000000, size: Size::Word, clock: 20, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000110000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: String::from("a+"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000110000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000110000000, size: Size::Long, clock: 20, rx_type_alias: 'd', addr_mode_aliases: String::from("dW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000110000000, size: Size::Long, clock: 22, rx_type_alias: 'd', addr_mode_aliases: String::from("x"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("add"), mask: 0b1101000110000000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: String::from("L"),
+        },
+
+        // adda
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: String::from("DA"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 12, rx_type_alias: 'a', addr_mode_aliases: String::from("a+i"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 14, rx_type_alias: 'a', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 16, rx_type_alias: 'a', addr_mode_aliases: String::from("dPW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 18, rx_type_alias: 'a', addr_mode_aliases: String::from("xX"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000011000000, size: Size::Word, clock: 20, rx_type_alias: 'a', addr_mode_aliases: String::from("L"),
+        },
+
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: String::from("DA"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 10, rx_type_alias: 'a', addr_mode_aliases: String::from("a+i"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: String::from("-"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: String::from("dPW"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 16, rx_type_alias: 'a', addr_mode_aliases: String::from("xX"),
+        },
+        RxAddrModeInstPattern {
+            name: String::from("adda"), mask: 0b1101000111000000, size: Size::Long, clock: 18, rx_type_alias: 'a', addr_mode_aliases: String::from("L"),
+        },
     ];
 
     let mut instruction_set = Vec::new();
