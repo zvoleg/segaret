@@ -4,40 +4,40 @@ use crate::hardware::cpu::addressing_mode::{AddrModeType, AddrMode};
 
 lazy_static! {
     pub(in crate::hardware) static ref DATA: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::Data, 0b000, i))
+        .map(|i| AddrMode::new(AddrModeType::Data, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::Addr, 0b001, i))
+        .map(|i| AddrMode::new(AddrModeType::Addr, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR_IND: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::AddrInd, 0b010, i))
+        .map(|i| AddrMode::new(AddrModeType::AddrInd, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR_IND_POST_INC: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::AddrIndPostInc, 0b011, i))
+        .map(|i| AddrMode::new(AddrModeType::AddrIndPostInc, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR_IND_PRE_DECR: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::AddrIndPreDec , 0b100 , i))
+        .map(|i| AddrMode::new(AddrModeType::AddrIndPreDec, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR_IND_DISPL: Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::AddrIndDips , 0b101 , i))
+        .map(|i| AddrMode::new(AddrModeType::AddrIndDips, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ADDR_IND_IDX : Vec<AddrMode> = (0..8)
-        .map(|i| AddrMode::new(AddrModeType::AddrIndIdx , 0b110 , i))
+        .map(|i| AddrMode::new(AddrModeType::AddrIndIdx, i))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref PC_DISPL : Vec<AddrMode> = (0..1)
-        .map(|_| AddrMode::new(AddrModeType::PcDisp , 0b111 , 0b010))
+        .map(|_| AddrMode::new(AddrModeType::PcDisp, 0b010))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref PC_IDX : Vec<AddrMode> = (0..1)
-        .map(|_| AddrMode::new(AddrModeType::PcIdx , 0b111 , 0b011))
+        .map(|_| AddrMode::new(AddrModeType::PcIdx, 0b011))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ABS_SHORT : Vec<AddrMode> = (0..1)
-        .map(|_| AddrMode::new(AddrModeType::AbsShort , 0b111 , 0b000))
+        .map(|_| AddrMode::new(AddrModeType::AbsShort, 0b000))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref ABS_LONG: Vec<AddrMode> = (0..1)
-        .map(|_| AddrMode::new(AddrModeType::AbsLong , 0b111 , 0b001))
+        .map(|_| AddrMode::new(AddrModeType::AbsLong, 0b001))
         .collect::<Vec<AddrMode>>();
     pub(in crate::hardware) static ref IMMEDIATE: Vec<AddrMode> = (0..1)
-        .map(|_| AddrMode::new(AddrModeType::Immediate , 0b111 , 0b100))
+        .map(|_| AddrMode::new(AddrModeType::Immediate, 0b100))
         .collect::<Vec<AddrMode>>();
 }
 

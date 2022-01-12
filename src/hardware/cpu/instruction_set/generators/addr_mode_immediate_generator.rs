@@ -73,6 +73,11 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeImmediateMetada
         AddrModeInstPattern {
             name: String::from("addi"), mask: 0b0000011010000000, size: Size::Long, clock: 32, addr_mode_aliases: String::from("L"),
         },
+
+        // andi
+        AddrModeInstPattern {
+            name: String::from("andi"), mask: 0b0000001000000000, size: Size::Byte, clock: 0, addr_mode_aliases: String::from("D"),
+        }
     ];
 
     let mut instruction_set = Vec::new();
@@ -108,6 +113,7 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeImmediateMetada
 fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
     match name {
         "addi" => Mc68k::ADDI,
+        "andi" => Mc68k::ANDI,
         _ => panic!("addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

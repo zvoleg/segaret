@@ -22,6 +22,25 @@ pub enum AddrModeType {
     Immediate,
 }
 
+impl AddrModeType {
+    fn get_mode_bits(&self) -> usize {
+        match self {
+            AddrModeType::Data => 0b000,
+            AddrModeType::Addr => 0b001,
+            AddrModeType::AddrInd => 0b010,
+            AddrModeType::AddrIndPostInc => 0b011,
+            AddrModeType::AddrIndPreDec => 0b100,
+            AddrModeType::AddrIndDips => 0b101,
+            AddrModeType::AddrIndIdx => 0b110,
+            AddrModeType::PcDisp => 0b111,
+            AddrModeType::PcIdx => 0b111,
+            AddrModeType::AbsShort => 0b111,
+            AddrModeType::AbsLong => 0b111,
+            AddrModeType::Immediate => 0b111,
+        }
+    }
+}
+
 #[derive(Copy, Clone)]
 pub(in crate::hardware) struct BriefExtWord {
     pub register: Register,
@@ -61,10 +80,10 @@ pub(in crate::hardware) struct AddrMode {
 }
 
 impl AddrMode {
-    pub(in crate::hardware) fn new(am_type: AddrModeType, mode_bits: usize, reg_idx: usize) -> Self {
+    pub(in crate::hardware) fn new(am_type: AddrModeType, reg_idx: usize) -> Self {
         Self {
             am_type: am_type,
-            mode_bits: mode_bits,
+            mode_bits: am_type.get_mode_bits(),
             reg_idx: reg_idx,
             ext_word: None,
             brief_ext_word: None,

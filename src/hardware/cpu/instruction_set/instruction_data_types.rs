@@ -33,6 +33,21 @@ impl AddrModeImmediateMetadata {
     }
 }
 
+#[derive(Clone)]
+pub(in crate::hardware)struct AddrModeDataMetadata {
+    pub(in crate::hardware) addr_mode: AddrMode,
+    pub(in crate::hardware) data: u32,
+}
+
+impl AddrModeDataMetadata {
+    pub (in crate::hardware)fn new(addr_mode: AddrMode, data: u32) -> Self {
+        Self {
+            addr_mode,
+            data,
+        }
+    }
+}
+
 // addr_mode extension word
 #[derive(Clone)]
 pub(in crate::hardware)struct AddrModeExtWordMetadata {

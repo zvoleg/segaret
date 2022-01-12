@@ -109,7 +109,12 @@ impl InstructionProcess for Instruction::<ExplicitMetadata> {
 impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::new(LocationType::Memory, cpu.pc as usize);
-        let data = cpu.read(location, self.size);
+        
+        let size = match self.size {
+            Size::Byte => Size::Word,
+            _ => self.size,
+        };
+        let data = cpu.read(location, size);
         self.data.immediate_data = data;
 
         cpu.increment_pc();
@@ -221,8 +226,10 @@ impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
 }
 
 impl InstructionProcess for Instruction<RxDataMetadata> {
-    fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
-    fn disassembly(&self) -> std::string::String { todo!() }
+    fn fetch_data(&mut self, _: &mut Mc68k) {}
+    fn disassembly(&self) -> String { 
+        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.data))
+    }
 }
 
 impl InstructionProcess for Instruction<RxRyMetadata> {
