@@ -85,6 +85,10 @@ impl Mc68k {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
         });
+        addr_mode_data_generator::generate().iter().for_each(|instruction| {
+            let opcode = instruction.operation_word as usize;
+            opcode_table[opcode] = Box::new(instruction.clone());
+        });
         addr_mode_immediate_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
@@ -98,6 +102,14 @@ impl Mc68k {
             opcode_table[opcode] = Box::new(instruction.clone());
         });
         rx_ry_generator::generate().iter().for_each(|instruction| {
+            let opcode = instruction.operation_word as usize;
+            opcode_table[opcode] = Box::new(instruction.clone());
+        });
+        ry_generator::generate().iter().for_each(|instruction| {
+            let opcode = instruction.operation_word as usize;
+            opcode_table[opcode] = Box::new(instruction.clone());
+        });
+        ry_ext_word_generator::generate().iter().for_each(|instruction| {
             let opcode = instruction.operation_word as usize;
             opcode_table[opcode] = Box::new(instruction.clone());
         });

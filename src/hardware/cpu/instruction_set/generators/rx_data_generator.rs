@@ -28,7 +28,7 @@ pub(in crate::hardware::cpu) fn generate() -> Vec<Instruction<RxDataMetadata>> {
         let reg_type = register_type_by_char(pattern.rx_type_alias);
 
         (0..8).for_each(|i| {
-            let mut instructions = (0..0xFF).map(|d| {
+            let mut instructions = (0..0x100).map(|d| {
                 let opcode = mask | i << 9 | d;
                 Instruction::new(
                     pattern.name.clone(),

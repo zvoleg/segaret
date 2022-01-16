@@ -30,10 +30,67 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeMetadata>> {
             name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 12, addr_mode_aliases: String::from("a"),
         },
         AddrModeInstPattern {
-            name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 16, addr_mode_aliases: String::from("dPW"),
+            name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 16, addr_mode_aliases: String::from("dWP"),
         },
         AddrModeInstPattern {
             name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 20, addr_mode_aliases: String::from("xXL"),
+        },
+
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("D"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("a+i"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("-"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("dWP"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 22, addr_mode_aliases: String::from("xX"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 24, addr_mode_aliases: String::from("L"),
+        },
+
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 6, addr_mode_aliases: String::from("D"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("a+"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 14, addr_mode_aliases: String::from("-"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("dW"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("x"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("L"),
+        },
+
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("D"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("a+i"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("-"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("dWP"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 22, addr_mode_aliases: String::from("xX"),
+        },
+        AddrModeInstPattern {
+            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 24, addr_mode_aliases: String::from("L"),
         },
     ];
 
@@ -71,6 +128,9 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
     match name {
         "tst" => Mc68k::TST,
         "pea" => Mc68k::PEA,
+        "move_to_sr" => Mc68k::MOVE_to_SR,
+        "move_from_sr" => Mc68k::MOVE_from_SR,
+        "move_to_ccr" => Mc68k::MOVE_to_CCR,
         _ => panic!("addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

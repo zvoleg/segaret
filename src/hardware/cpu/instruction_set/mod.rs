@@ -97,7 +97,7 @@ impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
 }
 
 impl InstructionProcess for Instruction::<ExplicitMetadata> {
-    fn fetch_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_data(&mut self, _: &mut Mc68k) {
 
     }
 
@@ -136,6 +136,16 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
     }
 }
 
+impl InstructionProcess for Instruction<AddrModeDataMetadata> {
+    fn fetch_data(&mut self, _: &mut Mc68k) {
+
+    }
+
+    fn disassembly(&self) -> String {
+        String::from(format!("{}.{} #{} {}", self.name, self.size, self.data.data, self.data.addr_mode))
+    }
+}
+
 impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
@@ -164,8 +174,13 @@ impl InstructionProcess for Instruction<RxAddrModeMetadata> {
 }
 
 impl InstructionProcess for Instruction<RyMetadata> {
-    fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
-    fn disassembly(&self) -> std::string::String { todo!() }
+    fn fetch_data(&mut self, _: &mut Mc68k) { 
+        
+    }
+    
+    fn disassembly(&self) -> std::string::String {
+        String::from(format!("{}.{} {}", self.name, self.size, self.data.reg_y)) 
+    }
 }
 
 impl InstructionProcess for Instruction<RyExtWordMetadata> {
