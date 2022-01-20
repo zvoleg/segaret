@@ -1,3 +1,4 @@
+use crate::hardware::cpu::instruction_set::InstructionProcess;
 use crate::hardware::cpu::addressing_mode::AddrMode;
 use crate::hardware::Register;
 use crate::Mc68k;
@@ -18,7 +19,7 @@ struct RxAddrModeInstPattern {
     addr_mode_aliases: String,
 }
 
-pub(in crate::hardware) fn generate() -> Vec<Instruction<RxAddrModeMetadata>> {
+pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RxAddrModeInstPattern {
             name: String::from("movea"), mask: 0b0011000001000000, size: Size::Word, clock: 4, rx_type_alias: 'a', addr_mode_aliases: String::from("DA")
@@ -227,8 +228,6 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<RxAddrModeMetadata>> {
         },
     ];
 
-    let mut instruction_set = Vec::new();
-
     for pattern in patterns {
         let mask = pattern.mask;
 
@@ -239,27 +238,21 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<RxAddrModeMetadata>> {
             let addr_mode_list = get_addr_mode_table(addr_mode_type);
 
             (0..8).for_each(|i| {
-                let mut instructions = addr_mode_list
-                    .iter()
-                    .map(|mode| {
+                addr_mode_list.iter()
+                    .for_each(|mode| {
                         let opcode = generate_mask(&pattern.name, mask, i, mode);
-                        Instruction::new(
+                        opcode_table[opcode as usize] = Box::new(Instruction::new(
                             pattern.name.clone(),
                             opcode,
                             pattern.size,
                             pattern.clock,
                             cpu_function_by_name(&pattern.name),
                             RxAddrModeMetadata::new(Register::new(rx_type, i as usize), *mode),
-                        )
-                    })
-                    .collect::<Vec<Instruction<RxAddrModeMetadata>>>();
-                
-                instruction_set.append(&mut instructions);
+                        ));
+                    });
             })
         }
     }
-
-    instruction_set
 }
 
 fn generate_mask(name: &str, mask: u16, rx_idx: u16, addr_mode: &AddrMode) -> u16 {

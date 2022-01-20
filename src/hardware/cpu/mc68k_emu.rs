@@ -1,18 +1,7 @@
 extern crate lazy_static;
 
-use crate::hardware::cpu::instruction_set::instruction_data_types::AddrModeDataMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::AddrModeImmediateMetadata;
-use crate::hardware::cpu::instruction_set::generators::*;
-use crate::hardware::cpu::instruction_set::instruction_data_types::ConditionDisplacementMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::RyExtWordMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::RyMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::AddrModeMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::RxDataMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::RxRyMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::AddrModeExtWordMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::RxAddrModeMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::MoveInstructionMetadata;
-use crate::hardware::cpu::instruction_set::instruction_data_types::ExplicitMetadata;
+use crate::hardware::cpu::instruction_set;
+use crate::hardware::cpu::instruction_set::instruction_data_types::*;
 
 use crate::hardware::cpu::instruction_set::InstructionProcess;
 
@@ -70,53 +59,9 @@ impl Mc68k {
 
         let stack_ptr = vector_table.reset_stack_pointer();
         let pc = vector_table.reset_program_counter();
-        let mut opcode_table: Vec<Box<dyn InstructionProcess>> = vec![
-            Box::new(Instruction::new(String::from("illegal"), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
+        let opcode_table = instruction_set::generate();
 
-        move_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        addr_mode_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        addr_mode_ext_word_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        addr_mode_data_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        addr_mode_immediate_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        rx_addr_mode_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        rx_data_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        rx_ry_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        ry_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        ry_ext_word_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
-        condition_displ_generator::generate().iter().for_each(|instruction| {
-            let opcode = instruction.operation_word as usize;
-            opcode_table[opcode] = Box::new(instruction.clone());
-        });
+        
 
         let instruction: Box<dyn InstructionProcess> = opcode_table[0].clone();
         let mut reg = [0; 17];
@@ -891,6 +836,29 @@ impl Mc68k {
         }
     }
 
+    pub(crate) fn DBcc(&mut self) {
+        let instruction = self.instruction::<Instruction<ConditionRyExtWordMetadata>>();
+
+        let ext_word = instruction.data.ext_word;
+        let offset = sign_extend(ext_word, Size::Word);
+
+        let condition = instruction.data.condition;
+        let result = self.check_condition(condition);
+
+
+        if !result {
+            let counter_location = Location::register(instruction.data.reg_y);
+            let mut counter = self.read(counter_location, Size::Word) as i32;
+            counter -= 1;
+            self.write(counter_location, counter as u32, Size::Word);
+            if counter >= 0 {
+                self.pc = offset.wrapping_add(self.pc - 2);
+            }
+        } else {
+
+        }
+    }
+
     pub(crate) fn ADD(&mut self) {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
@@ -1023,19 +991,14 @@ impl Mc68k {
 
     pub(crate) fn ADDX(&mut self) {
         let size = self.instruction.size();
-        let instruction = self.instruction::<Instruction<RxRyMetadata>>();
+        let instruction = self.instruction::<Instruction<RxRySpecAddrModeMetadata>>();
 
-        let addr_mode_type = match instruction.data.reg_x.reg_type {
-            RegisterType::Data => AddrModeType::Data,
-            RegisterType::Address => AddrModeType::AddrIndPreDec,
-        };
-
-        self.current_addr_mode = AddrMode::new(addr_mode_type, instruction.data.reg_x.reg_idx);
+        self.current_addr_mode = instruction.data.addr_mode_x;
         self.call_addressing_mode();
 
         let data_x = self.ea_operand;
 
-        self.current_addr_mode = AddrMode::new(addr_mode_type, instruction.data.reg_y.reg_idx);
+        self.current_addr_mode = instruction.data.addr_mode_y;
         self.call_addressing_mode();
 
         let data_y = self.ea_operand;
@@ -1202,19 +1165,14 @@ impl Mc68k {
 
     pub(crate) fn SUBX(&mut self) {
         let size = self.instruction.size();
-        let instruction = self.instruction::<Instruction<RxRyMetadata>>();
+        let instruction = self.instruction::<Instruction<RxRySpecAddrModeMetadata>>();
 
-        let addr_mode_type = match instruction.data.reg_x.reg_type {
-            RegisterType::Data => AddrModeType::Data,
-            RegisterType::Address => AddrModeType::AddrIndPreDec,
-        };
-
-        self.current_addr_mode = AddrMode::new(addr_mode_type, instruction.data.reg_x.reg_idx);
+        self.current_addr_mode = instruction.data.addr_mode_x;
         self.call_addressing_mode();
 
         let data_x = self.ea_operand;
 
-        self.current_addr_mode = AddrMode::new(addr_mode_type, instruction.data.reg_y.reg_idx);
+        self.current_addr_mode = instruction.data.addr_mode_y;
         self.call_addressing_mode();
 
         let data_y = self.ea_operand;
@@ -1376,17 +1334,189 @@ impl Mc68k {
         self.set_status(Status::V, false);
         self.set_status(Status::C, false);
     }
-    pub(crate) fn NEG(&mut self) {}
+    pub(crate) fn NEG(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-    pub(crate) fn NEGX(&mut self) {}
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
 
-    pub(crate) fn DIVS(&mut self) {}
+        let result = 0u32.wrapping_sub(self.ea_operand);
+        self.write(self.ea_location, result, size);
 
-    pub(crate) fn DIVU(&mut self) {}
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let carry = !zero; // в описании инструкции указано !zero, в таблице вычисления флагов dm || rm
 
-    pub(crate) fn MULS(&mut self) {}
+        let dm = get_msb(self.ea_operand, size);
+        let rm = get_msb(result, size);
+        let overflow = dm & rm;
 
-    pub(crate) fn MULU(&mut self) {}
+        self.set_status(Status::X, carry);
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn NEGX(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let x_bit = if self.get_status(Status::X) {
+            1
+        } else {
+            0
+        };
+
+        let result = 0u32.wrapping_sub(self.ea_operand).wrapping_sub(x_bit);
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+
+        let dm = get_msb(self.ea_operand, size);
+        let rm = get_msb(result, size);
+        let overflow = dm & rm;
+        let carry = dm | rm;
+
+        self.set_status(Status::X, carry);
+        self.set_status(Status::N, negate);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+
+        if !zero {
+            self.set_status(Status::Z, zero);
+        }
+    }
+
+    pub(crate) fn MULS(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_operand = self.read(dst_location, size) as i32;
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let (result, overflow) = (self.ea_operand as i32).overflowing_mul(dst_operand);
+        let result = result as u32;
+        self.write(dst_location, result, Size::Long);
+        
+        let negate = is_negate(result, Size::Long);
+        let zero = is_zero(result);
+        let carry = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn MULU(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_operand = self.read(dst_location, size);
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let (result, overflow) = self.ea_operand.overflowing_mul(dst_operand);
+        self.write(dst_location, result, Size::Long);
+        
+        let negate = is_negate(result, Size::Long);
+        let zero = is_zero(result);
+        let carry = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn DIVS(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_operand = self.read(dst_location, Size::Long) as i32;
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        if self.ea_operand != 0 {
+            let (quotient, overflow) = dst_operand.overflowing_div(self.ea_operand as i32);
+            
+            if overflow {
+                self.set_status(Status::V, overflow);
+                return;
+            }
+
+            let remainder = dst_operand % self.ea_operand as i32;
+
+            let result = remainder << 16 | (quotient & 0xFFFF);
+
+            self.write(dst_location, result as u32, Size::Long);
+
+            let negate = is_negate(quotient as u32, size);
+            let zero = is_zero(quotient as u32);
+            let carry = false;
+
+            self.set_status(Status::N, negate);
+            self.set_status(Status::Z, zero);
+            self.set_status(Status::V, overflow);
+            self.set_status(Status::C, carry);
+
+        } else {
+            self.prepare_exception();
+            self.pc = self.vector_table.zero_division_exception();
+        }
+    }
+
+    pub(crate) fn DIVU(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_operand = self.read(dst_location, Size::Long);
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        if self.ea_operand != 0 {
+            let (quotient, overflow) = dst_operand.overflowing_div(self.ea_operand);
+            
+            if overflow {
+                self.set_status(Status::V, overflow);
+                return;
+            }
+
+            let remainder = dst_operand % self.ea_operand;
+
+            let result = remainder << 16 | (quotient & 0xFFFF);
+
+            self.write(dst_location, result as u32, Size::Long);
+
+            let negate = is_negate(quotient as u32, size);
+            let zero = is_zero(quotient as u32);
+            let carry = false;
+
+            self.set_status(Status::N, negate);
+            self.set_status(Status::Z, zero);
+            self.set_status(Status::V, overflow);
+            self.set_status(Status::C, carry);
+
+        } else {
+            self.prepare_exception();
+            self.pc = self.vector_table.zero_division_exception();
+        }
+    }
 
     pub(crate) fn ANDI(&mut self) {}
 

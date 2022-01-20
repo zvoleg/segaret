@@ -172,16 +172,18 @@ impl ConditionAddrModeMetadata {
 
 // condition ry
 #[derive(Clone)]
-pub(in crate::hardware)struct ConditionRyMetadata {
+pub(in crate::hardware)struct ConditionRyExtWordMetadata {
     pub(in crate::hardware)condition: Condition,
     pub(in crate::hardware)reg_y: Register,
+    pub(in crate::hardware)ext_word: u32
 }
 
-impl ConditionRyMetadata {
+impl ConditionRyExtWordMetadata {
     pub(in crate::hardware)fn new(condition: Condition, reg_y: Register) -> Self {
         Self {
             condition,
             reg_y,
+            ext_word: 0,
         }
     }
 }
@@ -244,6 +246,21 @@ impl RxRyMetadata {
         Self {
             reg_x, 
             reg_y,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(in crate::hardware) struct RxRySpecAddrModeMetadata {
+    pub(in crate::hardware) addr_mode_x: AddrMode,
+    pub(in crate::hardware) addr_mode_y: AddrMode,
+}
+
+impl RxRySpecAddrModeMetadata {
+    pub(in crate::hardware)fn new(addr_mode_x: AddrMode, addr_mode_y: AddrMode) -> Self {
+        Self {
+            addr_mode_x,
+            addr_mode_y,
         }
     }
 }

@@ -81,7 +81,7 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {}", self.name, self.size(), self.data.addr_mode))
+        String::from(format!("{}.{} {}", self.name, self.size, self.data.addr_mode))
     }
 }
 
@@ -213,8 +213,15 @@ impl InstructionProcess for Instruction<ConditionAddrModeMetadata> {
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
-impl InstructionProcess for Instruction<ConditionRyMetadata> {
-    fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
+impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
+    fn fetch_data(&mut self, cpu: &mut Mc68k) {
+        let location = Location::memory(cpu.pc as usize);
+        let ext_word = cpu.read(location, Size::Word);
+        cpu.increment_pc();
+
+        self.data.ext_word = ext_word;
+    }
+    
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
@@ -252,7 +259,38 @@ impl InstructionProcess for Instruction<RxRyMetadata> {
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
+impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
+    fn fetch_data(&mut self, cpu: &mut Mc68k) {
+        self.data.addr_mode_x.fetch_ext_word(cpu);
+        self.data.addr_mode_y.fetch_ext_word(cpu);
+    }
+
+    fn disassembly(&self) -> String {
+        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.addr_mode_x, self.data.addr_mode_y))
+    }
+}
+
 impl InstructionProcess for Instruction<RotationRyMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
+}
+
+pub(in crate::hardware)fn generate() -> Vec<Box<dyn InstructionProcess>> {
+    let mut opcode_table: Vec<Box<dyn InstructionProcess>> = vec![
+            Box::new(Instruction::new(String::from("illegal"), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
+
+    generators::move_generator::generate(&mut opcode_table);
+    generators::addr_mode_generator::generate(&mut opcode_table);
+    generators::addr_mode_ext_word_generator::generate(&mut opcode_table);
+    generators::addr_mode_data_generator::generate(&mut opcode_table);
+    generators::addr_mode_immediate_generator::generate(&mut opcode_table);
+    generators::rx_addr_mode_generator::generate(&mut opcode_table);
+    generators::rx_data_generator::generate(&mut opcode_table);
+    generators::rx_ry_generator::generate(&mut opcode_table);
+    generators::rx_ry_spec_addr_mode_generator::generate(&mut opcode_table);
+    generators::ry_generator::generate(&mut opcode_table);
+    generators::ry_ext_word_generator::generate(&mut opcode_table);
+    generators::condition_displ_generator::generate(&mut opcode_table);
+
+    opcode_table
 }

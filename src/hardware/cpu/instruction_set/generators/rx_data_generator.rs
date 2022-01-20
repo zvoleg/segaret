@@ -1,3 +1,4 @@
+use crate::hardware::cpu::instruction_set::InstructionProcess;
 use crate::hardware::cpu::instruction_set::generators::register_type_by_char;
 use crate::hardware::Size;
 use crate::hardware::cpu::instruction_set::RxDataMetadata;
@@ -13,14 +14,12 @@ struct RxDataPattern {
     rx_type_alias: char,
 }
 
-pub(in crate::hardware::cpu) fn generate() -> Vec<Instruction<RxDataMetadata>> {
+pub(in crate::hardware::cpu) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RxDataPattern {
             name: String::from("moveq"), mask: 0b0111000000000000, size: Size::Long, clock: 4, rx_type_alias: 'd'
         }
     ];
-
-    let mut instruction_set = Vec::new();
 
     for pattern in patterns {
         let mask = pattern.mask;
@@ -28,21 +27,17 @@ pub(in crate::hardware::cpu) fn generate() -> Vec<Instruction<RxDataMetadata>> {
         let reg_type = register_type_by_char(pattern.rx_type_alias);
 
         (0..8).for_each(|i| {
-            let mut instructions = (0..0x100).map(|d| {
+            (0..0x100).for_each(|d| {
                 let opcode = mask | i << 9 | d;
-                Instruction::new(
+                opcode_table[opcode as usize] = Box::new(Instruction::new(
                     pattern.name.clone(),
                     opcode,
                     pattern.size,
                     pattern.clock,
                     Mc68k::MOVEQ,
                     RxDataMetadata::new(Register::new(reg_type, i as usize), d as u32)
-                )
-            }).collect::<Vec<Instruction<RxDataMetadata>>>();
-
-            instruction_set.append(&mut instructions);
+                ));
+            });
         });
     }
-
-    instruction_set
 }

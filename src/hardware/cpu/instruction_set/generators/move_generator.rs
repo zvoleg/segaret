@@ -1,3 +1,4 @@
+use crate::hardware::cpu::instruction_set::InstructionProcess;
 use crate::hardware::cpu::instruction_set::generators::addr_mode_type_by_char;
 use crate::hardware::cpu::addressing_mode::AddrModeType;
 use crate::hardware::cpu::instruction_set::addr_mode_table::get_addr_mode_table;
@@ -15,7 +16,7 @@ struct MoveInstructionPattern {
     dst_addr_mode_aliases: String,
 }
 
-pub(in crate::hardware) fn generate() -> Vec<Instruction<MoveInstructionMetadata>> {
+pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         MoveInstructionPattern {
             name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 4, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("D"),
@@ -283,8 +284,6 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<MoveInstructionMetadata
         },
     ];
 
-    let mut instruction_set = Vec::new();
-    
     for pattern in patterns {
 
         let name = pattern.name;
@@ -301,23 +300,19 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<MoveInstructionMetadata
                 let dst_addr_modes = get_addr_mode_table(*dst_addr_mode_type);
 
                 src_addr_modes.iter().for_each(|src_mode| {
-                    let mut instructions = dst_addr_modes.iter().map(|dst_mode| {
+                    dst_addr_modes.iter().for_each(|dst_mode| {
                         let opcode = mask | (src_mode.reg_idx as u16) << 9 | (src_mode.mode_bits as u16) << 6 | (dst_mode.mode_bits as u16) << 3 | dst_mode.reg_idx as u16;
 
-                        Instruction::new(
+                        opcode_table[opcode as usize] = Box::new(Instruction::new(
                             name.clone(),
                             opcode,
                             size,
                             clock,
                             Mc68k::MOVE,
-                            MoveInstructionMetadata::new(*src_mode, *dst_mode))
-                    }).collect::<Vec<Instruction<MoveInstructionMetadata>>>();
-                    
-                    instruction_set.append(&mut instructions);  
+                            MoveInstructionMetadata::new(*src_mode, *dst_mode)));
+                    });
                 });
             }
         }
     }
-
-    instruction_set
 }

@@ -1,3 +1,4 @@
+use crate::hardware::cpu::instruction_set::InstructionProcess;
 use crate::hardware::cpu::instruction_set::generators::condition_by_bits;
 use crate::hardware::Size;
 use crate::hardware::cpu::instruction_set::ConditionDisplacementMetadata;
@@ -11,27 +12,25 @@ struct ConditionDisplPattern {
     clock: u32,
 }
 
-pub(in crate::hardware) fn generate() -> Vec<Instruction<ConditionDisplacementMetadata>> {
+pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         ConditionDisplPattern {
             name: String::from("bcc"), mask: 0b0110000000000000, size: Size::Byte, clock: 10,
         }
     ];
     
-    let mut instruction_set = Vec::new();
-
     for pattern in patterns {
         let mask = pattern.mask;
 
         (0..0x10).for_each(|c| {
-            let mut instructions = (0..0x100).map(|d| {
+            let mut instructions = (0..0x100).for_each(|d| {
                 let opcode = mask | c << 8 | d;
                 let displacement_size = if d == 0 {
                     Size::Word
                 } else {
                     Size::Byte
                 };
-                Instruction::new(
+                opcode_table[opcode as usize] = Box::new(Instruction::new(
                     pattern.name.clone(),
                     opcode,
                     pattern.size,
@@ -42,12 +41,8 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<ConditionDisplacementMe
                         d as u32,
                         displacement_size,
                     )
-                )
-            }).collect::<Vec<Instruction<ConditionDisplacementMetadata>>>();
-
-            instruction_set.append(&mut instructions);
+                ));
+            });
         });
     }
-
-    instruction_set
 }

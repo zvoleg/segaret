@@ -2,6 +2,7 @@ const STACK_PTR: isize = 0x000000;
 const PROGRAM_COUNTER: isize = 0x000004;
 
 const ILLEGAL_INSTR: isize = 0x000010;
+const ZERO_DIVISION: isize = 0x000014;
 
 pub(in crate::hardware) struct VectorTable {
     header_ptr: *const u8,
@@ -30,5 +31,9 @@ impl VectorTable {
 
     pub(in crate::hardware) fn illegal_instruction(&self) -> u32 {
         self.get_offseted_value(ILLEGAL_INSTR)
+    }
+
+    pub(in crate::hardware) fn zero_division_exception(&self) -> u32 {
+        self.get_offseted_value(ZERO_DIVISION)
     }
 }

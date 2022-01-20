@@ -1,3 +1,4 @@
+use crate::hardware::cpu::instruction_set::InstructionProcess;
 use crate::Mc68k;
 use crate::hardware::cpu::instruction_set::addr_mode_table::get_addr_mode_table;
 use crate::hardware::cpu::addressing_mode::AddrModeType;
@@ -14,7 +15,7 @@ struct AddrModeInstPattern {
     addr_mode_aliases: String,
 }
 
-pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeExtWordMetadata>> {
+pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>){
     let patterns = vec![
         AddrModeInstPattern {
             name: String::from("movem"), mask: 0b0100110011000000, size: Size::Long, clock: 12, addr_mode_aliases: String::from("a+"),
@@ -66,8 +67,6 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeExtWordMetadata
         },
     ];
 
-    let mut instruction_set = Vec::new();
-
     for pattern in patterns {
         
         let mask = pattern.mask;
@@ -76,24 +75,20 @@ pub(in crate::hardware) fn generate() -> Vec<Instruction<AddrModeExtWordMetadata
         for addr_mode_type in addr_mode_type_list {
             let addr_modes = get_addr_mode_table(addr_mode_type);
 
-            instruction_set.append(&mut addr_modes
-                .iter()
-                .map(|mode| {
+            addr_modes.iter()
+                .for_each(|mode| {
                     let opcode =  mask | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
-                    Instruction::new(
+                    opcode_table[opcode as usize] = Box::new(Instruction::new(
                         pattern.name.clone(),
                         opcode,
                         pattern.size,
                         pattern.clock,
                         cpu_function_by_name(&pattern.name),
                         AddrModeExtWordMetadata::new(*mode),
-                    )
-                })
-                .collect::<Vec<Instruction<AddrModeExtWordMetadata>>>());
+                    ));
+                });
         }
     }
-    
-    instruction_set
 }
 
 fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
