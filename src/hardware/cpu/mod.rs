@@ -66,6 +66,14 @@ impl Register {
     pub(in crate::hardware) fn new(reg_type: RegisterType, reg_idx: usize) -> Self {
         Register { reg_type, reg_idx }
     }
+
+    pub(in crate::hardware) fn data(reg_idx: usize) -> Self {
+        Register::new(RegisterType::Data, reg_idx)
+    }
+
+    pub(in crate::hardware) fn addr(reg_idx: usize) -> Self {
+        Register:: new(RegisterType::Address, reg_idx)
+    }
 }
 
 impl fmt::Display for Register {

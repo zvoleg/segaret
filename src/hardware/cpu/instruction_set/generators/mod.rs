@@ -14,6 +14,7 @@ pub(in crate::hardware) mod rx_ry_spec_addr_mode_generator;
 pub(in crate::hardware) mod ry_generator;
 pub(in crate::hardware) mod ry_ext_word_generator;
 pub(in crate::hardware) mod condition_displ_generator;
+pub(in crate::hardware) mod condition_ry_ext_word_generator;
 
 fn register_type_by_char(c: char) -> RegisterType {
     match c {

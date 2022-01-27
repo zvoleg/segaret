@@ -8,62 +8,62 @@ use crate::hardware::cpu::instruction_set::AddrModeExtWordMetadata;
 use crate::hardware::cpu::instruction_set::Instruction;
 
 struct AddrModeInstPattern {
-    name: String,
+    name: &'static str,
     mask: u16,
     size: Size,
     clock: u32,
-    addr_mode_aliases: String,
+    addr_mode_aliases: &'static str,
 }
 
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>){
     let patterns = vec![
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110011000000, size: Size::Long, clock: 12, addr_mode_aliases: String::from("a+"),
+            name: "movem", mask: 0b0100110011000000, size: Size::Long, clock: 12, addr_mode_aliases: "a+",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110011000000, size: Size::Long, clock: 16, addr_mode_aliases: String::from("dWP"),
+            name: "movem", mask: 0b0100110011000000, size: Size::Long, clock: 16, addr_mode_aliases: "dWP",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110011000000, size: Size::Long, clock: 18, addr_mode_aliases: String::from("xX"),
+            name: "movem", mask: 0b0100110011000000, size: Size::Long, clock: 18, addr_mode_aliases: "xX",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110011000000, size: Size::Long, clock: 20, addr_mode_aliases: String::from("L"),
+            name: "movem", mask: 0b0100110011000000, size: Size::Long, clock: 20, addr_mode_aliases: "L",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110010000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("a+"),
+            name: "movem", mask: 0b0100110010000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110010000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("dWP"),
+            name: "movem", mask: 0b0100110010000000, size: Size::Word, clock: 16, addr_mode_aliases: "dWP",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110010000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("xX"),
+            name: "movem", mask: 0b0100110010000000, size: Size::Word, clock: 18, addr_mode_aliases: "xX",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100110010000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("L"),
+            name: "movem", mask: 0b0100110010000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100011000000, size: Size::Long, clock: 8, addr_mode_aliases: String::from("a-"),
+            name: "movem", mask: 0b0100100011000000, size: Size::Long, clock: 8, addr_mode_aliases: "a-",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100011000000, size: Size::Long, clock: 12, addr_mode_aliases: String::from("dW"),
+            name: "movem", mask: 0b0100100011000000, size: Size::Long, clock: 12, addr_mode_aliases: "dW",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100011000000, size: Size::Long, clock: 14, addr_mode_aliases: String::from("x"),
+            name: "movem", mask: 0b0100100011000000, size: Size::Long, clock: 14, addr_mode_aliases: "x",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100011000000, size: Size::Long, clock: 16, addr_mode_aliases: String::from("L"),
+            name: "movem", mask: 0b0100100011000000, size: Size::Long, clock: 16, addr_mode_aliases: "L",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100010000000, size: Size::Word, clock: 8, addr_mode_aliases: String::from("A-"),
+            name: "movem", mask: 0b0100100010000000, size: Size::Word, clock: 8, addr_mode_aliases: "A-",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100010000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("dW"),
+            name: "movem", mask: 0b0100100010000000, size: Size::Word, clock: 12, addr_mode_aliases: "dW",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100010000000, size: Size::Word, clock: 14, addr_mode_aliases: String::from("X"),
+            name: "movem", mask: 0b0100100010000000, size: Size::Word, clock: 14, addr_mode_aliases: "X",
         },
         AddrModeInstPattern {
-            name: String::from("movem"), mask: 0b0100100010000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("L"),
+            name: "movem", mask: 0b0100100010000000, size: Size::Word, clock: 16, addr_mode_aliases: "L",
         },
     ];
 
@@ -79,11 +79,11 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
                 .for_each(|mode| {
                     let opcode =  mask | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
                     opcode_table[opcode as usize] = Box::new(Instruction::new(
-                        pattern.name.clone(),
+                        pattern.name,
                         opcode,
                         pattern.size,
                         pattern.clock,
-                        cpu_function_by_name(&pattern.name),
+                        cpu_function_by_name(pattern.name),
                         AddrModeExtWordMetadata::new(*mode),
                     ));
                 });

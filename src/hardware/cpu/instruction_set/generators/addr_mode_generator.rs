@@ -8,90 +8,162 @@ use crate::hardware::cpu::mc68k_emu::Mc68k;
 use crate::hardware::Size;
 
 struct AddrModeInstPattern {
-    name: String,
+    name: &'static str,
     mask: u16,
     size: Size,
     clock: u32,
-    addr_mode_aliases: String,
+    addr_mode_aliases: &'static str,
 }
 
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>){
     let patterns = vec![
         AddrModeInstPattern {
-            name: String::from("tst"), mask: 0b0100101000000000, size: Size::Byte, clock: 4, addr_mode_aliases: String::from("DAa+-dxWLi"),
+            name: "tst", mask: 0b0100101000000000, size: Size::Byte, clock: 4, addr_mode_aliases: "DAa+-dxWLi",
         },
         AddrModeInstPattern {
-            name: String::from("tst"), mask: 0b0100101001000000, size: Size::Word, clock: 4, addr_mode_aliases: String::from("DAa+-dxWLi"),
+            name: "tst", mask: 0b0100101001000000, size: Size::Word, clock: 4, addr_mode_aliases: "DAa+-dxWLi",
         },
         AddrModeInstPattern {
-            name: String::from("tst"), mask: 0b0100101010000000, size: Size::Long, clock: 4, addr_mode_aliases: String::from("DAa+-dxWLi"),
-        },
-
-        AddrModeInstPattern {
-            name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 12, addr_mode_aliases: String::from("a"),
-        },
-        AddrModeInstPattern {
-            name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 16, addr_mode_aliases: String::from("dWP"),
-        },
-        AddrModeInstPattern {
-            name: String::from("pea"), mask: 0b0100100001000000, size: Size::Long, clock: 20, addr_mode_aliases: String::from("xXL"),
+            name: "tst", mask: 0b0100101010000000, size: Size::Long, clock: 4, addr_mode_aliases: "DAa+-dxWLi",
         },
 
         AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("D"),
+            name: "pea", mask: 0b0100100001000000, size: Size::Long, clock: 12, addr_mode_aliases: "a",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("a+i"),
+            name: "pea", mask: 0b0100100001000000, size: Size::Long, clock: 16, addr_mode_aliases: "dWP",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("-"),
-        },
-        AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("dWP"),
-        },
-        AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 22, addr_mode_aliases: String::from("xX"),
-        },
-        AddrModeInstPattern {
-            name: String::from("move_to_sr"), mask: 0b0100011011000000, size: Size::Word, clock: 24, addr_mode_aliases: String::from("L"),
+            name: "pea", mask: 0b0100100001000000, size: Size::Long, clock: 20, addr_mode_aliases: "xXL",
         },
 
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 6, addr_mode_aliases: String::from("D"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 12, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("a+"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 16, addr_mode_aliases: "a+i",
         },
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 14, addr_mode_aliases: String::from("-"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 18, addr_mode_aliases: "-",
         },
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("dW"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 20, addr_mode_aliases: "dWP",
         },
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("x"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 22, addr_mode_aliases: "xX",
         },
         AddrModeInstPattern {
-            name: String::from("move_from_sr"), mask: 0b0100000011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("L"),
+            name: "move_to_sr", mask: 0b0100011011000000, size: Size::Word, clock: 24, addr_mode_aliases: "L",
         },
 
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 12, addr_mode_aliases: String::from("D"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 6, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 16, addr_mode_aliases: String::from("a+i"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 18, addr_mode_aliases: String::from("-"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 14, addr_mode_aliases: "-",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 20, addr_mode_aliases: String::from("dWP"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 16, addr_mode_aliases: "dW",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 22, addr_mode_aliases: String::from("xX"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 18, addr_mode_aliases: "x",
         },
         AddrModeInstPattern {
-            name: String::from("move_to_ccr"), mask: 0b0100010011000000, size: Size::Word, clock: 24, addr_mode_aliases: String::from("L"),
+            name: "move_from_sr", mask: 0b0100000011000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
+        },
+
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 12, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 16, addr_mode_aliases: "a+i",
+        },
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 18, addr_mode_aliases: "-",
+        },
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 20, addr_mode_aliases: "dWP",
+        },
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 22, addr_mode_aliases: "xX",
+        },
+        AddrModeInstPattern {
+            name: "move_to_ccr", mask: 0b0100010011000000, size: Size::Word, clock: 24, addr_mode_aliases: "L",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 4, addr_mode_aliases: "D",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 4, addr_mode_aliases: "D",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 6, addr_mode_aliases: "D",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 14, addr_mode_aliases: "-",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 16, addr_mode_aliases: "dW",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 18, addr_mode_aliases: "x",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001000000000, size: Size::Byte, clock: 20, addr_mode_aliases: "L",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 14, addr_mode_aliases: "-",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 16, addr_mode_aliases: "dW",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 18, addr_mode_aliases: "x",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001001000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 16, addr_mode_aliases: "a+",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 18, addr_mode_aliases: "-",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 20, addr_mode_aliases: "dW",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 22, addr_mode_aliases: "x",
+        },
+
+        AddrModeInstPattern {
+            name: "clr", mask: 0b0100001010000000, size: Size::Long, clock: 24, addr_mode_aliases: "L",
         },
     ];
 
@@ -107,11 +179,11 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
                 .for_each(|mode| {
                     let opcode =  mask | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
                     opcode_table[opcode as usize] = Box::new(Instruction::new(
-                        pattern.name.clone(),
+                        pattern.name,
                         opcode,
                         pattern.size,
                         pattern.clock,
-                        cpu_function_by_name(&pattern.name),
+                        cpu_function_by_name(pattern.name),
                         AddrModeMetadata::new(*mode),
                     ));
                 });
@@ -126,6 +198,7 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "move_to_sr" => Mc68k::MOVE_to_SR,
         "move_from_sr" => Mc68k::MOVE_from_SR,
         "move_to_ccr" => Mc68k::MOVE_to_CCR,
+        "clr" => Mc68k::CLR,
         _ => panic!("addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

@@ -7,7 +7,7 @@ use crate::hardware::cpu::instruction_set::Instruction;
 use crate::hardware::Size;
 
 struct RyPattern {
-    name: String,
+    name: &'static str,
     mask: u16,
     size: Size,
     clock: u32,
@@ -17,14 +17,14 @@ struct RyPattern {
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RyPattern {
-            name: String::from("move_to_usp"), mask: 0b0100111001100000, size: Size::Long, clock: 4, ry_type_alias: 'a'
+            name: "move_to_usp", mask: 0b0100111001100000, size: Size::Long, clock: 4, ry_type_alias: 'a'
         },
         RyPattern {
-            name: String::from("move_from_usp"), mask: 0b0100111001101000, size: Size::Long, clock: 4, ry_type_alias: 'a'
+            name: "move_from_usp", mask: 0b0100111001101000, size: Size::Long, clock: 4, ry_type_alias: 'a'
         },
 
         RyPattern {
-            name: String::from("unlk"), mask: 0b0100111001011000, size: Size::Byte, clock: 12, ry_type_alias: 'a',
+            name: "unlk", mask: 0b0100111001011000, size: Size::Byte, clock: 12, ry_type_alias: 'a',
         }
     ];
 
@@ -36,11 +36,11 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         (0..8).for_each(|y| {
             let opcode = mask | y;
             opcode_table[opcode as usize] = Box::new(Instruction::new(
-                pattern.name.clone(),
+                pattern.name,
                 opcode,
                 pattern.size,
                 pattern.clock,
-                cpu_function_by_name(&pattern.name),
+                cpu_function_by_name(pattern.name),
                 RyMetadata::new(Register::new(ry_type, y as usize)),
             ));
         });

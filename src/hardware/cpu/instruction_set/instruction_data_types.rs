@@ -20,15 +20,13 @@ impl AddrModeMetadata {
 pub(in crate::hardware)struct AddrModeImmediateMetadata {
     pub(in crate::hardware) addr_mode: AddrMode,
     pub(in crate::hardware) immediate_data: u32,
-    pub(in crate::hardware) data_size: Size,
 }
 
 impl AddrModeImmediateMetadata {
-    pub(in crate::hardware)fn new(addr_mode: AddrMode, data_size: Size) -> Self {
+    pub(in crate::hardware)fn new(addr_mode: AddrMode) -> Self {
         Self {
             addr_mode: addr_mode,
             immediate_data: 0,
-            data_size,
         }
     }
 }
@@ -191,12 +189,13 @@ impl ConditionRyExtWordMetadata {
 // displacement
 #[derive(Clone)]
 pub(in crate::hardware)struct DisplacementMetadata {
-    pub(in crate::hardware)displacement: u32,
+    pub(in crate::hardware) displacement: u32,
+    pub(in crate::hardware) displacement_size: Size,
 }
 
 impl DisplacementMetadata {
     pub(in crate::hardware)fn new(displacement: u32) -> Self {
-        Self { displacement }
+        Self { displacement, displacement_size: Size::Byte }
     }
 }
 
@@ -284,3 +283,16 @@ impl RotationRyMetadata {
 // explicit
 #[derive(Clone)]
 pub(in crate::hardware)struct ExplicitMetadata;
+
+#[derive(Clone)]
+pub(in crate::hardware)struct ExplicitImmediateMetadata {
+    pub(in crate::hardware)immediate_data: u32,
+}
+
+impl ExplicitImmediateMetadata {
+    pub(in crate::hardware) fn new() -> Self {
+        Self {
+            immediate_data: 0,
+        }
+    }
+}

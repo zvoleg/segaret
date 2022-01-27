@@ -7,7 +7,7 @@ use crate::hardware::cpu::instruction_set::Instruction;
 use crate::hardware::Size;
 
 struct RyPattern {
-    name: String,
+    name: &'static str,
     mask: u16,
     size: Size,
     clock: u32,
@@ -17,7 +17,7 @@ struct RyPattern {
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RyPattern {
-            name: String::from("link"), mask: 0b0100111001010000, size: Size::Word, clock: 16, ry_type_alias: 'a'
+            name: "link", mask: 0b0100111001010000, size: Size::Word, clock: 16, ry_type_alias: 'a'
         },
     ];
 
@@ -26,14 +26,14 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 
         let ry_type = register_type_by_char(pattern.ry_type_alias);
 
-        let mut instructions = (0..8).for_each(|y| {
+        (0..8).for_each(|y| {
             let opcode = mask | y;
             opcode_table[opcode as usize] = Box::new(Instruction::new(
-                pattern.name.clone(),
+                pattern.name,
                 opcode,
                 pattern.size,
                 pattern.clock,
-                cpu_function_by_name(&pattern.name),
+                cpu_function_by_name(pattern.name),
                 RyExtWordMetadata::new(Register::new(ry_type, y as usize)),
             ));
         });

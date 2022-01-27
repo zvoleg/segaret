@@ -8,279 +8,279 @@ use crate::hardware::cpu::mc68k_emu::Mc68k;
 use crate::hardware::Size;
 
 struct MoveInstructionPattern {
-    name: String,
+    name: &'static str,
     mask: u16,
     size: Size,
     clock: u32,
-    src_addr_mode_aliases: String,
-    dst_addr_mode_aliases: String,
+    src_addr_mode_aliases: &'static str,
+    dst_addr_mode_aliases: &'static str,
 }
 
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 4, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 4, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 8, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 8, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 8, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 8, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 10, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 10, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 12, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 14, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 16, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 18, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 20, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 22, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 24, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 26, src_addr_mode_aliases: String::from("dX"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 26, src_addr_mode_aliases: "dX", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 26, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 26, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Word, mask: 0b0011000000000000, clock: 28, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Word, mask: 0b0011000000000000, clock: 28, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 4, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 4, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 12, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 12, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 12, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 12, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 14, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 14, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 16, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 16, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 16, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 16, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 18, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 18, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 18, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 18, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: String::from("DA"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: "DA", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 20, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 22, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 22, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 24, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 24, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 24, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 24, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 26, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("X"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "X",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 28, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 30, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("X"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "X",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 32, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 34, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 34, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 34, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 34, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Long, mask: 0b0010000000000000, clock: 36, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Long, mask: 0b0010000000000000, clock: 36, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 4, src_addr_mode_aliases: String::from("D"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 4, src_addr_mode_aliases: "D", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 8, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 8, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 8, src_addr_mode_aliases: String::from("D"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 8, src_addr_mode_aliases: "D", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 10, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 10, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: String::from("D"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: "D", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 12, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: String::from("D"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: "D", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("D"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 14, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "D",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: String::from("D"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: "D", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("X"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "X",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: String::from("a+i"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("a+-"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 20, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: String::from("-"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: "-", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 22, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: String::from("dPW"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: String::from("xX"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: "xX", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("dW"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 24, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "dW",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 26, src_addr_mode_aliases: String::from("dX"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 26, src_addr_mode_aliases: "dX", dst_addr_mode_aliases: "L",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 26, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("x"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 26, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "x",
         },
         MoveInstructionPattern {
-            name: String::from("move"), size: Size::Byte, mask: 0b0001000000000000, clock: 28, src_addr_mode_aliases: String::from("L"), dst_addr_mode_aliases: String::from("L"),
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 28, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "L",
         },
     ];
 
@@ -304,7 +304,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
                         let opcode = mask | (src_mode.reg_idx as u16) << 9 | (src_mode.mode_bits as u16) << 6 | (dst_mode.mode_bits as u16) << 3 | dst_mode.reg_idx as u16;
 
                         opcode_table[opcode as usize] = Box::new(Instruction::new(
-                            name.clone(),
+                            name,
                             opcode,
                             size,
                             clock,

@@ -9,7 +9,7 @@ fn main() {
     let bus = Bus::init(cartridge);
     let mut cpu = Mc68k::init(bus);
 
-    for _ in 0..20 {
+    for _ in 0..150 {
         cpu.clock();
     }
 }

@@ -853,11 +853,54 @@ impl Mc68k {
             self.write(counter_location, counter as u32, Size::Word);
             if counter >= 0 {
                 self.pc = offset.wrapping_add(self.pc - 2);
+            } else {
+                self.clock_counter += 4 // if loop counter expired
             }
         } else {
-
+            self.clock_counter += 2 // if condition true
         }
     }
+
+    pub(crate) fn Scc(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<ConditionAddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let condition = instruction.data.condition;
+        let result = self.check_condition(condition);
+
+        if result {
+            self.write(self.ea_location, 0x00, size);
+        } else {
+            self.write(self.ea_location, 0xFF, size);
+        }
+    }
+
+    pub(crate) fn BRA(&mut self) {
+        let instruction = self.instruction::<Instruction<DisplacementMetadata>>();
+
+        let offset = instruction.data.displacement;
+
+        match instruction.data.displacement_size {
+            Size::Word => self.pc -= 2,
+            _ => (),
+        }
+
+        self.pc = self.pc.wrapping_add(offset);
+    }
+
+    /*
+    BSR
+    JMP
+    JSR
+    NOP
+    RTD
+    RTR
+    RTS
+    TST
+    */
 
     pub(crate) fn ADD(&mut self) {
         let size = self.instruction.as_ref().size();
@@ -1518,7 +1561,208 @@ impl Mc68k {
         }
     }
 
-    pub(crate) fn ANDI(&mut self) {}
+    pub(crate) fn AND(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let reg_location = Location::register(instruction.data.reg_x);
+        let data = self.read(reg_location, size);
+
+        let result = data & self.ea_operand;
+
+        let direction_bit = (instruction.operation_word >> 8) & 1;
+
+        if direction_bit == 0 { // memory to data reg
+            self.write(reg_location, result, size);
+        } else { // data reg to memory
+            self.write(self.ea_location, result, size);
+        }
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn ANDI(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let data = instruction.data.immediate_data;
+        let result = data & self.ea_operand;
+
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn ANDI_to_CCR(&mut self) {
+        let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+
+        let data = instruction.data.immediate_data as u16;
+        let ccr = self.sr & 0xFF;
+        let result = ccr & data;
+
+        self.sr = (self.sr & !0xFF) | result;
+    }
+
+    pub(crate) fn EOR(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let reg_location = Location::register(instruction.data.reg_x);
+        let data = self.read(reg_location, size);
+
+        let result = data ^ self.ea_operand;
+
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn EORI(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let data = instruction.data.immediate_data;
+
+        let result = data ^ self.ea_operand;
+
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn EORI_to_CCR(&mut self) {
+        let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+
+        let data = instruction.data.immediate_data as u16;
+        let ccr = self.sr & 0xFF;
+        let result = ccr ^ data;
+
+        self.sr = (self.sr & !0xFF) | result;
+    }
+
+    pub(crate) fn OR(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let reg_location = Location::register(instruction.data.reg_x);
+        let data = self.read(reg_location, size);
+
+        let result = data | self.ea_operand;
+
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+    
+    pub(crate) fn ORI(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let data = instruction.data.immediate_data;
+
+        let result = data | self.ea_operand;
+
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn ORI_to_CCR(&mut self) {
+        let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+
+        let data = instruction.data.immediate_data as u16;
+        let ccr = self.sr & 0xFF;
+        let result = ccr | data;
+
+        self.sr = (self.sr & !0xFF) | result;
+    }
+    
+    pub(crate) fn NOT(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let result = !self.ea_operand;
+        self.write(self.ea_location, result, size);
+
+        let negate = is_negate(result, size);
+        let zero = is_zero(result);
+        let overflow = false;
+        let carry = false;
+        
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
 
     pub(crate) fn ILLEAGL(&mut self) {
         self.prepare_exception();

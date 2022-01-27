@@ -54,7 +54,7 @@ impl<T> InstructionData for Instruction<T> where T: 'static {
 
 #[derive(Clone)]
 pub struct Instruction<T> {
-    name: String,
+    name: &'static str,
     pub operation_word: u16,
     size: Size,
     clock: u32,
@@ -63,7 +63,7 @@ pub struct Instruction<T> {
 }
 
 impl<T> Instruction<T> {
-    pub fn new(name: String, operation_word: u16, size: Size, clock: u32, handler: fn(&mut Mc68k), data: T) -> Self {
+    pub fn new(name: &'static str, operation_word: u16, size: Size, clock: u32, handler: fn(&mut Mc68k), data: T) -> Self {
         Self {
             name: name,
             operation_word: operation_word, 
@@ -102,7 +102,7 @@ impl InstructionProcess for Instruction::<ExplicitMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        self.name.clone()
+        String::from(self.name)
     }
 }
 
@@ -222,7 +222,9 @@ impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
         self.data.ext_word = ext_word;
     }
     
-    fn disassembly(&self) -> std::string::String { todo!() }
+    fn disassembly(&self) -> std::string::String {
+        String::from(format!("{} {}, {} {:04X}", self.name, self.data.condition, self.data.reg_y, self.data.ext_word))
+    }
 }
 
 impl InstructionProcess for Instruction<DisplacementMetadata> {
@@ -275,9 +277,25 @@ impl InstructionProcess for Instruction<RotationRyMetadata> {
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
+impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {
+    fn fetch_data(&mut self, cpu: &mut Mc68k) {
+        let location = Location::memory(cpu.pc as usize);
+        let data = cpu.read(location, Size::Word);
+        let data = data & 0xFF;
+
+        cpu.increment_pc();
+
+        self.data.immediate_data = data;
+    }
+
+    fn disassembly(&self) -> String {
+        String::from(format!("{} {:02X}", self.name, self.data.immediate_data))
+    }
+}
+
 pub(in crate::hardware)fn generate() -> Vec<Box<dyn InstructionProcess>> {
     let mut opcode_table: Vec<Box<dyn InstructionProcess>> = vec![
-            Box::new(Instruction::new(String::from("illegal"), 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
+            Box::new(Instruction::new("illegal", 0, Size::Byte, 34, Mc68k::ILLEAGL, ExplicitMetadata)); 0x10000];
 
     generators::move_generator::generate(&mut opcode_table);
     generators::addr_mode_generator::generate(&mut opcode_table);
@@ -291,6 +309,7 @@ pub(in crate::hardware)fn generate() -> Vec<Box<dyn InstructionProcess>> {
     generators::ry_generator::generate(&mut opcode_table);
     generators::ry_ext_word_generator::generate(&mut opcode_table);
     generators::condition_displ_generator::generate(&mut opcode_table);
+    generators::condition_ry_ext_word_generator::generate(&mut opcode_table);
 
     opcode_table
 }
