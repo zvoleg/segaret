@@ -908,6 +908,10 @@ impl Mc68k {
         } else {
             self.write(self.ea_location, 0xFF, size);
         }
+
+        if result && instruction.data.addr_mode.am_type == AddrModeType::Data {
+            self.clock_counter += 2;
+        }
     }
 
     pub(crate) fn BRA(&mut self) {
@@ -1698,6 +1702,16 @@ impl Mc68k {
         self.sr = (self.sr & !0xFF) | result;
     }
 
+    pub(crate) fn ANDI_to_SR(&mut self) {
+        if self.mode == Mode::Supervisor {
+            let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+            let data = instruction.data.immediate_data as u16;
+            self.sr &= data;
+        } else {
+            // TODO call privilage exception
+        }
+    }
+
     pub(crate) fn EOR(&mut self) {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
@@ -1757,6 +1771,16 @@ impl Mc68k {
         self.sr = (self.sr & !0xFF) | result;
     }
 
+    pub(crate) fn EORI_to_SR(&mut self) {
+        if self.mode == Mode::Supervisor {
+            let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+            let data = instruction.data.immediate_data as u16;
+            self.sr ^= data;
+        } else {
+             // TODO call privilage exception
+        }
+    }
+
     pub(crate) fn OR(&mut self) {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
@@ -1814,6 +1838,16 @@ impl Mc68k {
         let result = ccr | data;
 
         self.sr = (self.sr & !0xFF) | result;
+    }
+
+    pub(crate) fn ORI_to_SR(&mut self) {
+        if self.mode == Mode::Supervisor {
+            let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
+            let data = instruction.data.immediate_data as u16;
+            self.sr |= data;
+        } else {
+             // TODO call privilage exception
+        }
     }
     
     pub(crate) fn NOT(&mut self) {
@@ -2078,11 +2112,10 @@ impl Mc68k {
     }
 
     pub(crate) fn SWAP(&mut self) {
-        let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RyMetadata>>();
 
         let location = Location::register(instruction.data.reg_y);
-        let mut data = self.read(location, size);
+        let mut data = self.read(location, Size::Long);
 
         let msw = (data & 0xFFFF0000) >> 16;
         let lsw = (data & 0x0000FFFF) >> 16;
@@ -2091,7 +2124,7 @@ impl Mc68k {
 
         self.write(location, data, Size::Long);
 
-        let negate = is_negate(data, size);
+        let negate = is_negate(data, Size::Long);
         let zero = is_zero(data);
         let overflow = false;
         let carry = false;

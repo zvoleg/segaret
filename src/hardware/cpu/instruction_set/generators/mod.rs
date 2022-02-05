@@ -6,6 +6,9 @@ pub(in crate::hardware) mod addr_mode_generator;
 pub(in crate::hardware) mod addr_mode_ext_word_generator;
 pub(in crate::hardware) mod addr_mode_immediate_generator;
 pub(in crate::hardware) mod addr_mode_data_generator;
+pub(in crate::hardware) mod displacement_generator;
+pub(in crate::hardware) mod explicit_generator;
+pub(in crate::hardware) mod explicit_immediate_generator;
 pub(in crate::hardware) mod move_generator;
 pub(in crate::hardware) mod rx_addr_mode_generator;
 pub(in crate::hardware) mod rx_data_generator;
@@ -15,6 +18,8 @@ pub(in crate::hardware) mod ry_generator;
 pub(in crate::hardware) mod ry_ext_word_generator;
 pub(in crate::hardware) mod condition_displ_generator;
 pub(in crate::hardware) mod condition_ry_ext_word_generator;
+pub(in crate::hardware) mod condition_addr_mode_generator;
+pub(in crate::hardware) mod shifting_rotation_generator;
 
 fn register_type_by_char(c: char) -> RegisterType {
     match c {

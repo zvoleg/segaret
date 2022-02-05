@@ -194,8 +194,8 @@ pub(in crate::hardware)struct DisplacementMetadata {
 }
 
 impl DisplacementMetadata {
-    pub(in crate::hardware)fn new(displacement: u32) -> Self {
-        Self { displacement, displacement_size: Size::Byte }
+    pub(in crate::hardware)fn new(displacement: u32, displacement_size: Size) -> Self {
+        Self { displacement, displacement_size }
     }
 }
 

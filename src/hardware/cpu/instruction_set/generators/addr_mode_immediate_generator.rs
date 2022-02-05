@@ -21,179 +21,123 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
+            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
             name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
+            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
             name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 16, addr_mode_aliases: "D",
         },
-
         AddrModeInstPattern {
-            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 16, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011000000000, size: Size::Byte, clock: 24, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 16, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011001000000, size: Size::Word, clock: 24, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 24, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 26, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 28, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 30, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 32, addr_mode_aliases: "L",
+            name: "addi", mask: 0b0000011010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
         },
 
         AddrModeInstPattern {
             name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
+            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
             name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
+            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
             name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 16, addr_mode_aliases: "D",
         },
-
         AddrModeInstPattern {
-            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 16, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010000000000, size: Size::Byte, clock: 24, addr_mode_aliases: "L",
+            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
         },
 
         AddrModeInstPattern {
-            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 16, addr_mode_aliases: "a+",
+            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "Da+-dxWLPXi",
         },
         AddrModeInstPattern {
-            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010001000000, size: Size::Word, clock: 24, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 24, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 26, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 28, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 30, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subi", mask: 0b0000010010000000, size: Size::Long, clock: 32, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+i",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 16, addr_mode_aliases: "dWP",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 18, addr_mode_aliases: "xX",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110000000000, size: Size::Byte, clock: 20, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+i",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 16, addr_mode_aliases: "dWP",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 18, addr_mode_aliases: "xX",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
+            name: "cmpi", mask: 0b0000110001000000, size: Size::Word, clock: 8, addr_mode_aliases: "Da+-dxWLPXi",
         },
 
         AddrModeInstPattern {
             name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 14, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+i",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 22, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 24, addr_mode_aliases: "dWP",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 26, addr_mode_aliases: "xX",
-        },
-        AddrModeInstPattern {
-            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 28, addr_mode_aliases: "L",
+            name: "cmpi", mask: 0b0000110010000000, size: Size::Long, clock: 12, addr_mode_aliases: "a+-dxWLPXi",
         },
 
         // andi
         AddrModeInstPattern {
-            name: "andi", mask: 0b0000001000000000, size: Size::Byte, clock: 0, addr_mode_aliases: "D",
-        }
+            name: "andi", mask: 0b0000001000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "andi", mask: 0b0000001000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "andi", mask: 0b0000001001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "andi", mask: 0b0000001001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "andi", mask: 0b0000001010000000, size: Size::Long, clock: 14, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "andi", mask: 0b0000001010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
+        },
+
+        //eori
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101010000000, size: Size::Long, clock: 16, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "eori", mask: 0b0000101010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
+        },
+
+        //ori
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000001000000, size: Size::Word, clock: 8, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+-dxWL",
+        },
+
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000010000000, size: Size::Long, clock: 16, addr_mode_aliases: "D",
+        },
+        AddrModeInstPattern {
+            name: "ori", mask: 0b0000000010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
+        },
     ];
 
     for pattern in patterns {
@@ -205,15 +149,20 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         
         for addr_mode_type in addr_mode_type_list {
             let addr_modes = get_addr_mode_table(addr_mode_type);
+            let clock_period = match pattern.size {
+                Size::Byte | Size::Word => pattern.clock + addr_mode_type.get_clock_periods_short(),
+                Size::Long => pattern.clock + addr_mode_type.get_clock_periods_long(),
+            };
 
             addr_modes.iter()
                 .for_each(|mode| {
                     let opcode =  mask | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
+
                     opcode_table[opcode as usize] = Box::new(Instruction::new(
                         pattern.name,
                         opcode,
                         pattern.size,
-                        pattern.clock,
+                        clock_period,
                         cpu_function_by_name(pattern.name),
                         AddrModeImmediateMetadata::new(*mode),
                     ));
@@ -228,6 +177,8 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "subi" => Mc68k::SUBI,
         "cmpi" => Mc68k::CMPI,
         "andi" => Mc68k::ANDI,
+        "eori" => Mc68k::EORI,
+        "ori" => Mc68k::ORI,
         _ => panic!("addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

@@ -25,7 +25,19 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 
         RyPattern {
             name: "unlk", mask: 0b0100111001011000, size: Size::Byte, clock: 12, ry_type_alias: 'a',
-        }
+        },
+
+        RyPattern {
+            name: "ext", mask: 0b0100100010000000, size: Size::Word, clock: 4, ry_type_alias: 'd',
+        },
+
+        RyPattern {
+            name: "ext", mask: 0b0100100011000000, size: Size::Long, clock: 4, ry_type_alias: 'd',
+        },
+
+        RyPattern {
+            name: "swap", mask: 0b0100100001000000, size: Size::Word, clock: 4, ry_type_alias: 'd',
+        },
     ];
 
     for pattern in patterns {
@@ -51,6 +63,8 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
     match name {
         "move_to_usp" | "move_from_usp" => Mc68k::MOVE_USP,
         "unlk" => Mc68k::UNLK,
+        "ext" => Mc68k::EXT,
+        "swap" => Mc68k::SWAP,
         _ => panic!("ry_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

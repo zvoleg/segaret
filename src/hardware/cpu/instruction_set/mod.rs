@@ -285,8 +285,12 @@ impl InstructionProcess for Instruction<RotationRyMetadata> {
 impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
-        let data = cpu.read(location, Size::Word);
-        let data = data & 0xFF;
+        let mut data = cpu.read(location, Size::Word);
+
+        match self.size {
+            Size::Byte => data &= 0xFF,
+            _ => (),
+        }
 
         cpu.increment_pc();
 
@@ -307,6 +311,9 @@ pub(in crate::hardware)fn generate() -> Vec<Box<dyn InstructionProcess>> {
     generators::addr_mode_ext_word_generator::generate(&mut opcode_table);
     generators::addr_mode_data_generator::generate(&mut opcode_table);
     generators::addr_mode_immediate_generator::generate(&mut opcode_table);
+    generators::explicit_generator::generate(&mut opcode_table);
+    generators::explicit_immediate_generator::generate(&mut opcode_table);
+    generators::displacement_generator::generate(&mut opcode_table);
     generators::rx_addr_mode_generator::generate(&mut opcode_table);
     generators::rx_data_generator::generate(&mut opcode_table);
     generators::rx_ry_generator::generate(&mut opcode_table);
@@ -315,6 +322,8 @@ pub(in crate::hardware)fn generate() -> Vec<Box<dyn InstructionProcess>> {
     generators::ry_ext_word_generator::generate(&mut opcode_table);
     generators::condition_displ_generator::generate(&mut opcode_table);
     generators::condition_ry_ext_word_generator::generate(&mut opcode_table);
+    generators::condition_addr_mode_generator::generate(&mut opcode_table);
+    generators::shifting_rotation_generator::generate(&mut opcode_table);
 
     opcode_table
 }

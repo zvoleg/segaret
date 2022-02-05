@@ -18,69 +18,24 @@ struct AddrModeInstPattern {
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 4, addr_mode_aliases: "D",
+            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 4, addr_mode_aliases: "DA",
         },
         AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 4, addr_mode_aliases: "A",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 16, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 18, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 20, addr_mode_aliases: "L",
-        },
-
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 4, addr_mode_aliases: "D",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 4, addr_mode_aliases: "A",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 16, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 18, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
+            name: "addq", mask: 0b0101000000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "a+-dxWL",
         },
         
         AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 8, addr_mode_aliases: "D",
+            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 4, addr_mode_aliases: "DA",
         },
         AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 8, addr_mode_aliases: "A",
+            name: "addq", mask: 0b0101000001000000, size: Size::Word, clock: 8, addr_mode_aliases: "a+-dxWL",
+        },
+        
+        AddrModeInstPattern {
+            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 8, addr_mode_aliases: "DA",
         },
         AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 16, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 24, addr_mode_aliases: "L",
+            name: "addq", mask: 0b0101000010000000, size: Size::Long, clock: 12, addr_mode_aliases: "a+-dxWL",
         },
 
         //subq
@@ -88,66 +43,21 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 4, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 4, addr_mode_aliases: "A",
+            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 8, addr_mode_aliases: "Aa+-dxWL",
         },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 16, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 18, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000100000000, size: Size::Byte, clock: 20, addr_mode_aliases: "L",
-        },
-
+        
         AddrModeInstPattern {
             name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 4, addr_mode_aliases: "D",
         },
         AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 4, addr_mode_aliases: "A",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 12, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 14, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 16, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 18, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 20, addr_mode_aliases: "L",
+            name: "subq", mask: 0b0101000101000000, size: Size::Word, clock: 8, addr_mode_aliases: "Aa+-dxWL",
         },
         
         AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 8, addr_mode_aliases: "D",
+            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 8, addr_mode_aliases: "DA",
         },
         AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 8, addr_mode_aliases: "A",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 16, addr_mode_aliases: "a+",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 18, addr_mode_aliases: "-",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 20, addr_mode_aliases: "dW",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 22, addr_mode_aliases: "x",
-        },
-        AddrModeInstPattern {
-            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 24, addr_mode_aliases: "L",
+            name: "subq", mask: 0b0101000110000000, size: Size::Long, clock: 12, addr_mode_aliases: "a+-dxWL",
         },
     ];
 
@@ -158,6 +68,10 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         
         for addr_mode_type in addr_mode_type_list {
             let addr_modes = get_addr_mode_table(addr_mode_type);
+            let clock_period = match pattern.size {
+                Size::Byte | Size::Word => pattern.clock + addr_mode_type.get_clock_periods_short(),
+                Size::Long => pattern.clock + addr_mode_type.get_clock_periods_long(),
+            };
 
             (0..8).for_each(|data| {
                 addr_modes.iter()
@@ -173,7 +87,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
                             pattern.name,
                             opcode,
                             pattern.size,
-                            pattern.clock,
+                            clock_period,
                             cpu_function_by_name(pattern.name),
                             AddrModeDataMetadata::new(*mode, data as u32),
                         ));

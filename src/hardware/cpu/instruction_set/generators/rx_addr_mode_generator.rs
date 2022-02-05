@@ -22,476 +22,229 @@ struct RxAddrModeInstPattern {
 pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 4, rx_type_alias: 'a', addr_mode_aliases: "DA"
+            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 4, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi"
         },
         RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "a+i"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 10, rx_type_alias: 'a', addr_mode_aliases: "-"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "dWP"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "xX"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0011000001000000, size: Size::Word, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "L"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 4, rx_type_alias: 'a', addr_mode_aliases: "DA"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "a+i"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "-"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "dWP"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 18, rx_type_alias: 'a', addr_mode_aliases: "xX"
-        },
-        RxAddrModeInstPattern {
-            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 20, rx_type_alias: 'a', addr_mode_aliases: "L"
+            name: "movea", mask: 0b0010000001000000, size: Size::Long, clock: 4, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "movep", mask: 0b0000000100001000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "a"
+            name: "movep", mask: 0b0000000100001000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "d"
         },
         RxAddrModeInstPattern {
-            name: "movep", mask: 0b0000000100001000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "a"
+            name: "movep", mask: 0b0000000100001000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "d"
         },
         RxAddrModeInstPattern {
-            name: "movep", mask: 0b0000000110001000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "a"
+            name: "movep", mask: 0b0000000110001000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "d"
         },
         RxAddrModeInstPattern {
-            name: "movep", mask: 0b0000000111001000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "a"
+            name: "movep", mask: 0b0000000111001000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "d"
         },
 
         RxAddrModeInstPattern {
-            name: "lea", mask: 0b0100000111000000, size: Size::Long, clock: 4, rx_type_alias: 'a', addr_mode_aliases: "a"
+            name: "lea", mask: 0b0100000111000000, size: Size::Long, clock: 0, rx_type_alias: 'a', addr_mode_aliases: "adWLP"
         },
         RxAddrModeInstPattern {
-            name: "lea", mask: 0b0100000111000000, size: Size::Long, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "dPW"
-        },
-        RxAddrModeInstPattern {
-            name: "lea", mask: 0b0100000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "xXL"
+            name: "lea", mask: 0b0100000111000000, size: Size::Long, clock: 2, rx_type_alias: 'a', addr_mode_aliases: "xX"
         },
 
         // add into data register
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi",
         },
         
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi",
         },
 
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "DA",
+            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "DAi",
         },
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPX",
         },
 
         // add into addr_mode
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000100000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000101000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
         RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 22, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "add", mask: 0b1101000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
         // adda
         RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 18, rx_type_alias: 'a', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 20, rx_type_alias: 'a', addr_mode_aliases: "L",
+            name: "adda", mask: 0b1101000011000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi",
         },
 
         RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "DA",
+            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DAi",
         },
         RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 10, rx_type_alias: 'a', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 18, rx_type_alias: 'a', addr_mode_aliases: "L",
+            name: "adda", mask: 0b1101000111000000, size: Size::Long, clock: 6, rx_type_alias: 'a', addr_mode_aliases: "a+-dxWLPX",
         },
 
         // sub from data register
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi",
         },
         
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi",
         },
 
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "DA",
+            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "DAi",
         },
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPX",
         },
 
         // sub from addr_mode
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000100000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000101000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
         RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "a+",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "dW",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 22, rx_type_alias: 'd', addr_mode_aliases: "x",
-        },
-        RxAddrModeInstPattern {
-            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 24, rx_type_alias: 'd', addr_mode_aliases: "L",
+            name: "sub", mask: 0b1001000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL",
         },
 
          // suba
          RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DA",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 18, rx_type_alias: 'a', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 20, rx_type_alias: 'a', addr_mode_aliases: "L",
+            name: "suba", mask: 0b1001000011000000, size: Size::Word, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi",
         },
 
         RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "DA",
+            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 8, rx_type_alias: 'a', addr_mode_aliases: "DAi",
         },
         RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 10, rx_type_alias: 'a', addr_mode_aliases: "a+i",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 12, rx_type_alias: 'a', addr_mode_aliases: "-",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 14, rx_type_alias: 'a', addr_mode_aliases: "dPW",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 16, rx_type_alias: 'a', addr_mode_aliases: "xX",
-        },
-        RxAddrModeInstPattern {
-            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 18, rx_type_alias: 'a', addr_mode_aliases: "L",
+            name: "suba", mask: 0b1001000111000000, size: Size::Long, clock: 6, rx_type_alias: 'a', addr_mode_aliases: "a+-dxWLPX",
         },
 
         // cmp
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "D"
+            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i"
+            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-"
+            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dWP"
+            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX"
+            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000000000000, size: Size::Byte, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L"
+            name: "muls", mask: 0b1100000111000000, size: Size::Word, clock: 70, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "DA"
+            name: "mulu", mask: 0b1100000011000000, size: Size::Word, clock: 70, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+i"
+            name: "divs", mask: 0b1000000111000000, size: Size::Word, clock: 158, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "-"
+            name: "divu", mask: 0b1000000011000000, size: Size::Word, clock: 140, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
+        },
+
+        // and to register
+        RxAddrModeInstPattern {
+            name: "and", mask: 0b1100000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "dWP"
+            name: "and", mask: 0b1100000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "xX"
+            name: "and", mask: 0b1100000010000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "Di"
+        },
+        RxAddrModeInstPattern {
+            name: "and", mask: 0b1100000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
+        },
+
+        //and to memory
+        RxAddrModeInstPattern {
+            name: "and", mask: 0b1100000100000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000001000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "L"
+            name: "and", mask: 0b1100000101000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DA"
+            name: "and", mask: 0b1100000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
+        },
+
+        //eor
+        RxAddrModeInstPattern {
+            name: "eor", mask: 0b1011000100000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "eor", mask: 0b1011000100000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "a+i"
+            name: "eor", mask: 0b1011000101000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "eor", mask: 0b1011000101000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "-"
+            name: "eor", mask: 0b1011000110000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "eor", mask: 0b1011000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWL"
+        },
+
+        // or to register
+        RxAddrModeInstPattern {
+            name: "or", mask: 0b1000000000000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "dWP"
+            name: "or", mask: 0b1000000001000000, size: Size::Word, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "Da+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "xX"
+            name: "or", mask: 0b1000000010000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "Di"
+        },
+        RxAddrModeInstPattern {
+            name: "or", mask: 0b1000000010000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPX"
+        },
+
+        //or to memory
+        RxAddrModeInstPattern {
+            name: "or", mask: 0b1000000100000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmp", mask: 0b1011000010000000, size: Size::Long, clock: 22, rx_type_alias: 'd', addr_mode_aliases: "L"
+            name: "or", mask: 0b1000000101000000, size: Size::Word, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
 
         RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DA"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "a+i"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "-"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "dWP"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "xX"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "L"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DA"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 14, rx_type_alias: 'd', addr_mode_aliases: "a+i"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 16, rx_type_alias: 'd', addr_mode_aliases: "-"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 18, rx_type_alias: 'd', addr_mode_aliases: "dWP"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 20, rx_type_alias: 'd', addr_mode_aliases: "xX"
-        },
-
-        RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 22, rx_type_alias: 'd', addr_mode_aliases: "L"
+            name: "or", mask: 0b1000000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
     ];
 
@@ -504,6 +257,15 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         for addr_mode_type in addr_mode_type_list {
             let addr_mode_list = get_addr_mode_table(addr_mode_type);
 
+            let clock_period = if pattern.name != "movep" {
+                match pattern.size {
+                    Size::Byte | Size::Word => pattern.clock + addr_mode_type.get_clock_periods_short(),
+                    Size::Long => pattern.clock + addr_mode_type.get_clock_periods_long(),
+                }
+            } else {
+                pattern.clock
+            };
+
             (0..8).for_each(|i| {
                 addr_mode_list.iter()
                     .for_each(|mode| {
@@ -512,7 +274,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
                             pattern.name,
                             opcode,
                             pattern.size,
-                            pattern.clock,
+                            clock_period,
                             cpu_function_by_name(pattern.name),
                             RxAddrModeMetadata::new(Register::new(rx_type, i as usize), *mode),
                         ));
@@ -540,6 +302,13 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "suba" => Mc68k::SUBA,
         "cmp" => Mc68k::CMP,
         "cmpa" => Mc68k::CMPA,
+        "muls" => Mc68k::MULS,
+        "mulu" => Mc68k::MULU,
+        "divs" => Mc68k::DIVS,
+        "divu" => Mc68k::DIVU,
+        "and" => Mc68k::AND,
+        "eor" => Mc68k::EOR,
+        "or" => Mc68k::OR,
         _ => panic!("rx_addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

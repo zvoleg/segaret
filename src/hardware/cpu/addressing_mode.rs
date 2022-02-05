@@ -39,6 +39,40 @@ impl AddrModeType {
             AddrModeType::Immediate => 0b111,
         }
     }
+
+    pub(in crate::hardware) fn get_clock_periods_short(&self) -> u32 {
+        match self {
+            AddrModeType::Data => 0,
+            AddrModeType::Addr => 0,
+            AddrModeType::AddrInd => 4,
+            AddrModeType::AddrIndPostInc => 4,
+            AddrModeType::AddrIndPreDec => 6,
+            AddrModeType::AddrIndDips => 8,
+            AddrModeType::AddrIndIdx => 10,
+            AddrModeType::PcDisp => 8,
+            AddrModeType::PcIdx => 10,
+            AddrModeType::AbsShort => 8,
+            AddrModeType::AbsLong => 12,
+            AddrModeType::Immediate => 4,
+        }
+    }
+
+    pub(in crate::hardware) fn get_clock_periods_long(&self) -> u32 {
+        match self {
+            AddrModeType::Data => 0,
+            AddrModeType::Addr => 0,
+            AddrModeType::AddrInd => 8,
+            AddrModeType::AddrIndPostInc => 8,
+            AddrModeType::AddrIndPreDec => 10,
+            AddrModeType::AddrIndDips => 12,
+            AddrModeType::AddrIndIdx => 14,
+            AddrModeType::PcDisp => 12,
+            AddrModeType::PcIdx => 14,
+            AddrModeType::AbsShort => 12,
+            AddrModeType::AbsLong => 16,
+            AddrModeType::Immediate => 8,
+        }
+    }
 }
 
 #[derive(Copy, Clone)]

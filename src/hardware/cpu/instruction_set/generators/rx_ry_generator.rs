@@ -26,6 +26,18 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         RxRyPattern {
             name: "exg", mask: 0b1100000110001000, size: Size::Long, clock: 6, rx_type_alias: 'd', ry_type_alias: 'a'
         },
+
+        RxRyPattern {
+            name: "cmpm", mask: 0b01011000100001000, size: Size::Byte, clock: 12, rx_type_alias: 'a', ry_type_alias: 'a',
+        },
+
+        RxRyPattern {
+            name: "cmpm", mask: 0b01011000101001000, size: Size::Word, clock: 12, rx_type_alias: 'a', ry_type_alias: 'a',
+        },
+
+        RxRyPattern {
+            name: "cmpm", mask: 0b01011000110001000, size: Size::Long, clock: 20, rx_type_alias: 'a', ry_type_alias: 'a',
+        },
     ];
 
     for pattern in patterns {
@@ -53,6 +65,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
     match name {
         "exg" => Mc68k::EXG,
+        "cmpm" => Mc68k::CMPM,
         _ => panic!("rx_ry_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }
