@@ -1,5 +1,6 @@
 extern crate lazy_static;
 
+use crate::hardware::Register;
 use crate::hardware::cpu::instruction_set;
 use crate::hardware::cpu::instruction_set::instruction_data_types::*;
 
@@ -188,17 +189,28 @@ impl Mc68k {
     }
 
     fn push(&mut self, data: u32, size: Size) {
-        self.set_stack_ptr(self.stack_ptr().wrapping_sub(4));
+        let size = match size {
+            Size::Byte => Size::Word,
+            _ => size,
+        };
+        let offset = size as u32;
+        self.set_stack_ptr(self.stack_ptr().wrapping_sub(offset));
 
         let location = Location::new(LocationType::Memory, self.stack_ptr() as usize);
         self.write(location, data, size);
     }
 
     fn pop(&mut self, size: Size) -> u32 {
+        let size = match size {
+            Size::Byte => Size::Word,
+            _ => size,
+        };
+        let offset = size as u32;
+
         let location = Location::new(LocationType::Memory, self.stack_ptr() as usize);
         let data = self.read(location, size);
 
-        self.set_stack_ptr(self.stack_ptr().wrapping_add(4));
+        self.set_stack_ptr(self.stack_ptr().wrapping_add(offset));
 
         data
     }
@@ -801,6 +813,26 @@ impl Mc68k {
         self.write(location, data, Size::Long);
     }
 
+    pub(crate) fn TAS(&mut self) {
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let negate = is_negate(self.ea_operand, Size::Byte);
+        let zero = is_zero(self.ea_operand);
+        let overflow = false;
+        let carry = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+
+        self.ea_operand |= 0x80;
+        self.write(self.ea_location, self.ea_operand, Size::Byte);
+    }
+
     pub(crate) fn TST(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
@@ -891,16 +923,57 @@ impl Mc68k {
         self.pc = self.pc.wrapping_add(offset);
     }
 
-    /*
-    BSR
-    JMP
-    JSR
-    NOP
-    RTD
-    RTR
-    RTS
-    TST
-    */
+    pub(crate) fn BSR(&mut self) {
+        let instruction = self.instruction::<Instruction<DisplacementMetadata>>();
+
+        self.push(self.pc as u32, Size::Long);
+
+        let offset = instruction.data.displacement;
+        self.pc = self.pc.wrapping_add(offset);
+    }
+
+    pub(crate) fn JMP(&mut self) {
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        self.pc = self.ea_location.address as u32;
+    }
+
+    pub(crate) fn JSR(&mut self) {
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        self.push(self.pc, Size::Long);
+        self.pc = self.ea_location.address as u32;
+    }
+
+    pub(crate) fn NOP(&mut self) {
+
+    }
+
+    pub(crate) fn RTR(&mut self) {
+        let ccr = self.pop(Size::Word);
+        self.sr = (self.sr & !0xFF) | ccr as u16;
+
+        self.pc = self.pop(Size::Long);
+    }
+    
+    pub(crate) fn RTS(&mut self) {
+        self.pc = self.pop(Size::Long);
+    }
+
+    pub(crate) fn RTE(&mut self) {
+        if self.mode == Mode::Supervisor {
+            self.sr = self.pop(Size::Word) as u16;
+            self.pc = self.pop(Size::Long);
+        } else {
+            // TODO call privilage exception
+        }
+    }
 
     pub(crate) fn ADD(&mut self) {
         let size = self.instruction.as_ref().size();
@@ -921,18 +994,18 @@ impl Mc68k {
         let direction_bit = (instruction.operation_word >> 8) & 0x1;
         let (carry, overflow) = if direction_bit == 1 { // Memory to register
             self.write(self.ea_location, result, size);
-            let sm = get_msb(data, size);
-            let dm = get_msb(self.ea_operand, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(data, size);
+            let dm = msb_is_set(self.ea_operand, size);
+            let rm = msb_is_set(result, size);
 
             let overflow = sm && dm && !rm || !sm && !dm && rm;
             let carry = sm && dm || !rm && dm || sm && !rm;
             (carry, overflow)
         } else { // Register to memory
             self.write(location, result, size);
-            let sm = get_msb(self.ea_operand, size);
-            let dm = get_msb(data, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(self.ea_operand, size);
+            let dm = msb_is_set(data, size);
+            let rm = msb_is_set(result, size);
     
             let overflow = sm && dm && !rm || !sm && !dm && rm;
             let carry = sm && dm || !rm && dm || sm && !rm;
@@ -979,9 +1052,9 @@ impl Mc68k {
 
         self.write(self.ea_location, result, size);
         
-        let sm = get_msb(data, size);
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = sm && dm && !rm || !sm && !dm && rm;
         let carry = sm && dm || !rm && dm || sm && !rm;
@@ -1014,9 +1087,9 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         if instruction.data.addr_mode.am_type != AddrModeType::Addr {
-            let sm = get_msb(data, size);
-            let dm = get_msb(self.ea_operand, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(data, size);
+            let dm = msb_is_set(self.ea_operand, size);
+            let rm = msb_is_set(result, size);
 
             let overflow = sm && dm && !rm || !sm && !dm && rm;
             let carry = sm && dm || !rm && dm || sm && !rm;
@@ -1058,9 +1131,9 @@ impl Mc68k {
             Size::Long => data_x.wrapping_add(x_bit).wrapping_add(data_y),
         };
 
-        let sm = get_msb(data_x, size);
-        let dm = get_msb(data_y, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data_x, size);
+        let dm = msb_is_set(data_y, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = sm && dm && !rm || !sm && !dm && rm;
         let carry = sm && dm || !rm && dm || sm && !rm;
@@ -1095,18 +1168,18 @@ impl Mc68k {
         let direction_bit = (instruction.operation_word >> 8) & 0x1;
         let (carry, overflow) = if direction_bit == 1 { // Memory to register
             self.write(self.ea_location, result, size);
-            let sm = get_msb(data, size);
-            let dm = get_msb(self.ea_operand, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(data, size);
+            let dm = msb_is_set(self.ea_operand, size);
+            let rm = msb_is_set(result, size);
 
             let overflow = !sm && dm && !rm || sm && !dm && rm;
             let carry = sm && !dm || rm && !dm || sm && rm;
             (carry, overflow)
         } else { // Register to memory
             self.write(location, result, size);
-            let sm = get_msb(self.ea_operand, size);
-            let dm = get_msb(data, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(self.ea_operand, size);
+            let dm = msb_is_set(data, size);
+            let rm = msb_is_set(result, size);
     
             let overflow = !sm && dm && !rm || sm && !dm && rm;
             let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1153,9 +1226,9 @@ impl Mc68k {
 
         self.write(self.ea_location, result, size);
         
-        let sm = get_msb(data, size);
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1188,9 +1261,9 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         if instruction.data.addr_mode.am_type != AddrModeType::Addr {
-            let sm = get_msb(data, size);
-            let dm = get_msb(self.ea_operand, size);
-            let rm = get_msb(result, size);
+            let sm = msb_is_set(data, size);
+            let dm = msb_is_set(self.ea_operand, size);
+            let rm = msb_is_set(result, size);
 
             let overflow = !sm && dm && !rm || sm && !dm && rm;
             let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1232,9 +1305,9 @@ impl Mc68k {
             Size::Long => data_x.wrapping_add(x_bit).wrapping_add(data_y),
         };
 
-        let sm = get_msb(data_x, size);
-        let dm = get_msb(data_y, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data_x, size);
+        let dm = msb_is_set(data_y, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1276,9 +1349,9 @@ impl Mc68k {
 
         let result = self.ea_operand.wrapping_sub(data);
 
-        let sm = get_msb(data, size);
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1306,9 +1379,9 @@ impl Mc68k {
 
         let result = self.ea_operand.wrapping_sub(data);
 
-        let sm = get_msb(data, size);
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1335,9 +1408,9 @@ impl Mc68k {
 
         let result = data_y.wrapping_sub(data_x);
 
-        let sm = get_msb(data_x, size);
-        let dm = get_msb(data_y, size);
-        let rm = get_msb(result, size);
+        let sm = msb_is_set(data_x, size);
+        let dm = msb_is_set(data_y, size);
+        let rm = msb_is_set(result, size);
 
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
@@ -1391,8 +1464,8 @@ impl Mc68k {
         let zero = is_zero(result);
         let carry = !zero; // в описании инструкции указано !zero, в таблице вычисления флагов dm || rm
 
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
         let overflow = dm & rm;
 
         self.set_status(Status::X, carry);
@@ -1421,8 +1494,8 @@ impl Mc68k {
         let negate = is_negate(result, size);
         let zero = is_zero(result);
 
-        let dm = get_msb(self.ea_operand, size);
-        let rm = get_msb(result, size);
+        let dm = msb_is_set(self.ea_operand, size);
+        let rm = msb_is_set(result, size);
         let overflow = dm & rm;
         let carry = dm | rm;
 
@@ -1764,6 +1837,271 @@ impl Mc68k {
         self.set_status(Status::C, carry);
     }
 
+    fn shifting_operation_data(&mut self) -> (u32, Location, u16) {
+        let mode = (self.instruction.operation_word() >> 5) & 1;
+        let (counter, data_register) = if mode == 0 { // immediate counter
+            let instruction = self.instruction::<Instruction<RotationRyMetadata>>();
+            (instruction.data.counter, instruction.data.reg_y)
+        } else { // data register counter
+            let instruction = self.instruction::<Instruction<RxRyMetadata>>();
+            let location = Location::register(instruction.data.reg_x);
+            let data = self.read(location, Size::Long);
+            (data % 64, instruction.data.reg_y)
+        };
+        let location = Location::register(data_register);
+        
+        let direction = (self.instruction.operation_word() >> 8) & 1;
+
+        (counter, location, direction)
+    }
+
+    fn shifting_operation_memory(&mut self) -> (u32, Location, u16) {
+        let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let location = self.ea_location;
+
+        let direction = (self.instruction.operation_word() >> 8) & 1;
+        (1, location, direction)
+    }
+
+    pub(crate) fn ASd_data(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_data();
+        if direction == 0 {
+            self.ASR(counter, location);
+        } else {
+            self.ASL(counter, location);
+        }
+    }
+
+    pub(crate) fn ASd_memory(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_memory();
+        if direction == 0 {
+            self.ASR(counter, location);
+        } else {
+            self.ASL(counter, location);
+        }
+    }
+
+    fn ASR(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+        
+        let msb = if msb_is_set(data, size) {
+            1
+        } else {
+            0
+        };
+        let msb_mask = msb << (8 * size as u32);
+
+        (0..counter).for_each(|_| {
+            let poped_bit = data & 1 == 1;
+
+            data >>= 1;
+            data |= msb_mask;
+
+            self.set_status(Status::X, poped_bit);
+            self.set_status(Status::C, poped_bit);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    fn ASL(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+
+        let mut msb_changed = false;
+        (0..counter).for_each(|_| {
+            let poped_bit = msb_is_set(data, size);
+            data <<= 1;
+            let msb_after = msb_is_set(data, size);
+
+            if !msb_changed && poped_bit != msb_after {
+                msb_changed = true;
+            }
+
+            self.set_status(Status::X, poped_bit);
+            self.set_status(Status::C, poped_bit);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = msb_changed;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    pub(crate) fn LSd_data(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_data();
+        if direction == 0 {
+            self.ASR(counter, location);
+        } else {
+            self.ASL(counter, location);
+        }
+    }
+
+    pub(crate) fn LSd_memory(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_memory();
+        if direction == 0 {
+            self.LSR(counter, location);
+        } else {
+            self.LSL(counter, location);
+        }
+    }
+
+    fn LSR(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+        
+        (0..counter).for_each(|_| {
+            let poped_bit = data & 1 == 1;
+            data >>= 1;
+
+            self.set_status(Status::X, poped_bit);
+            self.set_status(Status::C, poped_bit);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    fn LSL(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+
+        (0..counter).for_each(|_| {
+            let poped_bit = msb_is_set(data, size);
+            data <<= 1;
+
+            self.set_status(Status::X, poped_bit);
+            self.set_status(Status::C, poped_bit);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    pub(crate) fn ROd_data(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_data();
+        if direction == 0 {
+            self.ROR(counter, location);
+        } else {
+            self.ROL(counter, location);
+        }
+    }
+
+    pub(crate) fn ROd_memory(&mut self) {
+        let (counter, location, direction) = self.shifting_operation_memory();
+        if direction == 0 {
+            self.ROR(counter, location);
+        } else {
+            self.ROL(counter, location);
+        }
+    }
+
+    fn ROR(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+
+        (0..counter).for_each(|_| {
+            let lsb = data & 1;
+            let msb_mask = lsb << (8 * size as u32);
+
+            data >>= 1;
+            data |= msb_mask;
+
+            self.set_status(Status::C, lsb == 1);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    fn ROL(&mut self, counter: u32, location: Location) {
+        let size = self.instruction.size();
+        let mut data = self.read(location, size);
+
+        (0..counter).for_each(|_| {
+            let msb = get_msb(data, size);
+
+            data <<= 1;
+            data |= msb;
+
+            self.set_status(Status::C, msb == 1);
+        });
+
+        self.write(location, data, size);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+    }
+
+    pub(crate) fn SWAP(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RyMetadata>>();
+
+        let location = Location::register(instruction.data.reg_y);
+        let mut data = self.read(location, size);
+
+        let msw = (data & 0xFFFF0000) >> 16;
+        let lsw = (data & 0x0000FFFF) >> 16;
+
+        data = lsw | msw;
+
+        self.write(location, data, Size::Long);
+
+        let negate = is_negate(data, size);
+        let zero = is_zero(data);
+        let overflow = false;
+        let carry = false;
+
+        self.set_status(Status::N, negate);
+        self.set_status(Status::Z, zero);
+        self.set_status(Status::V, overflow);
+        self.set_status(Status::C, carry);
+    }
+
     pub(crate) fn ILLEAGL(&mut self) {
         self.prepare_exception();
         self.pc = self.vector_table.illegal_instruction();
@@ -1782,7 +2120,7 @@ fn is_zero(data: u32) -> bool {
     data == 0
 }
 
-fn get_msb(data: u32, size: Size) -> bool {
+fn msb_is_set(data: u32, size: Size) -> bool {
     match size {
         Size::Byte => data & 0x80 != 0,
         Size::Word => data & 0x8000 != 0,
@@ -1790,3 +2128,10 @@ fn get_msb(data: u32, size: Size) -> bool {
     }
 }
 
+fn get_msb(data: u32, size: Size) -> u32 {
+    if msb_is_set(data, size) {
+        1
+    } else {
+        0
+    }
+}

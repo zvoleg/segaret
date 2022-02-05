@@ -35,6 +35,7 @@ impl Clone for Box<dyn InstructionProcess> {
 pub(in crate::hardware) trait InstructionData {
     fn handler(&self) -> fn(&mut Mc68k);
     fn size(&self) -> Size;
+    fn operation_word(&self) -> u16;
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -45,6 +46,10 @@ impl<T> InstructionData for Instruction<T> where T: 'static {
 
     fn size(&self) -> Size {
         self.size
+    }
+
+    fn operation_word(&self) -> u16 {
+        self.operation_word
     }
 
     fn as_any(&self) -> &dyn Any {
