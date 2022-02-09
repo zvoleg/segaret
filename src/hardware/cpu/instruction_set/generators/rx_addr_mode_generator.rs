@@ -246,6 +246,35 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         RxAddrModeInstPattern {
             name: "or", mask: 0b1000000110000000, size: Size::Long, clock: 12, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWL"
         },
+
+        // bit manipulation instructions
+        RxAddrModeInstPattern {
+            name: "bchg", mask: 0b0000000101000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "bchg", mask: 0b0000000101000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPXi"
+        },
+        
+        RxAddrModeInstPattern {
+            name: "bclr", mask: 0b0000000110000000, size: Size::Long, clock: 10, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "bclr", mask: 0b0000000110000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPXi"
+        },
+
+        RxAddrModeInstPattern {
+            name: "bset", mask: 0b0000000111000000, size: Size::Long, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "bset", mask: 0b0000000111000000, size: Size::Byte, clock: 8, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPXi"
+        },
+
+        RxAddrModeInstPattern {
+            name: "btst", mask: 0b0000000100000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "D"
+        },
+        RxAddrModeInstPattern {
+            name: "btst", mask: 0b0000000100000000, size: Size::Byte, clock: 4, rx_type_alias: 'd', addr_mode_aliases: "a+-dxWLPXi"
+        },
     ];
 
     for pattern in patterns {
@@ -309,6 +338,10 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "and" => Mc68k::AND,
         "eor" => Mc68k::EOR,
         "or" => Mc68k::OR,
+        "bchg" => Mc68k::BCHG_reg,
+        "bclr" => Mc68k::BCLR_reg,
+        "bset" => Mc68k::BSET_reg,
+        "btst" => Mc68k::BTST_reg,
         _ => panic!("rx_addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

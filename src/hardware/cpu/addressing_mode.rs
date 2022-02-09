@@ -124,7 +124,7 @@ impl AddrMode {
         }
     }
 
-    pub(in crate::hardware) fn fetch_ext_word(&mut self, cpu: &mut Mc68k) {
+    pub(in crate::hardware) fn fetch_ext_word(&mut self, cpu: &mut Mc68k, size: Size) {
         match self.am_type {
             AddrModeType::AddrIndDips => {
                 let location = Location::new(LocationType::Memory, cpu.pc as usize);
@@ -166,6 +166,15 @@ impl AddrMode {
                 cpu.increment_pc();
 
                 self.ext_word = Some(data); 
+            },
+            AddrModeType::Immediate => {
+                let location = Location::memory(cpu.pc as usize);
+                self.ext_word = Some(cpu.read(location, size));
+                match size {
+                    Size::Byte => self.ext_word = Some((cpu.instruction.operation_word() & 0xFF) as u32),
+                    Size::Word => cpu.increment_pc(),
+                    Size::Long => (0..2).for_each(|_| cpu.increment_pc()),
+                };
             }
             _ => (),
         }
@@ -196,7 +205,7 @@ impl fmt::Display for AddrMode {
             },
             AddrModeType::AbsShort => format!("{:04X}", self.ext_word.unwrap()),
             AddrModeType::AbsLong => format!("{:08X}", self.ext_word.unwrap()),
-            AddrModeType::Immediate => format!(""),
+            AddrModeType::Immediate => format!("#{:08}", self.ext_word.unwrap()),
         };
         write!(f, "{}", disassembly)
     }

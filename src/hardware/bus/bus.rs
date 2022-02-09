@@ -22,6 +22,7 @@ impl Bus {
         if address <= 0x3FFFFF {
             self.cartridge.read(address, size)
         } else {
+            let address = address & 0xFFFFFF;
             match size {
                 Size::Byte => self.ram[address] as u32,
                 Size::Word => unsafe {

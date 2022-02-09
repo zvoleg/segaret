@@ -138,6 +138,36 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         AddrModeInstPattern {
             name: "ori", mask: 0b0000000010000000, size: Size::Long, clock: 20, addr_mode_aliases: "a+-dxWL",
         },
+
+        
+        // bit manipulation instructions
+        AddrModeInstPattern {
+            name: "bchg", mask: 0b0000100001000000, size: Size::Long, clock: 12, addr_mode_aliases: "D"
+        },
+        AddrModeInstPattern {
+            name: "bchg", mask: 0b0000100001000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWLPX"
+        },
+        
+        AddrModeInstPattern {
+            name: "bclr", mask: 0b0000100010000000, size: Size::Long, clock: 14, addr_mode_aliases: "D"
+        },
+        AddrModeInstPattern {
+            name: "bclr", mask: 0b0000100010000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWLPX"
+        },
+
+        AddrModeInstPattern {
+            name: "bset", mask: 0b0000100011000000, size: Size::Long, clock: 12, addr_mode_aliases: "D"
+        },
+        AddrModeInstPattern {
+            name: "bset", mask: 0b0000100011000000, size: Size::Byte, clock: 12, addr_mode_aliases: "a+-dxWLPX"
+        },
+
+        AddrModeInstPattern {
+            name: "btst", mask: 0b0000100000000000, size: Size::Long, clock: 10, addr_mode_aliases: "D"
+        },
+        AddrModeInstPattern {
+            name: "btst", mask: 0b0000100000000000, size: Size::Byte, clock: 8, addr_mode_aliases: "a+-dxWLPX"
+        },
     ];
 
     for pattern in patterns {
@@ -179,6 +209,10 @@ fn cpu_function_by_name(name: &str) -> fn(&mut Mc68k) {
         "andi" => Mc68k::ANDI,
         "eori" => Mc68k::EORI,
         "ori" => Mc68k::ORI,
+        "bchg" => Mc68k::BCHG_ext_word,
+        "bclr" => Mc68k::BCLR_ext_word,
+        "bset" => Mc68k::BSET_ext_word,
+        "btst" => Mc68k::BTST_ext_word,
         _ => panic!("addr_mode_generator::cpu_function_by_name: unexpected function name ({})", name)
     }
 }

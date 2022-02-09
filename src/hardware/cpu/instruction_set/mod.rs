@@ -82,7 +82,7 @@ impl<T> Instruction<T> {
 
 impl InstructionProcess for Instruction::<AddrModeMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
-        self.data.addr_mode.fetch_ext_word(cpu);
+        self.data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -92,8 +92,8 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
 
 impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
-        self.data.src_addr_mode.fetch_ext_word(cpu);
-        self.data.dst_addr_mode.fetch_ext_word(cpu);
+        self.data.src_addr_mode.fetch_ext_word(cpu, self.size);
+        self.data.dst_addr_mode.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -130,7 +130,7 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
             _ => (),
         };
 
-        self.data.addr_mode.fetch_ext_word(cpu);
+        self.data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -160,7 +160,7 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
 
         cpu.increment_pc();
 
-        self.data.addr_mode.fetch_ext_word(cpu);
+        self.data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -170,7 +170,7 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
 
 impl InstructionProcess for Instruction<RxAddrModeMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
-        self.data.addr_mode.fetch_ext_word(cpu);
+        self.data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -268,8 +268,8 @@ impl InstructionProcess for Instruction<RxRyMetadata> {
 
 impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
-        self.data.addr_mode_x.fetch_ext_word(cpu);
-        self.data.addr_mode_y.fetch_ext_word(cpu);
+        self.data.addr_mode_x.fetch_ext_word(cpu, self.size);
+        self.data.addr_mode_y.fetch_ext_word(cpu, self.size);
     }
 
     fn disassembly(&self) -> String {
@@ -278,8 +278,13 @@ impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
 }
 
 impl InstructionProcess for Instruction<RotationRyMetadata> {
-    fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
-    fn disassembly(&self) -> std::string::String { todo!() }
+    fn fetch_data(&mut self, _: &mut Mc68k) {
+
+    }
+
+    fn disassembly(&self) -> String {
+        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.counter, self.data.reg_y))    
+    }
 }
 
 impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {

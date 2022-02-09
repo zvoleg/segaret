@@ -235,6 +235,9 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: "dPW", dst_addr_mode_aliases: "a+-",
         },
         MoveInstructionPattern {
+            name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 16, src_addr_mode_aliases: "L", dst_addr_mode_aliases: "D",
+        },
+        MoveInstructionPattern {
             name: "move", size: Size::Byte, mask: 0b0001000000000000, clock: 18, src_addr_mode_aliases: "a+i", dst_addr_mode_aliases: "X",
         },
         MoveInstructionPattern {
@@ -301,7 +304,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 
                 src_addr_modes.iter().for_each(|src_mode| {
                     dst_addr_modes.iter().for_each(|dst_mode| {
-                        let opcode = mask | (src_mode.reg_idx as u16) << 9 | (src_mode.mode_bits as u16) << 6 | (dst_mode.mode_bits as u16) << 3 | dst_mode.reg_idx as u16;
+                        let opcode = mask | (dst_mode.reg_idx as u16) << 9 | (dst_mode.mode_bits as u16) << 6 | (src_mode.mode_bits as u16) << 3 | src_mode.reg_idx as u16;
 
                         opcode_table[opcode as usize] = Box::new(Instruction::new(
                             name,

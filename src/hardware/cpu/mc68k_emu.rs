@@ -1,6 +1,7 @@
 extern crate lazy_static;
 
-use crate::hardware::Register;
+use std::fmt;
+
 use crate::hardware::cpu::instruction_set;
 use crate::hardware::cpu::instruction_set::instruction_data_types::*;
 
@@ -36,20 +37,41 @@ pub struct Mc68k {
     vector_table: VectorTable,
 
     reg: [u32; 17], // idx 15 and 16 are ssp and usp
-    pub pc: u32,
+    pub(in crate::hardware)  pc: u32,
 
     sr: u16,
     mode: Mode, // user/supervisor
 
     clock_counter: i32,
 
-    instruction: Box<dyn InstructionProcess>,
+    pub(in crate::hardware) instruction: Box<dyn InstructionProcess>,
     current_addr_mode: AddrMode,
     ea_location: Location,
     ea_operand: u32,
 
     // memory stub
     bus: Bus,
+}
+
+impl fmt::Display for Mc68k {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let mut cpu_condition_buffer = vec![String::from("data register:\n")];
+        for r in 0..4 {
+            cpu_condition_buffer.push(format!("D{}: {:08X}", r, self.reg[r]));
+            cpu_condition_buffer.push(String::from("\t"));
+            cpu_condition_buffer.push(format!("D{}: {:08X}", r + 4, self.reg[r + 4]));
+            cpu_condition_buffer.push(String::from("\n"));
+        }
+        cpu_condition_buffer.push(String::from("address register:\n"));
+        for r in 0..4 {
+            let r = r + 8;
+            cpu_condition_buffer.push(format!("A{}: {:08X}", r - 8, self.reg[r]));
+            cpu_condition_buffer.push(String::from("\t"));
+            cpu_condition_buffer.push(format!("A{}: {:08X}", r + 4 - 8, self.reg[r + 4]));
+            cpu_condition_buffer.push(String::from("\n"));
+        }
+        write!(f, "{}", cpu_condition_buffer.join(""))
+    }
 }
 
 #[allow(non_snake_case)]
@@ -99,13 +121,14 @@ impl Mc68k {
         self.increment_pc();
 
         let mut instruction = self.opcode_table[operation_word as usize].clone();
-        instruction.as_mut().fetch_data(self);
+        instruction.fetch_data(self);
 
         self.instruction = instruction;
 
         println!("{:08X}: {:04X}\t{}", instruction_addr, operation_word, self.instruction.as_ref().disassembly());
-
+        
         (self.instruction.as_ref().handler())(self);
+        println!("{}", self);
     }
 
     fn read_data_reg(&self, reg: usize, size: Size) -> u32 {
@@ -423,7 +446,8 @@ impl Mc68k {
             Size::Long => self.instruction.as_ref().size() as u32,
         };
 
-        let address = (self.read_addr_reg(reg_idx, Size::Long) - decrement) as usize;
+        let register_data = self.read_addr_reg(reg_idx, Size::Long);
+        let address = register_data.wrapping_sub(decrement) as usize;
         self.write_addr_reg(reg_idx, address as u32, Size::Long);
 
         // fetch data
@@ -515,8 +539,7 @@ impl Mc68k {
     }
 
     fn immediate(&mut self) {
-        // contains one or two extension words
-        // don't understend how to figure out its amount
+        self.ea_operand = self.current_addr_mode.ext_word.unwrap();
     }
 
     /* INSTRUCTION SET */
@@ -569,19 +592,19 @@ impl Mc68k {
         let register_mask = instruction.data.ext_word;
         let mut affected_registers = Vec::new();
         if self.current_addr_mode.am_type == AddrModeType::AddrIndPreDec {
-            // A7..A0D7..D0
-            for i in 0..16 {
-                let bit = (register_mask >> i) & 1;
-                if bit == 1 {
-                    affected_registers.push(i);
-                }
-            }
-        } else {
             // D0..D7A0..A7
             for i in 0..16 {
                 let bit = (register_mask >> i) & 1;
                 if bit == 1 {
                     affected_registers.push(15 - i);
+                }
+            }
+        } else {
+            // A7..A0D7..D0
+            for i in 0..16 {
+                let bit = (register_mask >> i) & 1;
+                if bit == 1 {
+                    affected_registers.push(i);
                 }
             }
         }
@@ -596,7 +619,7 @@ impl Mc68k {
         self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
-        let direction_bit = (instruction.operation_word >> 9) & 0x1;
+        let direction_bit = (instruction.operation_word >> 10) & 0x1;
         let current_addr_mode_type = instruction.data.addr_mode.am_type;
 
         let operation_size_usize = size as usize;
@@ -2133,6 +2156,180 @@ impl Mc68k {
         self.set_status(Status::Z, zero);
         self.set_status(Status::V, overflow);
         self.set_status(Status::C, carry);
+    }
+
+    pub(crate) fn BCHG_reg(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let bit_number_location = Location::register(instruction.data.reg_x);
+        let mut bit_number = self.read(bit_number_location, Size::Long);
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand ^ (1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BCHG_ext_word(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        let mut bit_number = instruction.data.immediate_data;
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand ^ (1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BCLR_reg(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let bit_number_location = Location::register(instruction.data.reg_x);
+        let mut bit_number = self.read(bit_number_location, Size::Long);
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand & !(1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BCLR_ext_word(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        let mut bit_number = instruction.data.immediate_data;
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand & !(1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BSET_reg(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let bit_number_location = Location::register(instruction.data.reg_x);
+        let mut bit_number = self.read(bit_number_location, Size::Long);
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand | (1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BSET_ext_word(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        let mut bit_number = instruction.data.immediate_data;
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        let result = self.ea_operand | (1 << bit_number);
+        self.write(self.ea_location, result, size);
+
+        self.set_status(Status::Z, bit == 0);
+    }
+    
+    pub(crate) fn BTST_reg(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
+
+        let bit_number_location = Location::register(instruction.data.reg_x);
+        let mut bit_number = self.read(bit_number_location, Size::Long);
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        self.set_status(Status::Z, bit == 0);
+    }
+
+    pub(crate) fn BTST_ext_word(&mut self) {
+        let size = self.instruction.size();
+        let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
+
+        let mut bit_number = instruction.data.immediate_data;
+        match size {
+            Size::Byte => bit_number %= 8,
+            Size::Long => bit_number %= 32,
+            Size::Word => panic!("bit change: wrong instruction size"),
+        };
+
+        self.current_addr_mode = instruction.data.addr_mode;
+        self.call_addressing_mode();
+
+        let bit = (self.ea_operand >> bit_number) & 1;
+
+        self.set_status(Status::Z, bit == 0);
     }
 
     pub(crate) fn ILLEAGL(&mut self) {
