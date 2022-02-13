@@ -1,3 +1,4 @@
+use crate::hardware::sign_extend;
 use std::any::Any;
 
 use crate::Mc68k;
@@ -135,8 +136,8 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
 
     fn disassembly(&self) -> String {
         match self.size {
-            Size::Byte | Size::Word => String::from(format!("{}.{} {:04X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
-            Size::Long => String::from(format!("{}.{} {:08X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
+            Size::Byte | Size::Word => String::from(format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
+            Size::Long => String::from(format!("{}.{} 0x{:08X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
         }
     }
 }
@@ -164,7 +165,7 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {:04X} {}", self.name, self.size, self.data.ext_word, self.data.addr_mode))
+        String::from(format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.ext_word, self.data.addr_mode))
     }
 }
 
@@ -199,7 +200,7 @@ impl InstructionProcess for Instruction<RyExtWordMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} {:04X}", self.name, self.size, self.data.reg_y, self.data.ext_word))
+        String::from(format!("{}.{} {} 0x{:04X}", self.name, self.size, self.data.reg_y, self.data.ext_word))
     }
 }
 
@@ -228,7 +229,7 @@ impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
     }
     
     fn disassembly(&self) -> std::string::String {
-        String::from(format!("{} {}, {} {:04X}", self.name, self.data.condition, self.data.reg_y, self.data.ext_word))
+        String::from(format!("{} {}, {} 0x{:04X}", self.name, self.data.condition, self.data.reg_y, self.data.ext_word))
     }
 }
 
@@ -240,17 +241,17 @@ impl InstructionProcess for Instruction<DisplacementMetadata> {
 impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
     fn fetch_data(&mut self, cpu: &mut Mc68k) {
         let mut displacement = self.operation_word as u8 as u32;
+        displacement = sign_extend(displacement, Size::Byte);
         if displacement == 0 {
             let location = Location::memory(cpu.pc as usize);
             displacement = cpu.read(location, Size::Word);
-            
-            cpu.increment_pc();
+            displacement = sign_extend(displacement, Size::Word);
         }
         self.data.displacement = displacement;
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{} {} {:04X}", self.name, self.data.condition, self.data.displacement))
+        String::from(format!("{} {} 0x{:04X}", self.name, self.data.condition, self.data.displacement))
     }
 }
 
@@ -303,7 +304,7 @@ impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{} {:02X}", self.name, self.data.immediate_data))
+        String::from(format!("{} 0x{:02X}", self.name, self.data.immediate_data))
     }
 }
 

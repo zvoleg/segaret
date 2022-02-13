@@ -1,3 +1,4 @@
+use crate::hardware::sign_extend;
 use crate::hardware::{Location, LocationType};
 use crate::Mc68k;
 use std::fmt;
@@ -95,7 +96,8 @@ impl BriefExtWord {
         } else {
             Size::Word
         };
-        let displacement = ext_word & 0xFF;
+        let mut displacement = ext_word & 0xFF;
+        displacement = sign_extend(displacement, Size::Byte);
         Self {
             register: Register::new(reg_type, reg_idx as usize),
             size: size,
@@ -110,7 +112,8 @@ pub(in crate::hardware) struct AddrMode {
     pub(in crate::hardware) mode_bits: usize, 
     pub(in crate::hardware) reg_idx: usize,
     pub(in crate::hardware) ext_word: Option<u32>,
-    pub(in crate::hardware) brief_ext_word: Option<BriefExtWord>
+    pub(in crate::hardware) brief_ext_word: Option<BriefExtWord>,
+    pub(in crate::hardware) ext_word_addr: u32,
 }
 
 impl AddrMode {
@@ -121,18 +124,22 @@ impl AddrMode {
             reg_idx: reg_idx,
             ext_word: None,
             brief_ext_word: None,
+            ext_word_addr: 0,
         }
     }
 
     pub(in crate::hardware) fn fetch_ext_word(&mut self, cpu: &mut Mc68k, size: Size) {
         match self.am_type {
             AddrModeType::AddrIndDips => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, cpu.pc as usize);
-                let data = cpu.read(location, Size::Word);
+                let mut data = cpu.read(location, Size::Word);
+                data = sign_extend(data, Size::Word);
                 cpu.increment_pc();
                 self.ext_word = Some(data); 
             },
             AddrModeType::AddrIndIdx => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, cpu.pc as usize);
                 let data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
@@ -140,26 +147,30 @@ impl AddrMode {
                 self.brief_ext_word = Some(brief_ext_word);
             },
             AddrModeType::PcDisp => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, (cpu.pc) as usize);
-                let data = cpu.read(location, Size::Word);
-
+                let mut data = cpu.read(location, Size::Word);
+                cpu.increment_pc();
+                data = sign_extend(data, Size::Word);
                 self.ext_word = Some(data);
             },
             AddrModeType::PcIdx => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, (cpu.pc) as usize);
                 let data = cpu.read(location, Size::Word);
-
+                cpu.increment_pc();
                 let brief_ext_word = BriefExtWord::new(data);
                 self.brief_ext_word = Some(brief_ext_word);
             }
             AddrModeType::AbsShort => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, cpu.pc as usize);
                 let data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
-
                 self.ext_word = Some(data); 
             },
             AddrModeType::AbsLong => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::new(LocationType::Memory, cpu.pc as usize);
                 let data = cpu.read(location, Size::Long);
                 cpu.increment_pc();
@@ -168,12 +179,22 @@ impl AddrMode {
                 self.ext_word = Some(data); 
             },
             AddrModeType::Immediate => {
+                self.ext_word_addr = cpu.pc;
                 let location = Location::memory(cpu.pc as usize);
-                self.ext_word = Some(cpu.read(location, size));
                 match size {
-                    Size::Byte => self.ext_word = Some((cpu.instruction.operation_word() & 0xFF) as u32),
-                    Size::Word => cpu.increment_pc(),
-                    Size::Long => (0..2).for_each(|_| cpu.increment_pc()),
+                    Size::Byte => {
+                        let data = cpu.read(location, Size::Word) & 0xFF;
+                        self.ext_word = Some(data);
+                        cpu.increment_pc();
+                    }
+                    Size::Word => {
+                        self.ext_word = Some(cpu.read(location, size));
+                        cpu.increment_pc();
+                    }
+                    Size::Long => {
+                        self.ext_word = Some(cpu.read(location, size));
+                        (0..2).for_each(|_| cpu.increment_pc());
+                    }
                 };
             }
             _ => (),
@@ -189,23 +210,23 @@ impl fmt::Display for AddrMode {
             AddrModeType::AddrInd => format!("(A{})", self.reg_idx),
             AddrModeType::AddrIndPostInc => format!("(A{})+", self.reg_idx),
             AddrModeType::AddrIndPreDec => format!("-(A{})", self.reg_idx),
-            AddrModeType::AddrIndDips => format!("({}, A{})", self.ext_word.unwrap(), self.reg_idx),
+            AddrModeType::AddrIndDips => format!("(0x{:04X}, A{})", self.ext_word.unwrap(), self.reg_idx),
             AddrModeType::AddrIndIdx => {
                 let displacement = self.brief_ext_word.unwrap().displacement;
                 let register = self.brief_ext_word.unwrap().register;
                 let size = self.brief_ext_word.unwrap().size;
-                format!("({}, A{}, {}, {})", displacement, self.reg_idx, register, size)
+                format!("(0x{:02X}, A{}, {}, {})", displacement, self.reg_idx, register, size)
             },
-            AddrModeType::PcDisp => format!("({},PC)", self.ext_word.unwrap()),
+            AddrModeType::PcDisp => format!("(0x{:04X},PC)", self.ext_word.unwrap()),
             AddrModeType::PcIdx => {
                 let displacement = self.brief_ext_word.unwrap().displacement;
                 let register = self.brief_ext_word.unwrap().register;
                 let size = self.brief_ext_word.unwrap().size;
-                format!("({}, PC, {}, {})", displacement, register, size)
+                format!("(0x{:02X}, PC, {}, {})", displacement, register, size)
             },
-            AddrModeType::AbsShort => format!("{:04X}", self.ext_word.unwrap()),
-            AddrModeType::AbsLong => format!("{:08X}", self.ext_word.unwrap()),
-            AddrModeType::Immediate => format!("#{:08}", self.ext_word.unwrap()),
+            AddrModeType::AbsShort => format!("0x{:04X}", self.ext_word.unwrap()),
+            AddrModeType::AbsLong => format!("0x{:08X}", self.ext_word.unwrap()),
+            AddrModeType::Immediate => format!("#0x{:X}", self.ext_word.unwrap()),
         };
         write!(f, "{}", disassembly)
     }

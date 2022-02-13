@@ -31,7 +31,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             name: "ori_to_ccr", mask: 0b0000000000111100, size: Size::Byte ,clock: 20,
         },
         ExplicitPattern {
-            name: "ori_to_sr", mask: 0b0000101001111100, size: Size::Word ,clock: 20,
+            name: "ori_to_sr", mask: 0b0000000001111100, size: Size::Word ,clock: 20,
         },
     ];
 

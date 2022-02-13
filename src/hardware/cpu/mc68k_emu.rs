@@ -13,6 +13,8 @@ use super::vector_table::VectorTable;
 use super::instruction_set::Instruction;
 use super::Condition;
 
+use crate::disassembler::Disassembler;
+
 use crate::hardware::bus::bus::Bus;
 use crate::hardware::{
     Size, Location, LocationType, sign_extend
@@ -50,34 +52,37 @@ pub struct Mc68k {
     ea_operand: u32,
 
     // memory stub
-    bus: Bus,
+    bus: *mut Bus,
+    disassembler: Disassembler,
 }
 
 impl fmt::Display for Mc68k {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let mut cpu_condition_buffer = vec![String::from("data register:\n")];
         for r in 0..4 {
-            cpu_condition_buffer.push(format!("D{}: {:08X}", r, self.reg[r]));
+            cpu_condition_buffer.push(format!("D{}: 0x{:08X}", r, self.reg[r]));
             cpu_condition_buffer.push(String::from("\t"));
-            cpu_condition_buffer.push(format!("D{}: {:08X}", r + 4, self.reg[r + 4]));
+            cpu_condition_buffer.push(format!("D{}: 0x{:08X}", r + 4, self.reg[r + 4]));
             cpu_condition_buffer.push(String::from("\n"));
         }
         cpu_condition_buffer.push(String::from("address register:\n"));
         for r in 0..4 {
             let r = r + 8;
-            cpu_condition_buffer.push(format!("A{}: {:08X}", r - 8, self.reg[r]));
+            cpu_condition_buffer.push(format!("A{}: 0x{:08X}", r - 8, self.reg[r]));
             cpu_condition_buffer.push(String::from("\t"));
-            cpu_condition_buffer.push(format!("A{}: {:08X}", r + 4 - 8, self.reg[r + 4]));
+            cpu_condition_buffer.push(format!("A{}: 0x{:08X}", r + 4 - 8, self.reg[r + 4]));
             cpu_condition_buffer.push(String::from("\n"));
         }
+        cpu_condition_buffer.push(String::from("TTSM0III___XNZVC\n"));
+        cpu_condition_buffer.push(format!("{:016b}\n", self.sr));
         write!(f, "{}", cpu_condition_buffer.join(""))
     }
 }
 
 #[allow(non_snake_case)]
 impl Mc68k {
-    pub fn init(bus: Bus) -> Self {
-        let ram_ptr = bus.get_rom_ptr();
+    pub fn init(bus: *mut Bus, disassembler: Disassembler) -> Self {
+        let ram_ptr = unsafe { (*bus).get_rom_ptr() };
         let vector_table = VectorTable::init(ram_ptr);
 
         let stack_ptr = vector_table.reset_stack_pointer();
@@ -112,6 +117,7 @@ impl Mc68k {
             ea_operand: 0,
 
             bus: bus,
+            disassembler: disassembler,
         }
     }
 
@@ -125,10 +131,21 @@ impl Mc68k {
 
         self.instruction = instruction;
 
-        println!("{:08X}: {:04X}\t{}", instruction_addr, operation_word, self.instruction.as_ref().disassembly());
+        
+        let disasm_str = format!("0x{:04X}\t{}", operation_word, self.instruction.as_ref().disassembly());
+        self.disassembler.push_instruction(instruction_addr, disasm_str.clone());
+        println!("0x{:08X}: {}", instruction_addr, disasm_str);
         
         (self.instruction.as_ref().handler())(self);
         println!("{}", self);
+    }
+
+    pub fn set_pc(&mut self, new_pc: u32) {
+        self.pc = new_pc;
+    }
+
+    pub fn save(&self) {
+        self.disassembler.save();
     }
 
     fn read_data_reg(&self, reg: usize, size: Size) -> u32 {
@@ -180,11 +197,15 @@ impl Mc68k {
     }
 
     fn read_memory(&self, address: usize, size: Size) -> u32 {
-        self.bus.read(address, size)
+        unsafe {
+            (*self.bus).read(address, size)
+        }
     }
 
     fn write_memory(&mut self, address: usize, data: u32, size: Size) {
-        self.bus.write(address, data, size);
+        unsafe {
+            (*self.bus).write(address, data, size);
+        }
     }
 
     pub fn read(&mut self, location: Location, size: Size) -> u32 {
@@ -377,8 +398,8 @@ impl Mc68k {
         let sr_copy = self.sr as u32;
         let pc_copy = self.pc;
 
+        self.push(pc_copy, Size::Long); 
         self.push(sr_copy, Size::Word);
-        self.push(pc_copy, Size::Word); 
     }
 
     fn instruction<T: 'static + Clone>(&self) -> T {
@@ -490,10 +511,8 @@ impl Mc68k {
     }
 
     fn pc_indirect_disp(&mut self) {
-        let address = self.pc;
+        let address = self.current_addr_mode.ext_word_addr; // address in pc should pouint at extension word after instruction
         let displacement = self.current_addr_mode.ext_word.unwrap();
-        
-        self.increment_pc();
 
         let ea_addr = address.wrapping_add(displacement) as usize;
 
@@ -502,11 +521,9 @@ impl Mc68k {
     }
 
     fn pc_indirect_idx(&mut self) {
-        let address = self.pc;
+        let address = self.current_addr_mode.ext_word_addr; // address in pc should pouint at extension word after instruction
         let brief_ext_word = self.current_addr_mode.brief_ext_word.unwrap();
         let idx_reg = brief_ext_word.register;
-
-        self.increment_pc();
 
         let idx_reg_data = match idx_reg.reg_type {
             RegisterType::Address => self.read_addr_reg(idx_reg.reg_idx, brief_ext_word.size),
@@ -884,7 +901,10 @@ impl Mc68k {
         } else {
             let clock_corection = match instruction.data.displacement_size {
                 Size::Byte => -2,
-                Size::Word => 2,
+                Size::Word => {
+                    self.increment_pc();
+                    2
+                },
                 Size::Long => panic!("Bcc: unexpected displacement size"),
             };
             self.clock_counter += clock_corection;
@@ -1186,23 +1206,27 @@ impl Mc68k {
         let location = Location::register(instruction.data.reg_x);
         let data = self.read(location, size);
 
-        let result = match size {
-            Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
-            Size::Word => self.ea_operand.wrapping_sub(data) & 0xFFFF,
-            Size::Long => self.ea_operand.wrapping_add(data),
-        };
-
         let direction_bit = (instruction.operation_word >> 8) & 0x1;
-        let (carry, overflow) = if direction_bit == 1 { // Memory to register
+        let (result, carry, overflow) = if direction_bit == 1 { // <ea> - dn -> <ea>
+            let result = match size {
+                Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
+                Size::Word => self.ea_operand.wrapping_sub(data) & 0xFFFF,
+                Size::Long => self.ea_operand.wrapping_sub(data),
+            };
             self.write(self.ea_location, result, size);
             let sm = msb_is_set(data, size);
             let dm = msb_is_set(self.ea_operand, size);
             let rm = msb_is_set(result, size);
-
+            
             let overflow = !sm && dm && !rm || sm && !dm && rm;
             let carry = sm && !dm || rm && !dm || sm && rm;
-            (carry, overflow)
-        } else { // Register to memory
+            (result, carry, overflow)
+        } else { // dn - <ea> -> dn
+            let result = match size {
+                Size::Byte => data.wrapping_sub(self.ea_operand) & 0xFF,
+                Size::Word => data.wrapping_sub(self.ea_operand) & 0xFFFF,
+                Size::Long => data.wrapping_sub(self.ea_operand),
+            };
             self.write(location, result, size);
             let sm = msb_is_set(self.ea_operand, size);
             let dm = msb_is_set(data, size);
@@ -1210,7 +1234,7 @@ impl Mc68k {
     
             let overflow = !sm && dm && !rm || sm && !dm && rm;
             let carry = sm && !dm || rm && !dm || sm && rm;
-            (carry, overflow)
+            (result, carry, overflow)
         };
 
         let is_negate = is_negate(result, size);
@@ -1248,7 +1272,7 @@ impl Mc68k {
         let result = match size {
             Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
             Size::Word => self.ea_operand.wrapping_sub(data) & 0xFFFF,
-            Size::Long => self.ea_operand.wrapping_add(data),
+            Size::Long => self.ea_operand.wrapping_sub(data),
         };
 
         self.write(self.ea_location, result, size);
@@ -1282,7 +1306,7 @@ impl Mc68k {
         let result = match size {
             Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
             Size::Word => self.ea_operand.wrapping_sub(data) & 0xFFFF,
-            Size::Long => self.ea_operand.wrapping_add(data),
+            Size::Long => self.ea_operand.wrapping_sub(data),
         };
 
         self.write(self.ea_location, result, size);
@@ -1327,9 +1351,9 @@ impl Mc68k {
         };
 
         let result = match size {
-            Size::Byte => data_x.wrapping_add(x_bit).wrapping_add(data_y) & 0x00FF,
-            Size::Word => data_x.wrapping_add(x_bit).wrapping_add(data_y) & 0xFFFF,
-            Size::Long => data_x.wrapping_add(x_bit).wrapping_add(data_y),
+            Size::Byte => data_x.wrapping_sub(x_bit).wrapping_sub(data_y) & 0x00FF,
+            Size::Word => data_x.wrapping_sub(x_bit).wrapping_sub(data_y) & 0xFFFF,
+            Size::Long => data_x.wrapping_sub(x_bit).wrapping_sub(data_y),
         };
 
         let sm = msb_is_set(data_x, size);
@@ -1951,7 +1975,7 @@ impl Mc68k {
         } else {
             0
         };
-        let msb_mask = msb << (8 * size as u32);
+        let msb_mask = msb << ((8 * size as u32) - 1);
 
         (0..counter).for_each(|_| {
             let poped_bit = data & 1 == 1;

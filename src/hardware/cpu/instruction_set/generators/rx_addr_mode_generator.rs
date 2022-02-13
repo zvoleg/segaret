@@ -144,11 +144,11 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
         },
 
         RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
+            name: "cmpa", mask: 0b1011000011000000, size: Size::Word, clock: 6, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {
-            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 6, rx_type_alias: 'd', addr_mode_aliases: "DAa+-dxWLPXi"
+            name: "cmpa", mask: 0b1011000111000000, size: Size::Long, clock: 6, rx_type_alias: 'a', addr_mode_aliases: "DAa+-dxWLPXi"
         },
 
         RxAddrModeInstPattern {

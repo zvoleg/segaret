@@ -4,6 +4,7 @@ use std::fmt;
 pub mod cpu;
 pub mod cartridge;
 pub mod bus;
+pub mod vdp;
 
 #[derive(Copy, Clone)]
 pub enum Size {

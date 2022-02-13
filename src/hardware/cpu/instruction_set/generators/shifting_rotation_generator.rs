@@ -106,8 +106,8 @@ fn generate_rotation_ry_instructions(opcode_table: &mut Vec<Box<dyn InstructionP
     ];
 
     for pattern in patterns {
-        (0..0x10).for_each(|counter_mask| {
-            (0..0x10).for_each(|reg_idx| {
+        (0..0x8).for_each(|counter_mask| {
+            (0..0x8).for_each(|reg_idx| {
                 let opcode = pattern.mask | counter_mask << 9 | reg_idx;
                 let counter = if counter_mask == 0 {
                     8
@@ -197,8 +197,8 @@ fn generate_rx_ry_instructions(opcode_table: &mut Vec<Box<dyn InstructionProcess
     ];
 
     for pattern in patterns {
-        (0..0x10).for_each(|reg_idx_x| {
-            (0..0x10).for_each(|reg_idx_y| {
+        (0..8).for_each(|reg_idx_x| {
+            (0..8).for_each(|reg_idx_y| {
                 let opcode = pattern.mask | reg_idx_x << 9 | reg_idx_y;
 
                 opcode_table[opcode as usize] = Box::new(Instruction::new(
