@@ -45,13 +45,14 @@ pub struct Mc68k {
     mode: Mode, // user/supervisor
 
     clock_counter: i32,
+    
+    pended_interrupt_level: Option<usize>,
 
     pub(in crate::hardware) instruction: Box<dyn InstructionProcess>,
     current_addr_mode: AddrMode,
     ea_location: Location,
     ea_operand: u32,
 
-    // memory stub
     bus: *mut Bus,
     disassembler: Disassembler,
 }
@@ -109,6 +110,8 @@ impl Mc68k {
 
             clock_counter: 0,
 
+            pended_interrupt_level: None,
+
             instruction: instruction,
             
             current_addr_mode: AddrMode::new(AddrModeType::Immediate, 0),
@@ -122,6 +125,12 @@ impl Mc68k {
     }
 
     pub fn clock(&mut self) {
+        if let Some(interrutp) = self.pended_interrupt_level {
+            self.prepare_exception();
+            self.pc = self.vector_table.interrupt_level(interrutp);
+            self.pended_interrupt_level = None;
+        }
+
         let instruction_addr = self.pc;
         let operation_word = self.read_memory(self.pc as usize, Size::Word);
         self.increment_pc();
@@ -138,6 +147,13 @@ impl Mc68k {
         
         (self.instruction.as_ref().handler())(self);
         println!("{}", self);
+    }
+
+    pub fn interrupt(&mut self, interrupt_level: usize) {
+        let cpu_priority = ((self.sr >> 8) & 0x7) as usize;
+        if self.pended_interrupt_level.is_none() && interrupt_level > cpu_priority {
+            self.pended_interrupt_level = Some(interrupt_level);
+        }
     }
 
     pub fn set_pc(&mut self, new_pc: u32) {
@@ -177,7 +193,7 @@ impl Mc68k {
         match size {
             Size::Byte => 0, // stub, may be should panic?
             Size::Word => self.reg[reg] & 0xFFFF,
-            Size::Long => self.reg[reg],
+            Size::Long => self.reg[reg] & 0x00FFFFFF,
         }
     }
 
@@ -286,13 +302,7 @@ impl Mc68k {
     }
 
     fn set_status(&mut self, status: Status, set: bool) {
-        let mask = match status {
-            Status::X => 1 << Status::X as u16,
-            Status::N => 1 << Status::N as u16,
-            Status::Z => 1 << Status::Z as u16,
-            Status::V => 1 << Status::V as u16,
-            Status::C => 1 << Status::C as u16,
-        };
+        let mask = 1 << status as u16;
         if set {
             self.sr = self.sr | mask;
         } else {
@@ -1070,16 +1080,18 @@ impl Mc68k {
     }
 
     pub(crate) fn ADDA(&mut self) {
+        let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
         self.current_addr_mode = instruction.data.addr_mode;
         self.call_addressing_mode();
 
         let location = Location::register(instruction.data.reg_x);
-        let data = self.read(location, self.instruction.as_ref().size());
+        let addr_reg_data = self.read(location, Size::Long);
+        let operand = sign_extend(self.ea_operand, size);
 
-        let result = self.ea_operand.wrapping_add(data);
-        self.write(location, result, self.instruction.as_ref().size());
+        let result = addr_reg_data.wrapping_add(operand);
+        self.write(location, result, Size::Long);
     }
 
     pub(crate) fn ADDI(&mut self) {
@@ -1398,7 +1410,7 @@ impl Mc68k {
 
         let data = self.read(Location::register(instruction.data.reg_x), size);
 
-        let result = self.ea_operand.wrapping_sub(data);
+        let result = data.wrapping_sub(self.ea_operand);
 
         let sm = msb_is_set(data, size);
         let dm = msb_is_set(self.ea_operand, size);
@@ -2165,7 +2177,7 @@ impl Mc68k {
         let mut data = self.read(location, Size::Long);
 
         let msw = (data & 0xFFFF0000) >> 16;
-        let lsw = (data & 0x0000FFFF) >> 16;
+        let lsw = (data & 0x0000FFFF) << 16;
 
         data = lsw | msw;
 

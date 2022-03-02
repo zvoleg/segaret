@@ -1,21 +1,30 @@
+use crate::Mc68k;
 use crate::Vdp;
 use crate::hardware::Size;
 use crate::hardware::cartridge::cartridge::Cartridge;
 
 pub struct Bus {
     cartridge: Cartridge,
-    vdp: *mut Vdp,
     ram: Vec<u8>,
+
+    vdp: *mut Vdp,
+    cpu: *mut Mc68k,
 }
 
 impl Bus {
     pub fn init(cartridge: Cartridge, vdp: *mut Vdp) -> Self {
         Self {
             cartridge: cartridge,
-            vdp: vdp,
             // z80_ram: vec[0; 0x10000], $A00000	$A0FFFF
             ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            
+            vdp: vdp,
+            cpu: std::ptr::null_mut(),
         }
+    }
+
+    pub(crate) fn set_cpu(&mut self, cpu: *mut Mc68k) {
+        self.cpu = cpu;
     }
 
     pub(crate) fn get_rom_ptr(&self) -> *const u8 {
@@ -85,6 +94,12 @@ impl Bus {
                     *ram_ptr_casted = data.to_be();
                 },
             }
+        }
+    }
+
+    pub fn send_interrupt(&self, interrupt_level: usize) {
+        unsafe {
+            (*self.cpu).interrupt(interrupt_level);
         }
     }
 }

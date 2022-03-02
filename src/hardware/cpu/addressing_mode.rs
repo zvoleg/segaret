@@ -217,12 +217,12 @@ impl fmt::Display for AddrMode {
                 let size = self.brief_ext_word.unwrap().size;
                 format!("(0x{:02X}, A{}, {}, {})", displacement, self.reg_idx, register, size)
             },
-            AddrModeType::PcDisp => format!("(0x{:04X},PC)", self.ext_word.unwrap()),
+            AddrModeType::PcDisp => format!("(0x{:04X},PC) -> [0x{:08X}]", self.ext_word.unwrap(), (self.ext_word.unwrap().wrapping_add(self.ext_word_addr))),
             AddrModeType::PcIdx => {
                 let displacement = self.brief_ext_word.unwrap().displacement;
                 let register = self.brief_ext_word.unwrap().register;
                 let size = self.brief_ext_word.unwrap().size;
-                format!("(0x{:02X}, PC, {}, {})", displacement, register, size)
+                format!("(0x{:02X}, PC, {}, {}) -> [0x{:08X} + {}]", displacement, register, size, (displacement.wrapping_add(self.ext_word_addr)), register)
             },
             AddrModeType::AbsShort => format!("0x{:04X}", self.ext_word.unwrap()),
             AddrModeType::AbsLong => format!("0x{:08X}", self.ext_word.unwrap()),

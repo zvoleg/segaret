@@ -87,7 +87,7 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {}", self.name, self.size, self.data.addr_mode))
+        format!("{}.{} {}", self.name, self.size, self.data.addr_mode)
     }
 }
 
@@ -98,7 +98,7 @@ impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.src_addr_mode, self.data.dst_addr_mode))
+        format!("{}.{} {} {}", self.name, self.size, self.data.src_addr_mode, self.data.dst_addr_mode)
     }
 }
 
@@ -136,8 +136,8 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
 
     fn disassembly(&self) -> String {
         match self.size {
-            Size::Byte | Size::Word => String::from(format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
-            Size::Long => String::from(format!("{}.{} 0x{:08X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode)),
+            Size::Byte | Size::Word => format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode),
+            Size::Long => format!("{}.{} 0x{:08X} {}", self.name, self.size, self.data.immediate_data, self.data.addr_mode),
         }
     }
 }
@@ -148,7 +148,7 @@ impl InstructionProcess for Instruction<AddrModeDataMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} #{} {}", self.name, self.size, self.data.data, self.data.addr_mode))
+        format!("{}.{} #{} {}", self.name, self.size, self.data.data, self.data.addr_mode)
     }
 }
 
@@ -165,7 +165,7 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.ext_word, self.data.addr_mode))
+        format!("{}.{} 0x{:04X} {}", self.name, self.size, self.data.ext_word, self.data.addr_mode)
     }
 }
 
@@ -175,7 +175,7 @@ impl InstructionProcess for Instruction<RxAddrModeMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.addr_mode))
+        format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.addr_mode)
     }
 }
 
@@ -185,7 +185,7 @@ impl InstructionProcess for Instruction<RyMetadata> {
     }
     
     fn disassembly(&self) -> std::string::String {
-        String::from(format!("{}.{} {}", self.name, self.size, self.data.reg_y)) 
+        format!("{}.{} {}", self.name, self.size, self.data.reg_y)
     }
 }
 
@@ -200,7 +200,7 @@ impl InstructionProcess for Instruction<RyExtWordMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} 0x{:04X}", self.name, self.size, self.data.reg_y, self.data.ext_word))
+        format!("{}.{} {} 0x{:04X}", self.name, self.size, self.data.reg_y, self.data.ext_word)
     }
 }
 
@@ -229,7 +229,7 @@ impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
     }
     
     fn disassembly(&self) -> std::string::String {
-        String::from(format!("{} {}, {} 0x{:04X}", self.name, self.data.condition, self.data.reg_y, self.data.ext_word))
+        format!("{} {}, {} 0x{:04X}", self.name, self.data.condition, self.data.reg_y, self.data.ext_word)
     }
 }
 
@@ -251,20 +251,23 @@ impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{} {} 0x{:04X}", self.name, self.data.condition, self.data.displacement))
+        format!("{} {} 0x{:04X}", self.name, self.data.condition, self.data.displacement)
     }
 }
 
 impl InstructionProcess for Instruction<RxDataMetadata> {
     fn fetch_data(&mut self, _: &mut Mc68k) {}
     fn disassembly(&self) -> String { 
-        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.data))
+        format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.data)
     }
 }
 
 impl InstructionProcess for Instruction<RxRyMetadata> {
-    fn fetch_data(&mut self, _: &mut Mc68k) { todo!() }
-    fn disassembly(&self) -> std::string::String { todo!() }
+    fn fetch_data(&mut self, _: &mut Mc68k) { }
+
+    fn disassembly(&self) -> std::string::String { 
+        format!("{}.{} {} {}", self.name, self.size, self.data.reg_x, self.data.reg_y)
+    }
 }
 
 impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
@@ -274,7 +277,7 @@ impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.addr_mode_x, self.data.addr_mode_y))
+        format!("{}.{} {} {}", self.name, self.size, self.data.addr_mode_x, self.data.addr_mode_y)
     }
 }
 
@@ -284,7 +287,7 @@ impl InstructionProcess for Instruction<RotationRyMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{}.{} {} {}", self.name, self.size, self.data.counter, self.data.reg_y))    
+        format!("{}.{} {} {}", self.name, self.size, self.data.counter, self.data.reg_y)
     }
 }
 
@@ -304,7 +307,7 @@ impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {
     }
 
     fn disassembly(&self) -> String {
-        String::from(format!("{} 0x{:02X}", self.name, self.data.immediate_data))
+        format!("{} 0x{:02X}", self.name, self.data.immediate_data)
     }
 }
 

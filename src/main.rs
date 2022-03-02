@@ -24,9 +24,11 @@ fn main() {
     let mut vdp = Vdp::init(canvas);
 
     let mut bus = Bus::init(cartridge, &mut vdp);
-    
+    vdp.set_bus(&mut bus);
+
     let disassembler = disassembler::Disassembler::new("pop_test_01");
     let mut cpu = Mc68k::init(&mut bus, disassembler);
+    bus.set_cpu(&mut cpu);
 
     let mut auto_state = false;
 

@@ -4,6 +4,8 @@ const PROGRAM_COUNTER: isize = 0x000004;
 const ILLEGAL_INSTR: isize = 0x000010;
 const ZERO_DIVISION: isize = 0x000014;
 
+const INTERRUPT_LEVEL_1: isize = 0x000064;
+
 pub(in crate::hardware) struct VectorTable {
     header_ptr: *const u8,
 }
@@ -35,5 +37,10 @@ impl VectorTable {
 
     pub(in crate::hardware) fn zero_division_exception(&self) -> u32 {
         self.get_offseted_value(ZERO_DIVISION)
+    }
+
+    pub(in crate::hardware) fn interrupt_level(&self, interrupt_level: usize) -> u32 {
+        let interrupt_offset = 4 * (interrupt_level - 1) as isize;
+        self.get_offseted_value(INTERRUPT_LEVEL_1 + interrupt_offset)
     }
 }
