@@ -1,5 +1,6 @@
 /target
 /.vscode
 *.md
+!README.md
 Cargo.lock
 /notes
