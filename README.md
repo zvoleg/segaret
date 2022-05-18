@@ -1,4 +1,4 @@
-#Emulator for "Sega"#
+# Emulator for "Sega"
 
 On this moment in project implemented only the emulator for CPU MC68000
 
