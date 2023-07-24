@@ -1,6 +1,6 @@
 use lazy_static::lazy_static;
 
-use crate::hardware::cpu::addressing_mode::{AddrModeType, AddrMode};
+use crate::hardware::mc68k::addressing_mode::{AddrModeType, AddrMode};
 
 lazy_static! {
     pub(in crate::hardware) static ref DATA: Vec<AddrMode> = (0..8)

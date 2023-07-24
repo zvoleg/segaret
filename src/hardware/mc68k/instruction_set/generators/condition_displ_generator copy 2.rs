@@ -1,9 +1,9 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::instruction_set::generators::condition_by_bits;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::generators::condition_by_bits;
 use crate::hardware::Size;
-use crate::hardware::cpu::instruction_set::ConditionDisplacementMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
-use crate::hardware::cpu::mc68k_emu::Mc68k;
+use crate::hardware::mc68k::instruction_set::ConditionDisplacementMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
+use crate::hardware::mc68k::mc68k_emu::Mc68k;
 
 struct ConditionDisplPattern {
     name: &'static str,

@@ -2,10 +2,10 @@ extern crate lazy_static;
 
 use std::fmt;
 
-use crate::hardware::cpu::instruction_set;
-use crate::hardware::cpu::instruction_set::instruction_data_types::*;
+use crate::hardware::mc68k::instruction_set;
+use crate::hardware::mc68k::instruction_set::instruction_meta_data_types::*;
 
-use crate::hardware::cpu::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
 
 use super::RegisterType;
 use super::addressing_mode::{AddrMode, AddrModeType};
@@ -135,16 +135,19 @@ impl Mc68k {
         let operation_word = self.read_memory(self.pc as usize, Size::Word);
         self.increment_pc();
 
+        // get instruction from table by its opcode
         let mut instruction = self.opcode_table[operation_word as usize].clone();
-        instruction.fetch_data(self);
+        // fetch all additional instruction information from instruction opcode and from memory (extension words, decode addressing modes, etc.)
+        instruction.fetch_instruction_data(self);
 
+        // save instruction in current cpu state for getting an instruction metadata, when cpu will execute this they will use them
         self.instruction = instruction;
-
         
         let disasm_str = format!("0x{:04X}\t{}", operation_word, self.instruction.as_ref().disassembly());
         self.disassembler.push_instruction(instruction_addr, disasm_str.clone());
         println!("0x{:08X}: {}", instruction_addr, disasm_str);
         
+        // call instruction execution
         (self.instruction.as_ref().handler())(self);
         println!("{}", self);
     }
@@ -416,7 +419,9 @@ impl Mc68k {
         self.instruction.as_ref().as_any().downcast_ref::<T>().unwrap().clone()
     }
 
+    /********************/
     /* ADDRESSING MODES */
+    /********************/
     fn data_reg(&mut self) {
         let reg_idx = self.current_addr_mode.reg_idx;
 
@@ -576,13 +581,13 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<MoveInstructionMetadata>>();
 
-        let src_addr_mode = instruction.data.src_addr_mode;
+        let src_addr_mode = instruction.meta_data.src_addr_mode;
         self.current_addr_mode = src_addr_mode.clone();
         self.call_addressing_mode();
 
         let src_data = self.ea_operand;
 
-        let dst_addr_mode = instruction.data.dst_addr_mode;
+        let dst_addr_mode = instruction.meta_data.dst_addr_mode;
         self.current_addr_mode = dst_addr_mode;
         self.call_addressing_mode();
 
@@ -601,12 +606,12 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let src_data = self.ea_operand;
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
 
         self.write(location, src_data, size);
     }
@@ -616,7 +621,7 @@ impl Mc68k {
         let instruction = self.instruction::<Instruction<AddrModeExtWordMetadata>>();
 
         // расчитать затрагиваемые регистры из register_mask
-        let register_mask = instruction.data.ext_word;
+        let register_mask = instruction.meta_data.ext_word;
         let mut affected_registers = Vec::new();
         if self.current_addr_mode.am_type == AddrModeType::AddrIndPreDec {
             // D0..D7A0..A7
@@ -643,11 +648,11 @@ impl Mc68k {
             Size::Byte => panic!("MOVEM: wrong size for this instruction"),
         }
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let direction_bit = (instruction.operation_word >> 10) & 0x1;
-        let current_addr_mode_type = instruction.data.addr_mode.am_type;
+        let current_addr_mode_type = instruction.meta_data.addr_mode.am_type;
 
         let operation_size_usize = size as usize;
 
@@ -696,10 +701,10 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(location, size).to_le();
 
         let iterations = size as usize;
@@ -727,9 +732,9 @@ impl Mc68k {
     pub(crate) fn MOVEQ(&mut self) {
         let instruction = self.instruction::<Instruction<RxDataMetadata>>();
 
-        let data = sign_extend(instruction.data.data, Size::Byte);
+        let data = sign_extend(instruction.meta_data.data, Size::Byte);
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         self.write(location, data, Size::Long);
 
         self.set_status(Status::N, is_negate(data, Size::Long));
@@ -743,7 +748,7 @@ impl Mc68k {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-            self.current_addr_mode = instruction.data.addr_mode;
+            self.current_addr_mode = instruction.meta_data.addr_mode;
             self.call_addressing_mode();
 
             self.sr = self.ea_operand as u16;
@@ -757,7 +762,7 @@ impl Mc68k {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-            self.current_addr_mode = instruction.data.addr_mode;
+            self.current_addr_mode = instruction.meta_data.addr_mode;
             self.call_addressing_mode();
 
             let data = self.sr as u32;
@@ -771,7 +776,7 @@ impl Mc68k {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<RyMetadata>>();
 
-            let location = Location::register(instruction.data.reg_y);
+            let location = Location::register(instruction.meta_data.reg_y);
             let direction_bit = (instruction.operation_word >> 3) & 0x1;
 
             if direction_bit == 0 { // USP to memory
@@ -789,7 +794,7 @@ impl Mc68k {
     pub(crate) fn MOVE_to_CCR(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let data = self.ea_operand & 0xFF;
@@ -801,8 +806,8 @@ impl Mc68k {
     pub(crate) fn EXG(&mut self) {
         let instruction = self.instruction::<Instruction<RxRyMetadata>>();
         let (a_idx, b_idx) = {
-            let reg_x = instruction.data.reg_x;
-            let reg_y = instruction.data.reg_y;
+            let reg_x = instruction.meta_data.reg_x;
+            let reg_y = instruction.meta_data.reg_y;
 
             let reg_x_idx = match reg_x.reg_type {
                 RegisterType::Data => reg_x.reg_idx,
@@ -821,17 +826,17 @@ impl Mc68k {
 
     pub(crate) fn LEA(&mut self) {
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
 
         self.write(location, self.ea_location.address as u32, Size::Long);
     }
 
     pub(crate) fn PEA(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         self.push(self.ea_location.address as u32, Size::Long);
@@ -840,13 +845,13 @@ impl Mc68k {
     pub(crate) fn LINK(&mut self) {
         let instruction = self.instruction::<Instruction<RyExtWordMetadata>>();
 
-        let location = Location::register(instruction.data.reg_y);
+        let location = Location::register(instruction.meta_data.reg_y);
         let data = self.read(location, Size::Long);
         self.push(data, Size::Long);
         
         self.write(location, self.stack_ptr(), Size::Long);
 
-        let displacement = instruction.data.ext_word;
+        let displacement = instruction.meta_data.ext_word;
         let displacement = sign_extend(displacement, Size::Word);
         let new_stack_ptr = self.stack_ptr().wrapping_add(displacement);
 
@@ -855,7 +860,7 @@ impl Mc68k {
 
     pub(crate) fn UNLK(&mut self) {
         let instruction = self.instruction::<Instruction<RyMetadata>>();
-        let location = Location::register(instruction.data.reg_y);
+        let location = Location::register(instruction.meta_data.reg_y);
         let data = self.read(location, Size::Long);
         self.set_stack_ptr(data);
 
@@ -866,7 +871,7 @@ impl Mc68k {
     pub(crate) fn TAS(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let negate = is_negate(self.ea_operand, Size::Byte);
@@ -886,7 +891,7 @@ impl Mc68k {
     pub(crate) fn TST(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let is_negate = is_negate(self.ea_operand, self.instruction.as_ref().size());
@@ -901,15 +906,15 @@ impl Mc68k {
     pub(crate) fn Bcc(&mut self) {
         let instruction = self.instruction::<Instruction<ConditionDisplacementMetadata>>();
 
-        let offset = instruction.data.displacement;
-        let condition = instruction.data.condition;
+        let offset = instruction.meta_data.displacement;
+        let condition = instruction.meta_data.condition;
 
         let result = self.check_condition(condition);
 
         if result {
             self.pc = self.pc.wrapping_add(offset);
         } else {
-            let clock_corection = match instruction.data.displacement_size {
+            let clock_corection = match instruction.meta_data.displacement_size {
                 Size::Byte => -2,
                 Size::Word => {
                     self.increment_pc();
@@ -924,15 +929,15 @@ impl Mc68k {
     pub(crate) fn DBcc(&mut self) {
         let instruction = self.instruction::<Instruction<ConditionRyExtWordMetadata>>();
 
-        let ext_word = instruction.data.ext_word;
+        let ext_word = instruction.meta_data.ext_word;
         let offset = sign_extend(ext_word, Size::Word);
 
-        let condition = instruction.data.condition;
+        let condition = instruction.meta_data.condition;
         let result = self.check_condition(condition);
 
 
         if !result {
-            let counter_location = Location::register(instruction.data.reg_y);
+            let counter_location = Location::register(instruction.meta_data.reg_y);
             let mut counter = self.read(counter_location, Size::Word) as i32;
             counter -= 1;
             self.write(counter_location, counter as u32, Size::Word);
@@ -950,10 +955,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<ConditionAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let condition = instruction.data.condition;
+        let condition = instruction.meta_data.condition;
         let result = self.check_condition(condition);
 
         if result {
@@ -962,7 +967,7 @@ impl Mc68k {
             self.write(self.ea_location, 0xFF, size);
         }
 
-        if result && instruction.data.addr_mode.am_type == AddrModeType::Data {
+        if result && instruction.meta_data.addr_mode.am_type == AddrModeType::Data {
             self.clock_counter += 2;
         }
     }
@@ -970,9 +975,9 @@ impl Mc68k {
     pub(crate) fn BRA(&mut self) {
         let instruction = self.instruction::<Instruction<DisplacementMetadata>>();
 
-        let offset = instruction.data.displacement;
+        let offset = instruction.meta_data.displacement;
 
-        match instruction.data.displacement_size {
+        match instruction.meta_data.displacement_size {
             Size::Word => self.pc -= 2,
             _ => (),
         }
@@ -985,14 +990,14 @@ impl Mc68k {
 
         self.push(self.pc as u32, Size::Long);
 
-        let offset = instruction.data.displacement;
+        let offset = instruction.meta_data.displacement;
         self.pc = self.pc.wrapping_add(offset);
     }
 
     pub(crate) fn JMP(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         self.pc = self.ea_location.address as u32;
@@ -1001,7 +1006,7 @@ impl Mc68k {
     pub(crate) fn JSR(&mut self) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         self.push(self.pc, Size::Long);
@@ -1036,10 +1041,10 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(location, size);
 
         let result = match size {
@@ -1083,10 +1088,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         let addr_reg_data = self.read(location, Size::Long);
         let operand = sign_extend(self.ea_operand, size);
 
@@ -1098,10 +1103,10 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
 
         let result = match size {
             Size::Byte => (self.ea_operand + data) & 0xFF,
@@ -1132,10 +1137,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeDataMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.data;
+        let data = instruction.meta_data.data;
 
         let result = match size {
             Size::Byte => (self.ea_operand + data) & 0xFF,
@@ -1145,7 +1150,7 @@ impl Mc68k {
 
         self.write(self.ea_location, result, size);
 
-        if instruction.data.addr_mode.am_type != AddrModeType::Addr {
+        if instruction.meta_data.addr_mode.am_type != AddrModeType::Addr {
             let sm = msb_is_set(data, size);
             let dm = msb_is_set(self.ea_operand, size);
             let rm = msb_is_set(result, size);
@@ -1168,12 +1173,12 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxRySpecAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode_x;
+        self.current_addr_mode = instruction.meta_data.addr_mode_x;
         self.call_addressing_mode();
 
         let data_x = self.ea_operand;
 
-        self.current_addr_mode = instruction.data.addr_mode_y;
+        self.current_addr_mode = instruction.meta_data.addr_mode_y;
         self.call_addressing_mode();
 
         let data_y = self.ea_operand;
@@ -1212,10 +1217,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(location, size);
 
         let direction_bit = (instruction.operation_word >> 8) & 0x1;
@@ -1262,10 +1267,10 @@ impl Mc68k {
     pub(crate) fn SUBA(&mut self) {
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let location = Location::register(instruction.data.reg_x);
+        let location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(location, self.instruction.as_ref().size());
 
         let result = self.ea_operand.wrapping_sub(data);
@@ -1276,10 +1281,10 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
 
         let result = match size {
             Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
@@ -1310,10 +1315,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeDataMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.data;
+        let data = instruction.meta_data.data;
 
         let result = match size {
             Size::Byte => self.ea_operand.wrapping_sub(data) & 0xFF,
@@ -1323,7 +1328,7 @@ impl Mc68k {
 
         self.write(self.ea_location, result, size);
 
-        if instruction.data.addr_mode.am_type != AddrModeType::Addr {
+        if instruction.meta_data.addr_mode.am_type != AddrModeType::Addr {
             let sm = msb_is_set(data, size);
             let dm = msb_is_set(self.ea_operand, size);
             let rm = msb_is_set(result, size);
@@ -1346,12 +1351,12 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxRySpecAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode_x;
+        self.current_addr_mode = instruction.meta_data.addr_mode_x;
         self.call_addressing_mode();
 
         let data_x = self.ea_operand;
 
-        self.current_addr_mode = instruction.data.addr_mode_y;
+        self.current_addr_mode = instruction.meta_data.addr_mode_y;
         self.call_addressing_mode();
 
         let data_y = self.ea_operand;
@@ -1390,7 +1395,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         self.write(self.ea_location, 0, size);
@@ -1405,10 +1410,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = self.read(Location::register(instruction.data.reg_x), size);
+        let data = self.read(Location::register(instruction.meta_data.reg_x), size);
 
         let result = data.wrapping_sub(self.ea_operand);
 
@@ -1435,10 +1440,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
 
         let result = self.ea_operand.wrapping_sub(data);
 
@@ -1461,11 +1466,11 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxRyMetadata>>();
 
-        self.current_addr_mode = AddrMode::new(AddrModeType::AddrIndPostInc, instruction.data.reg_x.reg_idx);
+        self.current_addr_mode = AddrMode::new(AddrModeType::AddrIndPostInc, instruction.meta_data.reg_x.reg_idx);
         self.call_addressing_mode();
         let data_x = self.ea_operand;
 
-        self.current_addr_mode = AddrMode::new(AddrModeType::AddrIndPostInc, instruction.data.reg_y.reg_idx);
+        self.current_addr_mode = AddrMode::new(AddrModeType::AddrIndPostInc, instruction.meta_data.reg_y.reg_idx);
         self.call_addressing_mode();
         let data_y = self.ea_operand;
 
@@ -1500,7 +1505,7 @@ impl Mc68k {
             _ => panic!("EXT: unexpected operation size (byte)"),
         };
 
-        let location = Location::register(instruction.data.reg_y);
+        let location = Location::register(instruction.meta_data.reg_y);
         let data = self.read(location, read_size);
         let result = sign_extend(data, size);
         self.write(location, result, size);
@@ -1517,7 +1522,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let result = 0u32.wrapping_sub(self.ea_operand);
@@ -1542,7 +1547,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let x_bit = if self.get_status(Status::X) {
@@ -1576,10 +1581,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_location = Location::register(instruction.meta_data.reg_x);
         let dst_operand = self.read(dst_location, size) as i32;
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let (result, overflow) = (self.ea_operand as i32).overflowing_mul(dst_operand);
@@ -1600,10 +1605,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_location = Location::register(instruction.meta_data.reg_x);
         let dst_operand = self.read(dst_location, size);
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let (result, overflow) = self.ea_operand.overflowing_mul(dst_operand);
@@ -1623,10 +1628,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_location = Location::register(instruction.meta_data.reg_x);
         let dst_operand = self.read(dst_location, Size::Long) as i32;
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         if self.ea_operand != 0 {
@@ -1662,10 +1667,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let dst_location = Location::register(instruction.data.reg_x);
+        let dst_location = Location::register(instruction.meta_data.reg_x);
         let dst_operand = self.read(dst_location, Size::Long);
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         if self.ea_operand != 0 {
@@ -1701,10 +1706,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let reg_location = Location::register(instruction.data.reg_x);
+        let reg_location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(reg_location, size);
 
         let result = data & self.ea_operand;
@@ -1732,10 +1737,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
         let result = data & self.ea_operand;
 
         self.write(self.ea_location, result, size);
@@ -1754,7 +1759,7 @@ impl Mc68k {
     pub(crate) fn ANDI_to_CCR(&mut self) {
         let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
 
-        let data = instruction.data.immediate_data as u16;
+        let data = instruction.meta_data.immediate_data as u16;
         let ccr = self.sr & 0xFF;
         let result = ccr & data;
 
@@ -1764,7 +1769,7 @@ impl Mc68k {
     pub(crate) fn ANDI_to_SR(&mut self) {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
-            let data = instruction.data.immediate_data as u16;
+            let data = instruction.meta_data.immediate_data as u16;
             self.sr &= data;
         } else {
             // TODO call privilage exception
@@ -1775,10 +1780,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let reg_location = Location::register(instruction.data.reg_x);
+        let reg_location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(reg_location, size);
 
         let result = data ^ self.ea_operand;
@@ -1800,10 +1805,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
 
         let result = data ^ self.ea_operand;
 
@@ -1823,7 +1828,7 @@ impl Mc68k {
     pub(crate) fn EORI_to_CCR(&mut self) {
         let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
 
-        let data = instruction.data.immediate_data as u16;
+        let data = instruction.meta_data.immediate_data as u16;
         let ccr = self.sr & 0xFF;
         let result = ccr ^ data;
 
@@ -1833,7 +1838,7 @@ impl Mc68k {
     pub(crate) fn EORI_to_SR(&mut self) {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
-            let data = instruction.data.immediate_data as u16;
+            let data = instruction.meta_data.immediate_data as u16;
             self.sr ^= data;
         } else {
              // TODO call privilage exception
@@ -1844,10 +1849,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let reg_location = Location::register(instruction.data.reg_x);
+        let reg_location = Location::register(instruction.meta_data.reg_x);
         let data = self.read(reg_location, size);
 
         let result = data | self.ea_operand;
@@ -1869,10 +1874,10 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
-        let data = instruction.data.immediate_data;
+        let data = instruction.meta_data.immediate_data;
 
         let result = data | self.ea_operand;
 
@@ -1892,7 +1897,7 @@ impl Mc68k {
     pub(crate) fn ORI_to_CCR(&mut self) {
         let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
 
-        let data = instruction.data.immediate_data as u16;
+        let data = instruction.meta_data.immediate_data as u16;
         let ccr = self.sr & 0xFF;
         let result = ccr | data;
 
@@ -1902,7 +1907,7 @@ impl Mc68k {
     pub(crate) fn ORI_to_SR(&mut self) {
         if self.mode == Mode::Supervisor {
             let instruction = self.instruction::<Instruction<ExplicitImmediateMetadata>>();
-            let data = instruction.data.immediate_data as u16;
+            let data = instruction.meta_data.immediate_data as u16;
             self.sr |= data;
         } else {
              // TODO call privilage exception
@@ -1913,7 +1918,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let result = !self.ea_operand;
@@ -1934,12 +1939,12 @@ impl Mc68k {
         let mode = (self.instruction.operation_word() >> 5) & 1;
         let (counter, data_register) = if mode == 0 { // immediate counter
             let instruction = self.instruction::<Instruction<RotationRyMetadata>>();
-            (instruction.data.counter, instruction.data.reg_y)
+            (instruction.meta_data.counter, instruction.meta_data.reg_y)
         } else { // data register counter
             let instruction = self.instruction::<Instruction<RxRyMetadata>>();
-            let location = Location::register(instruction.data.reg_x);
+            let location = Location::register(instruction.meta_data.reg_x);
             let data = self.read(location, Size::Long);
-            (data % 64, instruction.data.reg_y)
+            (data % 64, instruction.meta_data.reg_y)
         };
         let location = Location::register(data_register);
         
@@ -1951,7 +1956,7 @@ impl Mc68k {
     fn shifting_operation_memory(&mut self) -> (u32, Location, u16) {
         let instruction = self.instruction::<Instruction<AddrModeMetadata>>();
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let location = self.ea_location;
@@ -2173,7 +2178,7 @@ impl Mc68k {
     pub(crate) fn SWAP(&mut self) {
         let instruction = self.instruction::<Instruction<RyMetadata>>();
 
-        let location = Location::register(instruction.data.reg_y);
+        let location = Location::register(instruction.meta_data.reg_y);
         let mut data = self.read(location, Size::Long);
 
         let msw = (data & 0xFFFF0000) >> 16;
@@ -2198,7 +2203,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let bit_number_location = Location::register(instruction.data.reg_x);
+        let bit_number_location = Location::register(instruction.meta_data.reg_x);
         let mut bit_number = self.read(bit_number_location, Size::Long);
         match size {
             Size::Byte => bit_number %= 8,
@@ -2206,7 +2211,7 @@ impl Mc68k {
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2221,14 +2226,14 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        let mut bit_number = instruction.data.immediate_data;
+        let mut bit_number = instruction.meta_data.immediate_data;
         match size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2243,7 +2248,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let bit_number_location = Location::register(instruction.data.reg_x);
+        let bit_number_location = Location::register(instruction.meta_data.reg_x);
         let mut bit_number = self.read(bit_number_location, Size::Long);
         match size {
             Size::Byte => bit_number %= 8,
@@ -2251,7 +2256,7 @@ impl Mc68k {
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2266,14 +2271,14 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        let mut bit_number = instruction.data.immediate_data;
+        let mut bit_number = instruction.meta_data.immediate_data;
         match size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2288,7 +2293,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let bit_number_location = Location::register(instruction.data.reg_x);
+        let bit_number_location = Location::register(instruction.meta_data.reg_x);
         let mut bit_number = self.read(bit_number_location, Size::Long);
         match size {
             Size::Byte => bit_number %= 8,
@@ -2296,7 +2301,7 @@ impl Mc68k {
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2311,14 +2316,14 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        let mut bit_number = instruction.data.immediate_data;
+        let mut bit_number = instruction.meta_data.immediate_data;
         match size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2333,7 +2338,7 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<RxAddrModeMetadata>>();
 
-        let bit_number_location = Location::register(instruction.data.reg_x);
+        let bit_number_location = Location::register(instruction.meta_data.reg_x);
         let mut bit_number = self.read(bit_number_location, Size::Long);
         match size {
             Size::Byte => bit_number %= 8,
@@ -2341,7 +2346,7 @@ impl Mc68k {
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;
@@ -2353,14 +2358,14 @@ impl Mc68k {
         let size = self.instruction.size();
         let instruction = self.instruction::<Instruction<AddrModeImmediateMetadata>>();
 
-        let mut bit_number = instruction.data.immediate_data;
+        let mut bit_number = instruction.meta_data.immediate_data;
         match size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("bit change: wrong instruction size"),
         };
 
-        self.current_addr_mode = instruction.data.addr_mode;
+        self.current_addr_mode = instruction.meta_data.addr_mode;
         self.call_addressing_mode();
 
         let bit = (self.ea_operand >> bit_number) & 1;

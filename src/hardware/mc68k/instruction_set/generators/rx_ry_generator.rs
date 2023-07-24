@@ -1,9 +1,9 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::Register;
-use crate::hardware::cpu::instruction_set::generators::register_type_by_char;
+use crate::hardware::mc68k::instruction_set::generators::register_type_by_char;
 use crate::Mc68k;
-use crate::hardware::cpu::instruction_set::RxRyMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
+use crate::hardware::mc68k::instruction_set::RxRyMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
 use crate::hardware::Size;
 
 struct RxRyPattern {

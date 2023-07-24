@@ -132,7 +132,7 @@ impl AddrMode {
         match self.am_type {
             AddrModeType::AddrIndDips => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, cpu.pc as usize);
+                let location = Location::memory(cpu.pc as usize);
                 let mut data = cpu.read(location, Size::Word);
                 data = sign_extend(data, Size::Word);
                 cpu.increment_pc();
@@ -140,7 +140,7 @@ impl AddrMode {
             },
             AddrModeType::AddrIndIdx => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, cpu.pc as usize);
+                let location = Location::memory(cpu.pc as usize);
                 let data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
                 let brief_ext_word = BriefExtWord::new(data);
@@ -148,7 +148,7 @@ impl AddrMode {
             },
             AddrModeType::PcDisp => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, (cpu.pc) as usize);
+                let location = Location::memory((cpu.pc) as usize);
                 let mut data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
                 data = sign_extend(data, Size::Word);
@@ -156,7 +156,7 @@ impl AddrMode {
             },
             AddrModeType::PcIdx => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, (cpu.pc) as usize);
+                let location = Location::memory((cpu.pc) as usize);
                 let data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
                 let brief_ext_word = BriefExtWord::new(data);
@@ -164,14 +164,14 @@ impl AddrMode {
             }
             AddrModeType::AbsShort => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, cpu.pc as usize);
+                let location = Location::memory(cpu.pc as usize);
                 let data = cpu.read(location, Size::Word);
                 cpu.increment_pc();
                 self.ext_word = Some(data); 
             },
             AddrModeType::AbsLong => {
                 self.ext_word_addr = cpu.pc;
-                let location = Location::new(LocationType::Memory, cpu.pc as usize);
+                let location = Location::memory(cpu.pc as usize);
                 let data = cpu.read(location, Size::Long);
                 cpu.increment_pc();
                 cpu.increment_pc();

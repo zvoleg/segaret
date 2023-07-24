@@ -1,14 +1,14 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::addressing_mode::AddrMode;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::addressing_mode::AddrMode;
 use crate::hardware::Register;
 use crate::Mc68k;
-use crate::hardware::cpu::instruction_set::RxAddrModeMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
+use crate::hardware::mc68k::instruction_set::RxAddrModeMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
 use crate::hardware::Size;
-use crate::hardware::cpu::addressing_mode::AddrModeType;
-use crate::hardware::cpu::instruction_set::generators::addr_mode_type_by_char;
-use crate::hardware::cpu::instruction_set::addr_mode_table::get_addr_mode_table;
-use crate::hardware::cpu::instruction_set::generators::register_type_by_char;
+use crate::hardware::mc68k::addressing_mode::AddrModeType;
+use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
+use crate::hardware::mc68k::instruction_set::generators::register_type_by_char;
 
 struct RxAddrModeInstPattern {
     name: &'static str,

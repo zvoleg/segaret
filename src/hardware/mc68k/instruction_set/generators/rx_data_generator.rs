@@ -1,10 +1,10 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::instruction_set::generators::register_type_by_char;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::generators::register_type_by_char;
 use crate::hardware::Size;
-use crate::hardware::cpu::instruction_set::RxDataMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
-use crate::hardware::cpu::mc68k_emu::Mc68k;
-use crate::hardware::cpu::Register;
+use crate::hardware::mc68k::instruction_set::RxDataMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
+use crate::hardware::mc68k::mc68k_emu::Mc68k;
+use crate::hardware::mc68k::Register;
 
 struct RxDataPattern {
     name: &'static str,
@@ -14,7 +14,7 @@ struct RxDataPattern {
     rx_type_alias: char,
 }
 
-pub(in crate::hardware::cpu) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
+pub(in crate::hardware::mc68k) fn generate(opcode_table: &mut Vec<Box<dyn InstructionProcess>>) {
     let patterns = vec![
         RxDataPattern {
             name: "moveq", mask: 0b0111000000000000, size: Size::Long, clock: 4, rx_type_alias: 'd'

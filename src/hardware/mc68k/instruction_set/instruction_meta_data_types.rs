@@ -1,7 +1,7 @@
 // instruction types
 use crate::hardware::Size;
-use crate::hardware::cpu::addressing_mode::AddrMode;
-use crate::hardware::cpu::{Condition, Register};
+use crate::hardware::mc68k::addressing_mode::AddrMode;
+use crate::hardware::mc68k::{Condition, Register};
 
 // addressing_mode
 #[derive(Clone)]

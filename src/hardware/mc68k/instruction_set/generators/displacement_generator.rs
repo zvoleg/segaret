@@ -1,7 +1,7 @@
-use crate::hardware::cpu::instruction_set::DisplacementMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::mc68k_emu::Mc68k;
+use crate::hardware::mc68k::instruction_set::DisplacementMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::mc68k_emu::Mc68k;
 use crate::hardware::Size;
 
 struct DisplPattern {

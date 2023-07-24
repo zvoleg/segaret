@@ -1,10 +1,10 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::addressing_mode::AddrMode;
-use crate::hardware::cpu::instruction_set::generators::addr_mode_type_by_char;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::addressing_mode::AddrMode;
+use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
 use crate::Mc68k;
 use crate::hardware::Size;
-use crate::hardware::cpu::instruction_set::RxRySpecAddrModeMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
+use crate::hardware::mc68k::instruction_set::RxRySpecAddrModeMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
 
 struct RxRySpecAddrModePattern {
     name: &'static str,

@@ -1,6 +1,6 @@
-use crate::hardware::cpu::Condition;
-use crate::hardware::cpu::addressing_mode::AddrModeType;
-use crate::hardware::cpu::RegisterType;
+use crate::hardware::mc68k::Condition;
+use crate::hardware::mc68k::addressing_mode::AddrModeType;
+use crate::hardware::mc68k::RegisterType;
 
 pub(in crate::hardware) mod addr_mode_generator;
 pub(in crate::hardware) mod addr_mode_ext_word_generator;

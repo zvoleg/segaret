@@ -1,10 +1,10 @@
-use crate::hardware::cpu::instruction_set::InstructionProcess;
-use crate::hardware::cpu::instruction_set::generators::addr_mode_type_by_char;
-use crate::hardware::cpu::addressing_mode::AddrModeType;
-use crate::hardware::cpu::instruction_set::addr_mode_table::get_addr_mode_table;
-use crate::hardware::cpu::instruction_set::AddrModeMetadata;
-use crate::hardware::cpu::instruction_set::Instruction;
-use crate::hardware::cpu::mc68k_emu::Mc68k;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
+use crate::hardware::mc68k::addressing_mode::AddrModeType;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
+use crate::hardware::mc68k::instruction_set::AddrModeMetadata;
+use crate::hardware::mc68k::instruction_set::Instruction;
+use crate::hardware::mc68k::mc68k_emu::Mc68k;
 use crate::hardware::Size;
 
 struct AddrModeInstPattern {

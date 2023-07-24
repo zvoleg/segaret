@@ -10,7 +10,7 @@ use spriter::Color;
 mod hardware;
 pub mod disassembler;
 
-use hardware::cpu::mc68k_emu::Mc68k;
+use hardware::mc68k::mc68k_emu::Mc68k;
 use hardware::bus::bus::Bus;
 use hardware::cartridge::cartridge::Cartridge;
 use hardware::vdp::Vdp;

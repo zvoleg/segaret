@@ -1,8 +1,8 @@
-use crate::hardware::cpu::instruction_set::ExplicitImmediateMetadata;
+use crate::hardware::mc68k::instruction_set::ExplicitImmediateMetadata;
 use crate::Mc68k;
-use crate::hardware::cpu::instruction_set::Instruction;
+use crate::hardware::mc68k::instruction_set::Instruction;
 use crate::hardware::Size;
-use crate::hardware::cpu::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::InstructionProcess;
 
 struct ExplicitPattern {
     name: &'static str,
