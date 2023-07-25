@@ -5,7 +5,7 @@ use std::fmt;
 
 use crate::hardware::Size;
 
-use super::{RegisterType, Register};
+use super::{RegisterType, Register, Mc68kBus};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum AddrModeType {

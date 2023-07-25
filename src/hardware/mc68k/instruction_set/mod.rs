@@ -12,8 +12,10 @@ use crate::hardware::{Size, LocationType, Location};
 
 use instruction_meta_data_types::*;
 
+use super::Mc68kBus;
+
 pub(in crate::hardware) trait InstructionProcess: InstructionBoxedClone + InstructionData {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k);
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k);
     fn disassembly(&self) -> String;
 }
 
@@ -81,8 +83,8 @@ impl<T> Instruction<T> {
     }
 }
 
-impl InstructionProcess for Instruction::<AddrModeMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+impl InstructionProcess for Instruction<AddrModeMetadata> {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         self.meta_data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
@@ -91,8 +93,8 @@ impl InstructionProcess for Instruction::<AddrModeMetadata> {
     }
 }
 
-impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+impl InstructionProcess for Instruction<MoveInstructionMetadata> {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         self.meta_data.src_addr_mode.fetch_ext_word(cpu, self.size);
         self.meta_data.dst_addr_mode.fetch_ext_word(cpu, self.size);
     }
@@ -102,8 +104,8 @@ impl InstructionProcess for Instruction::<MoveInstructionMetadata> {
     }
 }
 
-impl InstructionProcess for Instruction::<ExplicitMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) {
+impl InstructionProcess for Instruction<ExplicitMetadata> {
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) {
 
     }
 
@@ -113,7 +115,7 @@ impl InstructionProcess for Instruction::<ExplicitMetadata> {
 }
 
 impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
         
         let size = match self.size {
@@ -143,7 +145,7 @@ impl InstructionProcess for Instruction<AddrModeImmediateMetadata> {
 }
 
 impl InstructionProcess for Instruction<AddrModeDataMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) {
 
     }
 
@@ -153,7 +155,7 @@ impl InstructionProcess for Instruction<AddrModeDataMetadata> {
 }
 
 impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
         let data = cpu.read(location, Size::Word);
 
@@ -170,7 +172,7 @@ impl InstructionProcess for Instruction<AddrModeExtWordMetadata> {
 }
 
 impl InstructionProcess for Instruction<RxAddrModeMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         self.meta_data.addr_mode.fetch_ext_word(cpu, self.size);
     }
 
@@ -180,7 +182,7 @@ impl InstructionProcess for Instruction<RxAddrModeMetadata> {
 }
 
 impl InstructionProcess for Instruction<RyMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { 
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { 
         
     }
     
@@ -190,7 +192,7 @@ impl InstructionProcess for Instruction<RyMetadata> {
 }
 
 impl InstructionProcess for Instruction<RyExtWordMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
         let data = cpu.read(location, Size::Word);
 
@@ -205,22 +207,22 @@ impl InstructionProcess for Instruction<RyExtWordMetadata> {
 }
 
 impl InstructionProcess for Instruction<VectorMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
 impl InstructionProcess for Instruction<DataAddrModeMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
 impl InstructionProcess for Instruction<ConditionAddrModeMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
 impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
         let ext_word = cpu.read(location, Size::Word);
         cpu.increment_pc();
@@ -234,12 +236,12 @@ impl InstructionProcess for Instruction<ConditionRyExtWordMetadata> {
 }
 
 impl InstructionProcess for Instruction<DisplacementMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { todo!() }
     fn disassembly(&self) -> std::string::String { todo!() }
 }
 
 impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let mut displacement = self.operation_word as u8 as u32;
         displacement = sign_extend(displacement, Size::Byte);
         if displacement == 0 {
@@ -256,14 +258,14 @@ impl InstructionProcess for Instruction<ConditionDisplacementMetadata> {
 }
 
 impl InstructionProcess for Instruction<RxDataMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) {}
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) {}
     fn disassembly(&self) -> String { 
         format!("{}.{} {} {}", self.name, self.size, self.meta_data.reg_x, self.meta_data.data)
     }
 }
 
 impl InstructionProcess for Instruction<RxRyMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) { }
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) { }
 
     fn disassembly(&self) -> std::string::String { 
         format!("{}.{} {} {}", self.name, self.size, self.meta_data.reg_x, self.meta_data.reg_y)
@@ -271,7 +273,7 @@ impl InstructionProcess for Instruction<RxRyMetadata> {
 }
 
 impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         self.meta_data.addr_mode_x.fetch_ext_word(cpu, self.size);
         self.meta_data.addr_mode_y.fetch_ext_word(cpu, self.size);
     }
@@ -282,7 +284,7 @@ impl InstructionProcess for Instruction<RxRySpecAddrModeMetadata> {
 }
 
 impl InstructionProcess for Instruction<RotationRyMetadata> {
-    fn fetch_instruction_data(&mut self, _: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, _: &mut Mc68k) {
 
     }
 
@@ -292,7 +294,7 @@ impl InstructionProcess for Instruction<RotationRyMetadata> {
 }
 
 impl InstructionProcess for Instruction<ExplicitImmediateMetadata> {
-    fn fetch_instruction_data(&mut self, cpu: &mut Mc68k) {
+    fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k) {
         let location = Location::memory(cpu.pc as usize);
         let mut data = cpu.read(location, Size::Word);
 

@@ -7,6 +7,7 @@ use crate::hardware::mc68k::instruction_set::instruction_meta_data_types::*;
 
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 
+use super::Mc68kBus;
 use super::RegisterType;
 use super::addressing_mode::{AddrMode, AddrModeType};
 use super::vector_table::VectorTable;
@@ -15,7 +16,6 @@ use super::Condition;
 
 use crate::disassembler::Disassembler;
 
-use crate::hardware::bus::bus::Bus;
 use crate::hardware::{
     Size, Location, LocationType, sign_extend
 };
@@ -53,7 +53,7 @@ pub struct Mc68k {
     ea_location: Location,
     ea_operand: u32,
 
-    bus: *mut Bus,
+    bus: *mut dyn Mc68kBus,
     disassembler: Disassembler,
 }
 
@@ -82,9 +82,8 @@ impl fmt::Display for Mc68k {
 
 #[allow(non_snake_case)]
 impl Mc68k {
-    pub fn init(bus: *mut Bus, disassembler: Disassembler) -> Self {
-        let ram_ptr = unsafe { (*bus).get_rom_ptr() };
-        let vector_table = VectorTable::init(ram_ptr);
+    pub fn init(bus: *mut dyn Mc68kBus, rom_ptr: *const u8, disassembler: Disassembler) -> Self {
+        let vector_table = VectorTable::init(rom_ptr);
 
         let stack_ptr = vector_table.reset_stack_pointer();
         let pc = vector_table.reset_program_counter();
@@ -136,9 +135,9 @@ impl Mc68k {
         self.increment_pc();
 
         // get instruction from table by its opcode
-        let mut instruction = self.opcode_table[operation_word as usize].clone();
+        let mut instruction: Box<dyn InstructionProcess> = self.opcode_table[operation_word as usize].clone();
         // fetch all additional instruction information from instruction opcode and from memory (extension words, decode addressing modes, etc.)
-        instruction.fetch_instruction_data(self);
+        instruction.fetch_decode_instruction_data(self);
 
         // save instruction in current cpu state for getting an instruction metadata, when cpu will execute this they will use them
         self.instruction = instruction;

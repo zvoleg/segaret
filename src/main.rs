@@ -11,7 +11,7 @@ mod hardware;
 pub mod disassembler;
 
 use hardware::mc68k::mc68k_emu::Mc68k;
-use hardware::bus::bus::Bus;
+use hardware::bus::Bus;
 use hardware::cartridge::cartridge::Cartridge;
 use hardware::vdp::Vdp;
 
@@ -27,7 +27,8 @@ fn main() {
     vdp.set_bus(&mut bus);
 
     let disassembler = disassembler::Disassembler::new("pop_test_01");
-    let mut cpu = Mc68k::init(&mut bus, disassembler);
+    let rom_ptr = bus.get_rom_ptr();
+    let mut cpu = Mc68k::init(&mut bus, rom_ptr, disassembler);
     bus.set_cpu(&mut cpu);
 
     let mut auto_state = false;

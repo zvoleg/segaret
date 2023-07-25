@@ -1,9 +1,9 @@
-use crate::Bus;
 use spriter::Color;
+use spriter::Canvas;
 use rand;
 
+use crate::hardware::bus::Bus;
 use crate::hardware::Size;
-use spriter::Canvas;
 
 #[derive(PartialEq)]
 enum DisplayMod {

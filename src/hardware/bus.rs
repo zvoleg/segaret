@@ -1,7 +1,8 @@
-use crate::Mc68k;
-use crate::Vdp;
+use crate::{Mc68k, Vdp};
 use crate::hardware::Size;
 use crate::hardware::cartridge::cartridge::Cartridge;
+
+use super::mc68k::Mc68kBus;
 
 pub struct Bus {
     cartridge: Cartridge,
@@ -31,7 +32,15 @@ impl Bus {
         self.cartridge.rom.as_ptr()
     }
 
-    pub fn read(&self, address: usize, size: Size) -> u32 {
+    pub fn send_interrupt(&self, interrupt_level: usize) {
+        unsafe {
+            (*self.cpu).interrupt(interrupt_level);
+        }
+    }
+}
+
+impl Mc68kBus for Bus {
+    fn read(&self, address: usize, size: Size) -> u32 {
         if address <= 0x3FFFFF {
             self.cartridge.read(address, size)
         } else if address == 0xA10001 {
@@ -68,7 +77,7 @@ impl Bus {
         }
     }
 
-    pub fn write(&mut self, address: usize, data: u32, size: Size) {
+    fn write(&mut self, address: usize, data: u32, size: Size) {
         if address == 0xC00000 || address == 0xC00002 {
             unsafe {
                 (*self.vdp).write_data_port(data as u16);
@@ -96,11 +105,4 @@ impl Bus {
             }
         }
     }
-
-    pub fn send_interrupt(&self, interrupt_level: usize) {
-        unsafe {
-            (*self.cpu).interrupt(interrupt_level);
-        }
-    }
 }
-

@@ -1,3 +1,4 @@
+use crate::hardware::mc68k::Mc68kBus;
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::mc68k::instruction_set::AddrModeDataMetadata;
 use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;

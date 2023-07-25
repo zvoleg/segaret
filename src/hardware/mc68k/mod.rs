@@ -1,5 +1,7 @@
 use std::fmt;
 
+use super::Size;
+
 pub mod mc68k_emu;
 mod vector_table;
 mod instruction_set;
@@ -84,4 +86,9 @@ impl fmt::Display for Register {
         };
         write!(f, "{}{}", reg_type_char, self.reg_idx)
     }
+}
+
+pub trait Mc68kBus {
+    fn read(&self, address: usize, size: Size) -> u32;
+    fn write(&mut self, address: usize, data: u32, size: Size);
 }

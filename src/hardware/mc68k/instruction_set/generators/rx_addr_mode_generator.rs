@@ -1,3 +1,4 @@
+use crate::hardware::mc68k::Mc68kBus;
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::mc68k::addressing_mode::AddrMode;
 use crate::hardware::Register;
