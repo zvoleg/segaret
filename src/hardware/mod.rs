@@ -4,6 +4,7 @@ pub mod mc68k;
 pub mod cartridge;
 pub mod bus;
 pub mod vdp;
+pub mod z80;
 
 use crate::hardware::mc68k::{Register, RegisterType};
 
