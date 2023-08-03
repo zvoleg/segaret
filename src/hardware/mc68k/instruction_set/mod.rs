@@ -8,11 +8,9 @@ pub(in crate::hardware) mod generators;
 
 mod addr_mode_table;
 
-use crate::hardware::{Size, LocationType, Location};
+use crate::hardware::{Size, Location};
 
 use instruction_meta_data_types::*;
-
-use super::Mc68kBus;
 
 pub(in crate::hardware) trait InstructionProcess: InstructionBoxedClone + InstructionData {
     fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k);

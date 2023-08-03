@@ -1,3 +1,5 @@
+use crate::hardware::{sign_extend, Size};
+
 use super::Z80Bus;
 
 pub struct Z80Emu {
@@ -22,14 +24,32 @@ pub struct Z80Emu {
     iy: u16, // index register Y
 
     //internal
+    fetched_data: u16,
+    fetched_data_size: Size,
     operand: u16,
+    displacement: u16,
 
     bus: *mut dyn Z80Bus,
 }
 
 impl Z80Emu {
+    fn clock(&mut self) {
+        // TODO collect all bytes of opcode (1 or 2 or 3 ... ?)
+
+        // TODO decode opcode
+        // TODO call opcode handler
+
+        // TODO clock counter
+    }
+
     fn increment_pc(&mut self) {
         self.pc = self.pc.wrapping_add(1)
+    }
+
+    fn read_pc_and_increment(&mut self) -> u8 {
+        let data = self.read_memory(self.pc);
+        self.increment_pc();
+        data
     }
 
     fn read_memory(&mut self, address: u16) -> u8 {
@@ -48,35 +68,45 @@ impl Z80Emu {
 /* Addressing modes */
 impl Z80Emu {
     fn immediate_am(&mut self) {
-        let operand = self.read_memory(self.pc);
-        self.operand = operand as u16;
-        self.increment_pc();
+        let operand = self.read_pc_and_increment();
+        self.fetched_data = operand as u16;
     }
 
     fn immediate_extended_am(&mut self) {
-        let high_order_bits = self.read_memory(self.pc);
-        self.operand = (high_order_bits as u16) << 8;
-        self.increment_pc();
+        let low_order_bits = self.read_pc_and_increment();
+        self.fetched_data = low_order_bits as u16;
 
-        let low_order_bits = self.read_memory(self.pc);
-        self.operand |= low_order_bits as u16;
-        self.increment_pc();
+        let high_order_bits = self.read_pc_and_increment();
+        self.fetched_data |= (high_order_bits as u16) << 8;
     }
 
     fn modified_page_zero_am(&mut self) {
-
+        // TODO this AM using only with RST instruction (restart page zero)
     }
 
     fn relative_am(&mut self) {
+        let data = self.read_pc_and_increment();
 
+        self.fetched_data = sign_extend(data as u32, Size::Byte) as u16;
     }
 
+    // fetched data is address of operand or address for jump instruction
     fn extended_am(&mut self) {
+        let low_order_bits = self.read_pc_and_increment();
+        self.fetched_data = low_order_bits as u16;
 
+        let high_order_bits = self.read_pc_and_increment();
+        self.fetched_data |= (high_order_bits as u16) << 8;
     }
 
     fn indexed_am(&mut self) {
+        let data = self.read_pc_and_increment();
+        let displacement = sign_extend(data as u32, Size::Byte) as u16;
+        
+        let register_value = self.ix; // TODO opcode specifies wich index register shoud be used
+        let address = register_value.wrapping_div(displacement);
 
+        self.fetched_data = self.read_memory(address) as u16;
     }
 
     fn register_am(&mut self) {
