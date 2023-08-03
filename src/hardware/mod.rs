@@ -1,10 +1,12 @@
-use crate::hardware::cpu::{Register, RegisterType};
 use std::fmt;
 
-pub mod cpu;
+pub mod mc68k;
 pub mod cartridge;
 pub mod bus;
 pub mod vdp;
+pub mod z80;
+
+use crate::hardware::mc68k::{Register, RegisterType};
 
 #[derive(Copy, Clone)]
 pub enum Size {
