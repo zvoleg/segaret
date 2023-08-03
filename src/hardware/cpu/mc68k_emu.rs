@@ -44,7 +44,7 @@ pub struct Mc68k {
     sr: u16,
     mode: Mode, // user/supervisor
 
-    clock_counter: i32,
+    clock_counter: u32,
     
     pended_interrupt_level: Option<usize>,
 
@@ -90,8 +90,6 @@ impl Mc68k {
         let pc = vector_table.reset_program_counter();
         let opcode_table = instruction_set::generate();
 
-        
-
         let instruction: Box<dyn InstructionProcess> = opcode_table[0].clone();
         let mut reg = [0; 17];
         reg[15] = stack_ptr;
@@ -125,28 +123,33 @@ impl Mc68k {
     }
 
     pub fn clock(&mut self) {
-        if let Some(interrutp) = self.pended_interrupt_level {
-            self.prepare_exception();
-            self.pc = self.vector_table.interrupt_level(interrutp);
-            self.pended_interrupt_level = None;
+        if self.clock_counter == 0 {
+            if let Some(interrutp) = self.pended_interrupt_level {
+                self.prepare_exception();
+                self.pc = self.vector_table.interrupt_level(interrutp);
+                self.pended_interrupt_level = None;
+            }
+
+            let instruction_addr = self.pc;
+            let operation_word = self.read_memory(self.pc as usize, Size::Word);
+            self.increment_pc();
+
+            let mut instruction = self.opcode_table[operation_word as usize].clone();
+            instruction.fetch_data(self);
+
+            self.clock_counter = instruction.as_ref().clock();
+            self.instruction = instruction;
+            
+            let disasm_str = format!("0x{:04X}\t{}", operation_word, self.instruction.as_ref().disassembly());
+            self.disassembler.push_instruction(instruction_addr, disasm_str.clone());
+            println!("0x{:08X}: {}", instruction_addr, disasm_str);
+            
+            (self.instruction.as_ref().handler())(self);
+            println!("{}", self);
+            self.clock_counter -= 1;
+        } else {
+            self.clock_counter -= 1;
         }
-
-        let instruction_addr = self.pc;
-        let operation_word = self.read_memory(self.pc as usize, Size::Word);
-        self.increment_pc();
-
-        let mut instruction = self.opcode_table[operation_word as usize].clone();
-        instruction.fetch_data(self);
-
-        self.instruction = instruction;
-
-        
-        let disasm_str = format!("0x{:04X}\t{}", operation_word, self.instruction.as_ref().disassembly());
-        self.disassembler.push_instruction(instruction_addr, disasm_str.clone());
-        println!("0x{:08X}: {}", instruction_addr, disasm_str);
-        
-        (self.instruction.as_ref().handler())(self);
-        println!("{}", self);
     }
 
     pub fn interrupt(&mut self, interrupt_level: usize) {
@@ -638,8 +641,8 @@ impl Mc68k {
 
         let num_of_regs = affected_registers.len();
         match self.instruction.as_ref().size() {
-            Size::Word => self.clock_counter += 4 * num_of_regs as i32,
-            Size::Long => self.clock_counter += 8 * num_of_regs as i32,
+            Size::Word => self.clock_counter += 4 * num_of_regs as u32,
+            Size::Long => self.clock_counter += 8 * num_of_regs as u32,
             Size::Byte => panic!("MOVEM: wrong size for this instruction"),
         }
 
@@ -909,7 +912,7 @@ impl Mc68k {
         if result {
             self.pc = self.pc.wrapping_add(offset);
         } else {
-            let clock_corection = match instruction.data.displacement_size {
+            let clock_corection: i32 = match instruction.data.displacement_size {
                 Size::Byte => -2,
                 Size::Word => {
                     self.increment_pc();
@@ -917,7 +920,7 @@ impl Mc68k {
                 },
                 Size::Long => panic!("Bcc: unexpected displacement size"),
             };
-            self.clock_counter += clock_corection;
+            self.clock_counter += clock_corection as u32;
         }
     }
 

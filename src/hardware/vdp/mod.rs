@@ -14,8 +14,8 @@ enum DisplayMod {
 impl DisplayMod {
     fn line_amount(&self) -> u32 {
         match self {
-            PAL => 240,
-            NTSC => 224,
+            DisplayMod::PAL => 240,
+            DisplayMod::NTSC => 224,
         }
     }
 }

@@ -37,6 +37,7 @@ pub(in crate::hardware) trait InstructionData {
     fn handler(&self) -> fn(&mut Mc68k);
     fn size(&self) -> Size;
     fn operation_word(&self) -> u16;
+    fn clock(&self) -> u32;
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -51,6 +52,10 @@ impl<T> InstructionData for Instruction<T> where T: 'static {
 
     fn operation_word(&self) -> u16 {
         self.operation_word
+    }
+
+    fn clock(&self) -> u32 {
+        self.clock
     }
 
     fn as_any(&self) -> &dyn Any {
