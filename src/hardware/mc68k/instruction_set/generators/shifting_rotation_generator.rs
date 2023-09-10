@@ -1,5 +1,5 @@
-use crate::hardware::mc68k::Mc68kBus;
 use crate::hardware::mc68k::addressing_mode::AddrModeType;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_am_bits;
 use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
 use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
 use crate::hardware::mc68k::instruction_set::AddrModeMetadata;
@@ -264,7 +264,7 @@ fn generate_memory_instructions(opcode_table: &mut Vec<Box<dyn InstructionProces
 
             addr_modes.iter()
                 .for_each(|mode| {
-                    let opcode =  mask | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
+                    let opcode =  mask | get_am_bits((*mode).am_type) << 3 | (*mode).reg_idx as u16;
 
                     opcode_table[opcode as usize] = Box::new(Instruction::new(
                         pattern.name,

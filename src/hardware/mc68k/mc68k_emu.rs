@@ -167,7 +167,7 @@ impl Mc68k {
     }
 
     pub fn save(&self) {
-        self.disassembler.save();
+        self.disassembler.save().unwrap();
     }
 
     fn read_data_reg(&self, reg: usize, size: Size) -> u32 {
@@ -623,7 +623,7 @@ impl Mc68k {
         let size = self.instruction.as_ref().size();
         let instruction = self.instruction::<Instruction<AddrModeExtWordMetadata>>();
 
-        // расчитать затрагиваемые регистры из register_mask
+        // calculate the affected registers from register_mask
         let register_mask = instruction.meta_data.ext_word;
         let mut affected_registers = Vec::new();
         if self.current_addr_mode.am_type == AddrModeType::AddrIndPreDec {

@@ -1,4 +1,3 @@
-use crate::hardware::mc68k::Mc68kBus;
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::mc68k::addressing_mode::AddrMode;
 use crate::hardware::Register;
@@ -7,6 +6,7 @@ use crate::hardware::mc68k::instruction_set::RxAddrModeMetadata;
 use crate::hardware::mc68k::instruction_set::Instruction;
 use crate::hardware::Size;
 use crate::hardware::mc68k::addressing_mode::AddrModeType;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_am_bits;
 use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
 use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
 use crate::hardware::mc68k::instruction_set::generators::register_type_by_char;
@@ -317,7 +317,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 fn generate_mask(name: &str, mask: u16, rx_idx: u16, addr_mode: &AddrMode) -> u16 {
     match name {
         "movep" => mask | rx_idx << 9 | (*addr_mode).reg_idx as u16,
-        _ => mask | rx_idx << 9 | ((*addr_mode).mode_bits as u16) << 3 | (*addr_mode).reg_idx as u16,
+        _ => mask | rx_idx << 9 | get_am_bits((*addr_mode).am_type) << 3 | (*addr_mode).reg_idx as u16,
     }
 }
 

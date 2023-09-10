@@ -1,4 +1,5 @@
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_am_bits;
 use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
 use crate::hardware::mc68k::addressing_mode::AddrModeType;
 use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
@@ -304,7 +305,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 
                 src_addr_modes.iter().for_each(|src_mode| {
                     dst_addr_modes.iter().for_each(|dst_mode| {
-                        let opcode = mask | (dst_mode.reg_idx as u16) << 9 | (dst_mode.mode_bits as u16) << 6 | (src_mode.mode_bits as u16) << 3 | src_mode.reg_idx as u16;
+                        let opcode = mask | (dst_mode.reg_idx as u16) << 9 | get_am_bits(dst_mode.am_type) << 6 | get_am_bits(src_mode.am_type) << 3 | src_mode.reg_idx as u16;
 
                         opcode_table[opcode as usize] = Box::new(Instruction::new(
                             name,

@@ -1,11 +1,11 @@
 use crate::hardware::sign_extend;
-use crate::hardware::{Location, LocationType};
+use crate::hardware::Location;
 use crate::Mc68k;
 use std::fmt;
 
 use crate::hardware::Size;
 
-use super::{RegisterType, Register, Mc68kBus};
+use super::{RegisterType, Register};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum AddrModeType {
@@ -24,23 +24,6 @@ pub enum AddrModeType {
 }
 
 impl AddrModeType {
-    fn get_mode_bits(&self) -> usize {
-        match self {
-            AddrModeType::Data => 0b000,
-            AddrModeType::Addr => 0b001,
-            AddrModeType::AddrInd => 0b010,
-            AddrModeType::AddrIndPostInc => 0b011,
-            AddrModeType::AddrIndPreDec => 0b100,
-            AddrModeType::AddrIndDips => 0b101,
-            AddrModeType::AddrIndIdx => 0b110,
-            AddrModeType::PcDisp => 0b111,
-            AddrModeType::PcIdx => 0b111,
-            AddrModeType::AbsShort => 0b111,
-            AddrModeType::AbsLong => 0b111,
-            AddrModeType::Immediate => 0b111,
-        }
-    }
-
     pub(in crate::hardware) fn get_clock_periods_short(&self) -> u32 {
         match self {
             AddrModeType::Data => 0,
@@ -108,8 +91,7 @@ impl BriefExtWord {
 
 #[derive(Copy, Clone)]
 pub(in crate::hardware) struct AddrMode {
-    pub(in crate::hardware) am_type: AddrModeType,
-    pub(in crate::hardware) mode_bits: usize, 
+    pub(in crate::hardware) am_type: AddrModeType, 
     pub(in crate::hardware) reg_idx: usize,
     pub(in crate::hardware) ext_word: Option<u32>,
     pub(in crate::hardware) brief_ext_word: Option<BriefExtWord>,
@@ -120,7 +102,6 @@ impl AddrMode {
     pub(in crate::hardware) fn new(am_type: AddrModeType, reg_idx: usize) -> Self {
         Self {
             am_type: am_type,
-            mode_bits: am_type.get_mode_bits(),
             reg_idx: reg_idx,
             ext_word: None,
             brief_ext_word: None,
