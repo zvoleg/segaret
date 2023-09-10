@@ -1,6 +1,6 @@
-use crate::hardware::mc68k::Mc68kBus;
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::mc68k::instruction_set::AddrModeDataMetadata;
+use crate::hardware::mc68k::instruction_set::addr_mode_table::get_am_bits;
 use crate::hardware::mc68k::instruction_set::generators::addr_mode_type_by_char;
 use crate::hardware::mc68k::addressing_mode::AddrModeType;
 use crate::hardware::mc68k::instruction_set::addr_mode_table::get_addr_mode_table;
@@ -77,7 +77,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             (0..8).for_each(|data| {
                 addr_modes.iter()
                     .for_each(|mode| {
-                        let opcode =  mask | data << 9 | ((*mode).mode_bits as u16) << 3 | (*mode).reg_idx as u16;
+                        let opcode =  mask | data << 9 | get_am_bits((*mode).am_type) << 3 | (*mode).reg_idx as u16;
                         let data = if data != 0 {
                             data
                         } else {

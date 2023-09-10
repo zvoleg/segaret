@@ -41,19 +41,36 @@ lazy_static! {
         .collect::<Vec<AddrMode>>();
 }
 
-pub(in crate::hardware) fn get_addr_mode_table(addr_mode_type: AddrModeType) -> Vec<AddrMode> {
+pub(in crate::hardware) fn get_addr_mode_table(addr_mode_type: AddrModeType) -> &'static [AddrMode] {
     match addr_mode_type {
-        AddrModeType::Data => (*DATA).clone(),
-        AddrModeType::Addr => (*ADDR).clone(),
-        AddrModeType::AddrInd => (*ADDR_IND).clone(),
-        AddrModeType::AddrIndPostInc => (*ADDR_IND_POST_INC).clone(),
-        AddrModeType::AddrIndPreDec => (*ADDR_IND_PRE_DECR).clone(),
-        AddrModeType::AddrIndDips => (*ADDR_IND_DISPL).clone(),
-        AddrModeType::AddrIndIdx => (*ADDR_IND_IDX).clone(),
-        AddrModeType::PcDisp => (*PC_DISPL).clone(),
-        AddrModeType::PcIdx => (*PC_IDX).clone(),
-        AddrModeType::AbsShort => (*ABS_SHORT).clone(),
-        AddrModeType::AbsLong => (*ABS_LONG).clone(),
-        AddrModeType::Immediate => (*IMMEDIATE).clone(),
+        AddrModeType::Data => &DATA,
+        AddrModeType::Addr => &ADDR,
+        AddrModeType::AddrInd => &ADDR_IND,
+        AddrModeType::AddrIndPostInc => &ADDR_IND_POST_INC,
+        AddrModeType::AddrIndPreDec => &ADDR_IND_PRE_DECR,
+        AddrModeType::AddrIndDips => &ADDR_IND_DISPL,
+        AddrModeType::AddrIndIdx => &ADDR_IND_IDX,
+        AddrModeType::PcDisp => &PC_DISPL,
+        AddrModeType::PcIdx => &PC_IDX,
+        AddrModeType::AbsShort => &ABS_SHORT,
+        AddrModeType::AbsLong => &ABS_LONG,
+        AddrModeType::Immediate => &IMMEDIATE,
     }
+}
+
+pub(in crate::hardware) fn get_am_bits(addr_mode_type: AddrModeType) -> u16 {
+    match addr_mode_type {
+        AddrModeType::Data => 0b000,
+        AddrModeType::Addr => 0b001,
+        AddrModeType::AddrInd => 0b010,
+        AddrModeType::AddrIndPostInc => 0b011,
+        AddrModeType::AddrIndPreDec => 0b100,
+        AddrModeType::AddrIndDips => 0b101,
+        AddrModeType::AddrIndIdx => 0b110,
+        AddrModeType::PcDisp => 0b111,
+        AddrModeType::PcIdx => 0b111,
+        AddrModeType::AbsShort => 0b111,
+        AddrModeType::AbsLong => 0b111,
+        AddrModeType::Immediate => 0b111,
+    }    
 }
