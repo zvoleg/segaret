@@ -10,7 +10,7 @@ pub(in crate::hardware)struct AddrModeMetadata {
 }
 
 impl AddrModeMetadata {
-    pub(in crate::hardware)fn new(addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware) fn new(addr_mode: AddrMode) -> Self {
         Self { addr_mode }
     }
 }
@@ -23,7 +23,7 @@ pub(in crate::hardware)struct AddrModeImmediateMetadata {
 }
 
 impl AddrModeImmediateMetadata {
-    pub(in crate::hardware)fn new(addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware) fn new(addr_mode: AddrMode) -> Self {
         Self {
             addr_mode: addr_mode,
             immediate_data: 0,
@@ -38,7 +38,7 @@ pub(in crate::hardware)struct AddrModeDataMetadata {
 }
 
 impl AddrModeDataMetadata {
-    pub (in crate::hardware)fn new(addr_mode: AddrMode, data: u32) -> Self {
+    pub (in crate::hardware) fn new(addr_mode: AddrMode, data: u32) -> Self {
         Self {
             addr_mode,
             data,
@@ -54,7 +54,7 @@ pub(in crate::hardware)struct AddrModeExtWordMetadata {
 }
 
 impl AddrModeExtWordMetadata {
-    pub(in crate::hardware)fn new(addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware) fn new(addr_mode: AddrMode) -> Self {
         Self {
             addr_mode,
             ext_word: 0,
@@ -65,12 +65,12 @@ impl AddrModeExtWordMetadata {
 // rx addressing_mode
 #[derive(Clone)]
 pub(in crate::hardware)struct RxAddrModeMetadata {
-    pub(in crate::hardware)reg_x: Register,
+    pub(in crate::hardware::mc68k)reg_x: Register,
     pub(in crate::hardware)addr_mode: AddrMode,
 }
 
 impl RxAddrModeMetadata {
-    pub(in crate::hardware)fn new(reg_x: Register, addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware::mc68k) fn new(reg_x: Register, addr_mode: AddrMode) -> Self {
         Self {
             reg_x,
             addr_mode,
@@ -86,7 +86,7 @@ pub(in crate::hardware)struct MoveInstructionMetadata {
 }
 
 impl MoveInstructionMetadata {
-    pub(in crate::hardware)fn new(src_addr_mode: AddrMode, dst_addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware) fn new(src_addr_mode: AddrMode, dst_addr_mode: AddrMode) -> Self {
         Self {
             src_addr_mode,
             dst_addr_mode,
@@ -97,11 +97,11 @@ impl MoveInstructionMetadata {
 // ry
 #[derive(Clone)]
 pub(in crate::hardware)struct RyMetadata {
-    pub(in crate::hardware)reg_y: Register,
+    pub(in crate::hardware::mc68k)reg_y: Register,
 }
 
 impl RyMetadata {
-    pub(in crate::hardware)fn new(reg_y: Register) -> Self {
+    pub(in crate::hardware::mc68k) fn new(reg_y: Register) -> Self {
         Self {
             reg_y
         }
@@ -111,12 +111,12 @@ impl RyMetadata {
 // ry extension word
 #[derive(Clone)]
 pub(in crate::hardware)struct RyExtWordMetadata {
-    pub(in crate::hardware)reg_y: Register,
+    pub(in crate::hardware::mc68k)reg_y: Register,
     pub(in crate::hardware)ext_word: u32,
 }
 
 impl RyExtWordMetadata {
-    pub(in crate::hardware)fn new(reg_y: Register) -> Self {
+    pub(in crate::hardware::mc68k) fn new(reg_y: Register) -> Self {
         Self {
             reg_y,
             ext_word: 0,
@@ -131,7 +131,7 @@ pub(in crate::hardware)struct VectorMetadata {
 }
 
 impl VectorMetadata {
-    pub(in crate::hardware)fn new(vector: usize) -> Self {
+    pub(in crate::hardware) fn new(vector: usize) -> Self {
         Self { vector }
     }
 }
@@ -139,12 +139,12 @@ impl VectorMetadata {
 // data addressing_mode
 #[derive(Clone)]
 pub(in crate::hardware)struct DataAddrModeMetadata {
-    pub(in crate::hardware)data: u32,
-    pub(in crate::hardware)addr_mode: AddrMode,
+    pub(in crate::hardware) data: u32,
+    pub(in crate::hardware) addr_mode: AddrMode,
 }
 
 impl DataAddrModeMetadata {
-    pub(in crate::hardware)fn new(data: u32, addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware) fn new(data: u32, addr_mode: AddrMode) -> Self {
         Self {
             data,
             addr_mode,
@@ -155,12 +155,12 @@ impl DataAddrModeMetadata {
 // condition addressing_mode
 #[derive(Clone)]
 pub(in crate::hardware)struct ConditionAddrModeMetadata {
-    pub(in crate::hardware)condition: Condition,
-    pub(in crate::hardware)addr_mode: AddrMode,
+    pub(in crate::hardware::mc68k) condition: Condition,
+    pub(in crate::hardware) addr_mode: AddrMode,
 }
 
 impl ConditionAddrModeMetadata {
-    pub(in crate::hardware)fn new(condition: Condition, addr_mode: AddrMode) -> Self {
+    pub(in crate::hardware::mc68k) fn new(condition: Condition, addr_mode: AddrMode) -> Self {
         Self {
             condition,
             addr_mode,
@@ -171,13 +171,13 @@ impl ConditionAddrModeMetadata {
 // condition ry
 #[derive(Clone)]
 pub(in crate::hardware)struct ConditionRyExtWordMetadata {
-    pub(in crate::hardware)condition: Condition,
-    pub(in crate::hardware)reg_y: Register,
-    pub(in crate::hardware)ext_word: u32
+    pub(in crate::hardware::mc68k) condition: Condition,
+    pub(in crate::hardware::mc68k) reg_y: Register,
+    pub(in crate::hardware) ext_word: u32
 }
 
 impl ConditionRyExtWordMetadata {
-    pub(in crate::hardware)fn new(condition: Condition, reg_y: Register) -> Self {
+    pub(in crate::hardware::mc68k) fn new(condition: Condition, reg_y: Register) -> Self {
         Self {
             condition,
             reg_y,
@@ -194,7 +194,7 @@ pub(in crate::hardware)struct DisplacementMetadata {
 }
 
 impl DisplacementMetadata {
-    pub(in crate::hardware)fn new(displacement: u32, displacement_size: Size) -> Self {
+    pub(in crate::hardware::mc68k) fn new(displacement: u32, displacement_size: Size) -> Self {
         Self { displacement, displacement_size }
     }
 }
@@ -202,13 +202,13 @@ impl DisplacementMetadata {
 // condition displacement
 #[derive(Clone)]
 pub(in crate::hardware)struct ConditionDisplacementMetadata {
-    pub(in crate::hardware) condition: Condition,
+    pub(in crate::hardware::mc68k) condition: Condition,
     pub(in crate::hardware) displacement: u32,
     pub(in crate::hardware) displacement_size: Size,
 }
 
 impl ConditionDisplacementMetadata {
-    pub(in crate::hardware)fn new(condition: Condition, displacement: u32, displacement_size: Size) -> Self {
+    pub(in crate::hardware::mc68k) fn new(condition: Condition, displacement: u32, displacement_size: Size) -> Self {
         Self {
             condition,
             displacement,
@@ -220,12 +220,12 @@ impl ConditionDisplacementMetadata {
 // rx data
 #[derive(Clone)]
 pub(in crate::hardware)struct RxDataMetadata {
-    pub(in crate::hardware)reg_x: Register,
-    pub(in crate::hardware)data: u32,
+    pub(in crate::hardware::mc68k) reg_x: Register,
+    pub(in crate::hardware) data: u32,
 }
 
 impl RxDataMetadata {
-    pub(in crate::hardware)fn new(reg_x: Register, data: u32) -> Self {
+    pub(in crate::hardware::mc68k) fn new(reg_x: Register, data: u32) -> Self {
         Self {
             reg_x,
             data,
@@ -236,12 +236,12 @@ impl RxDataMetadata {
 // rx ry
 #[derive(Clone)]
 pub(in crate::hardware)struct RxRyMetadata {
-    pub(in crate::hardware)reg_x: Register,
-    pub(in crate::hardware)reg_y: Register,
+    pub(in crate::hardware::mc68k) reg_x: Register,
+    pub(in crate::hardware::mc68k) reg_y: Register,
 }
 
 impl RxRyMetadata {
-    pub(in crate::hardware)fn new(reg_x: Register, reg_y: Register) -> Self {
+    pub(in crate::hardware::mc68k) fn new(reg_x: Register, reg_y: Register) -> Self {
         Self {
             reg_x, 
             reg_y,
@@ -256,7 +256,7 @@ pub(in crate::hardware) struct RxRySpecAddrModeMetadata {
 }
 
 impl RxRySpecAddrModeMetadata {
-    pub(in crate::hardware)fn new(addr_mode_x: AddrMode, addr_mode_y: AddrMode) -> Self {
+    pub(in crate::hardware::mc68k) fn new(addr_mode_x: AddrMode, addr_mode_y: AddrMode) -> Self {
         Self {
             addr_mode_x,
             addr_mode_y,
@@ -267,12 +267,12 @@ impl RxRySpecAddrModeMetadata {
 // rotation ry
 #[derive(Clone)]
 pub(in crate::hardware)struct RotationRyMetadata {
-    pub(in crate::hardware)counter: u32,
-    pub(in crate::hardware)reg_y: Register,
+    pub(in crate::hardware) counter: u32,
+    pub(in crate::hardware::mc68k) reg_y: Register,
 }
 
 impl RotationRyMetadata {
-    pub(in crate::hardware)fn new(counter: u32, reg_y: Register) -> Self {
+    pub(in crate::hardware::mc68k) fn new(counter: u32, reg_y: Register) -> Self {
         Self {
             counter,
             reg_y,

@@ -1,11 +1,10 @@
 use crate::hardware::sign_extend;
-use crate::hardware::Location;
 use crate::Mc68k;
 use std::fmt;
 
 use crate::hardware::Size;
 
-use super::{RegisterType, Register};
+use super::{RegisterType, Register, Location};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum AddrModeType {
@@ -60,8 +59,8 @@ impl AddrModeType {
 }
 
 #[derive(Copy, Clone)]
-pub(in crate::hardware) struct BriefExtWord {
-    pub register: Register,
+pub(in crate::hardware::mc68k) struct BriefExtWord {
+    pub(in crate::hardware::mc68k) register: Register,
     pub size: Size,
     pub displacement: u32,
 }
@@ -94,7 +93,7 @@ pub(in crate::hardware) struct AddrMode {
     pub(in crate::hardware) am_type: AddrModeType, 
     pub(in crate::hardware) reg_idx: usize,
     pub(in crate::hardware) ext_word: Option<u32>,
-    pub(in crate::hardware) brief_ext_word: Option<BriefExtWord>,
+    pub(in crate::hardware::mc68k) brief_ext_word: Option<BriefExtWord>,
     pub(in crate::hardware) ext_word_addr: u32,
 }
 

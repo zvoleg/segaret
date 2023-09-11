@@ -77,7 +77,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
             (0..8).for_each(|data| {
                 addr_modes.iter()
                     .for_each(|mode| {
-                        let opcode =  mask | data << 9 | get_am_bits((*mode).am_type) << 3 | (*mode).reg_idx as u16;
+                        let opcode =  mask | data << 9 | get_am_bits(mode.am_type) << 3 | mode.reg_idx as u16;
                         let data = if data != 0 {
                             data
                         } else {

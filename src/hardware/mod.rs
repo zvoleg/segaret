@@ -6,8 +6,6 @@ pub mod bus;
 pub mod vdp;
 pub mod z80;
 
-use crate::hardware::mc68k::{Register, RegisterType};
-
 #[derive(Copy, Clone)]
 pub enum Size {
     Byte = 1,
@@ -23,39 +21,6 @@ impl fmt::Display for Size {
             Size::Long => 'l',
         };
         write!(f, "{}", size_char)
-    }
-}
-
-#[derive(Copy, Clone)]
-pub enum LocationType {
-    DataReg,
-    AddrReg,
-    Memory,
-}
-
-#[derive(Copy, Clone)]
-pub struct Location {
-    location_type: LocationType,
-    address: usize,
-}
-
-impl Location {
-    pub fn new(location_type: LocationType, address: usize) -> Self {
-        Self {
-            location_type,
-            address,
-        }
-    }
-
-    pub fn memory(address: usize) -> Self {
-        Self::new(LocationType::Memory, address)
-    }
-
-    pub(in crate::hardware) fn register(register: Register) -> Self {
-        match register.reg_type {
-            RegisterType::Address => Self::new(LocationType::AddrReg, register.reg_idx),
-            RegisterType::Data => Self::new(LocationType::DataReg, register.reg_idx),
-        }
     }
 }
 

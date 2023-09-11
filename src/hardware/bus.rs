@@ -7,6 +7,7 @@ use super::mc68k::Mc68kBus;
 pub struct Bus {
     cartridge: Cartridge,
     ram: Vec<u8>,
+    z80_ram: Vec<u8>,
 
     vdp: *mut Vdp,
     cpu: *mut Mc68k,
@@ -16,8 +17,9 @@ impl Bus {
     pub fn init(cartridge: Cartridge, vdp: *mut Vdp) -> Self {
         Self {
             cartridge: cartridge,
-            // z80_ram: vec[0; 0x10000], $A00000	$A0FFFF
             ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            z80_ram: vec![0; 0x10000], // $A00000	$A0FFFF
+
             
             vdp: vdp,
             cpu: std::ptr::null_mut(),
@@ -36,6 +38,10 @@ impl Bus {
         unsafe {
             (*self.cpu).interrupt(interrupt_level);
         }
+    }
+
+    pub fn z80_dump(&self) -> &[u8] {
+        &self.z80_ram   
     }
 }
 
@@ -78,6 +84,10 @@ impl Mc68kBus for Bus {
     }
 
     fn write(&mut self, address: usize, data: u32, size: Size) {
+        if address >= 0xA00000 || address <= 0xA0FFFF {
+            let address = address & 0xFFFF;
+            self.z80_ram[address] = data as u8;
+        }
         if address == 0xC00000 || address == 0xC00002 {
             unsafe {
                 (*self.vdp).write_data_port(data as u16);

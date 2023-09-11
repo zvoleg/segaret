@@ -8,9 +8,11 @@ pub(in crate::hardware) mod generators;
 
 mod addr_mode_table;
 
-use crate::hardware::{Size, Location};
+use crate::hardware::Size;
 
 use instruction_meta_data_types::*;
+
+use super::Location;
 
 pub(in crate::hardware) trait InstructionProcess: InstructionBoxedClone + InstructionData {
     fn fetch_decode_instruction_data(&mut self, cpu: &mut Mc68k);
@@ -41,6 +43,16 @@ pub(in crate::hardware) trait InstructionData {
     fn as_any(&self) -> &dyn Any;
 }
 
+#[derive(Clone)]
+pub struct Instruction<T> {
+    name: &'static str,
+    pub operation_word: u16,
+    size: Size,
+    clock: u32,
+    pub meta_data: T,
+    pub handler: fn(&mut Mc68k),
+}
+
 impl<T> InstructionData for Instruction<T> where T: 'static {
     fn handler(&self) -> fn(&mut Mc68k) {
         self.handler
@@ -61,16 +73,6 @@ impl<T> InstructionData for Instruction<T> where T: 'static {
     fn as_any(&self) -> &dyn Any {
         self
     }
-}
-
-#[derive(Clone)]
-pub struct Instruction<T> {
-    name: &'static str,
-    pub operation_word: u16,
-    size: Size,
-    clock: u32,
-    pub meta_data: T,
-    pub handler: fn(&mut Mc68k),
 }
 
 impl<T> Instruction<T> {

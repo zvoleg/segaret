@@ -7,6 +7,8 @@ use crate::hardware::mc68k::instruction_set::instruction_meta_data_types::*;
 
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 
+use super::Location;
+use super::LocationType;
 use super::Mc68kBus;
 use super::RegisterType;
 use super::addressing_mode::{AddrMode, AddrModeType};
@@ -17,7 +19,7 @@ use super::Condition;
 use crate::disassembler::Disassembler;
 
 use crate::hardware::{
-    Size, Location, LocationType, sign_extend
+    Size, sign_extend
 };
 
 enum Status {
@@ -230,7 +232,7 @@ impl Mc68k {
         }
     }
 
-    pub fn read(&mut self, location: Location, size: Size) -> u32 {
+    pub(in crate::hardware::mc68k) fn read(&mut self, location: Location, size: Size) -> u32 {
         match location.location_type {
             LocationType::DataReg => self.read_data_reg(location.address, size),
             LocationType::AddrReg => self.read_addr_reg(location.address, size),

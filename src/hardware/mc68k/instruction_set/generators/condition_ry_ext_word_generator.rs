@@ -1,4 +1,4 @@
-use crate::hardware::Register;
+use crate::hardware::mc68k::Register;
 use crate::hardware::mc68k::instruction_set::ConditionRyExtWordMetadata;
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
 use crate::hardware::mc68k::instruction_set::generators::condition_by_bits;

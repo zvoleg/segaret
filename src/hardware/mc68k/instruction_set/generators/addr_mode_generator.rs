@@ -178,7 +178,7 @@ pub(in crate::hardware) fn generate(opcode_table: &mut Vec<Box<dyn InstructionPr
 
             addr_modes.iter()
                 .for_each(|mode| {
-                    let opcode =  mask | get_am_bits((*mode).am_type) << 3 | (*mode).reg_idx as u16;
+                    let opcode =  mask | get_am_bits(mode.am_type) << 3 | mode.reg_idx as u16;
 
                     opcode_table[opcode as usize] = Box::new(Instruction::new(
                         pattern.name,
