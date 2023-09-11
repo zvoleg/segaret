@@ -1,6 +1,17 @@
+use std::collections::HashSet;
+
+use lazy_static::lazy_static;
+
 use crate::hardware::{sign_extend, Size};
 
-use super::Z80Bus;
+use super::{Z80Bus, Instruction, Operand, AmType, Location, Register};
+
+lazy_static! {
+    static ref EXTENDING_TO_TWO_BYTES: HashSet<u32> = HashSet::from([0xCB, 0xDD, 0xED, 0xFDu32]);
+    static ref EXTENDING_TO_FOUR_BYTES: HashSet<u32> = HashSet::from([0xDDCB, 0xFDCBu32]);
+
+    static ref OPCODE_TABLE: Vec<Instruction> = vec![];
+}
 
 pub struct Z80Emu {
     pc: u16,
@@ -23,23 +34,53 @@ pub struct Z80Emu {
     ix: u16, // index register X
     iy: u16, // index register Y
 
+    iff1: bool,
+    iff2: bool,
+
     //internal
-    fetched_data: u16,
-    fetched_data_size: Size,
-    operand: u16,
-    displacement: u16,
+    curr_opcode: u32,
+    curr_opcode_size: i32,
+    src_operand: Option<Operand>,
+    dst_operand: Option<Operand>,
 
     bus: *mut dyn Z80Bus,
 }
 
 impl Z80Emu {
     fn clock(&mut self) {
-        // TODO collect all bytes of opcode (1 or 2 or 3 ... ?)
+        self.fetch_current_opcode();
+        let instruction = &OPCODE_TABLE[self.curr_opcode as u8 as usize];
 
-        // TODO decode opcode
-        // TODO call opcode handler
+        self.src_operand = match &instruction.src_am {
+            Some(am_type) => Some(self.call_am(am_type)),
+            None => None,
+        };
+        self.dst_operand = match &instruction.dst_am {
+            Some(am_type) => Some(self.call_am(am_type)),
+            None => None,
+        };
+        (instruction.handler)(self);
+    }
 
-        // TODO clock counter
+    fn fetch_current_opcode(&mut self) {
+        // excluded bytes CB, DD, ED, FD, DDCB, FDCB
+        let mut opcode = self.read_pc_and_increment() as u32;
+        let mut byte_counter = 1;
+        if EXTENDING_TO_TWO_BYTES.contains(&opcode) {
+            let additional_byte = self.read_pc_and_increment();
+            opcode = (opcode << 8) | additional_byte as u32;
+            byte_counter += 1;
+            if EXTENDING_TO_FOUR_BYTES.contains(&opcode) {
+                let additional_byte = self.read_pc_and_increment();
+                opcode = (opcode << 8) | additional_byte as u32;
+                byte_counter += 1;
+                let additional_byte = self.read_pc_and_increment();
+                opcode = (opcode << 8) | additional_byte as u32;
+                byte_counter += 1;
+            }
+        }
+        self.curr_opcode = opcode;
+        self.curr_opcode_size = byte_counter;
     }
 
     fn increment_pc(&mut self) {
@@ -47,82 +88,130 @@ impl Z80Emu {
     }
 
     fn read_pc_and_increment(&mut self) -> u8 {
-        let data = self.read_memory(self.pc);
+        let data = self.read_memory(self.pc, Size::Byte) as u8;
         self.increment_pc();
         data
     }
 
-    fn read_memory(&mut self, address: u16) -> u8 {
-        unsafe {
-            (*self.bus).read(address)
+    fn call_am(&mut self, am_type: &AmType) -> Operand {
+        match am_type {
+            AmType::Imm => self.immediate_am(),
+            AmType::ImmExt => self.immediate_extended_am(),
+            AmType::PageZero(addr) => self.modified_page_zero_am(*addr),
+            AmType::Relative => self.relative_am(),
+            AmType::Extended => self.extended_am(),
+            AmType::Indexed(reg) => self.indexed_am(*reg),
+            AmType::Register(reg) => self.register_am(*reg),
+            AmType::Implied => self.implied_am(),
+            AmType::RegIndirect(reg) => self.register_indirect_am(*reg),
+            AmType::BitAddr => self.bit_am(),
         }
     }
 
-    fn write_memory(&mut self, address: u16, data: u8) {
+    fn read_memory(&mut self, address: u16, size: Size) -> u16 {
         unsafe {
-            (*self.bus).write(address, data);
+            (*self.bus).read(address, size)
+        }
+    }
+
+    fn write_memory(&mut self, address: u16, data: u16, size: Size) {
+        unsafe {
+            (*self.bus).write(address, data, size);
+        }
+    }
+
+    fn read_register(&self, register: Register) -> u16 {
+        match register {
+            Register::B => self.bc >> 8,
+            Register::C => self.bc & 0xFF,
+            Register::D => self.de >> 8,
+            Register::E => self.de & 0xFF,
+            Register::H => self.hl >> 8,
+            Register::L => self.hl & 0xFF,
+            Register::BC => self.bc,
+            Register::DE => self.de,
+            Register::HL => self.hl,
+            Register::IX => self.ix,
+            Register::IY => self.iy,
+            Register::SP => self.sp,
         }
     }
 }
 
 /* Addressing modes */
 impl Z80Emu {
-    fn immediate_am(&mut self) {
+    fn immediate_am(&mut self) -> Operand {
         let operand = self.read_pc_and_increment();
-        self.fetched_data = operand as u16;
+        Operand::constant_operand(operand as u16)
     }
 
-    fn immediate_extended_am(&mut self) {
+    fn immediate_extended_am(&mut self) -> Operand {
         let low_order_bits = self.read_pc_and_increment();
-        self.fetched_data = low_order_bits as u16;
+        let mut data = low_order_bits as u16;
 
         let high_order_bits = self.read_pc_and_increment();
-        self.fetched_data |= (high_order_bits as u16) << 8;
+        data |= (high_order_bits as u16) << 8;
+
+        Operand::constant_operand(data)
     }
 
-    fn modified_page_zero_am(&mut self) {
-        // TODO this AM using only with RST instruction (restart page zero)
+    fn modified_page_zero_am(&mut self, address: u16) -> Operand {
+        let opcode_data = self.curr_opcode as u8;
+        Operand::memory_operand(address, 0)
     }
 
-    fn relative_am(&mut self) {
-        let data = self.read_pc_and_increment();
-
-        self.fetched_data = sign_extend(data as u32, Size::Byte) as u16;
+    fn relative_am(&mut self) -> Operand {
+        // addressing mode for the jump instructions, do not need to read data by the calculated offset
+        let byte = self.read_pc_and_increment();
+        let offset = sign_extend(byte as u32, Size::Byte) as u16;
+        let address = self.pc.wrapping_add(offset);
+        
+        Operand::memory_operand(address, 0)
     }
 
     // fetched data is address of operand or address for jump instruction
-    fn extended_am(&mut self) {
-        let low_order_bits = self.read_pc_and_increment();
-        self.fetched_data = low_order_bits as u16;
-
-        let high_order_bits = self.read_pc_and_increment();
-        self.fetched_data |= (high_order_bits as u16) << 8;
-    }
-
-    fn indexed_am(&mut self) {
-        let data = self.read_pc_and_increment();
-        let displacement = sign_extend(data as u32, Size::Byte) as u16;
+    fn extended_am(&mut self) -> Operand {
+        let address = self.read_memory(self.pc, Size::Word);
+        self.increment_pc();
+        self.increment_pc();
         
-        let register_value = self.ix; // TODO opcode specifies wich index register shoud be used
-        let address = register_value.wrapping_div(displacement);
-
-        self.fetched_data = self.read_memory(address) as u16;
+        let data = self.read_memory(address, Size::Byte);
+        Operand::memory_operand(address, data)
     }
 
-    fn register_am(&mut self) {
+    fn indexed_am(&mut self, register: Register) -> Operand {
+        let byte= if self.curr_opcode_size == 4 {
+            (self.curr_opcode >> 8) as u8
+        } else {
+            self.read_pc_and_increment()
+        };
 
+        let register_value = self.read_register(register);
+        let displacement = sign_extend(byte as u32, Size::Byte) as u16;
+        let address = register_value.wrapping_add(displacement);
+        let data = self.read_memory(address, Size::Byte);
+        Operand::memory_operand(address, data)
     }
 
-    fn implied_am(&mut self) {
-
+    fn register_am(&mut self, register: Register) -> Operand {
+        let data = self.read_register(register);
+        Operand::register_operand(register, data)
     }
 
-    fn register_indirect_am(&mut self) {
-
+    fn implied_am(&mut self) -> Operand {
+        Operand::constant_operand(0)
     }
 
-    fn bit_am(&mut self) {
+    fn register_indirect_am(&mut self, register: Register) -> Operand {
+        let address = self.read_register(register);
+        let data = self.read_memory(address, Size::Byte);
+        Operand::memory_operand(address, data)
+    }
 
+    fn bit_am(&mut self) -> Operand {
+        // TODO used for bit manipulation instructions and bit number contains in opcode,
+        // may be it will be calculates in handlers
+        Operand::constant_operand(0)
     }
 }
 
@@ -133,6 +222,21 @@ impl Z80Emu {
     fn LD(&mut self) {
         // src value u8
         // destination pointer u8
+        // match self.instruction.size {
+        //     Size::Byte => {
+        //         let src_value = *(self.src_ptr as *const u8);
+        //         unsafe {
+        //             *(self.dst_ptr as *mut u8) = src_value;
+        //         }
+        //     },
+        //     Size::Word => {
+        //         let src_value = *(self.src_ptr as *const u16);
+        //         unsafe {
+        //             *(self.dst_ptr as *mut u16) = src_value;
+        //         }
+        //     },
+        //     Size::Long => (),
+        // }
     }
 
     // push data on the stack
