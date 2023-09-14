@@ -13,6 +13,15 @@ lazy_static! {
     static ref OPCODE_TABLE: Vec<Instruction> = vec![];
 }
 
+enum Status {
+    S = 7,
+    Z = 6,
+    H = 4,
+    PV = 2,
+    N = 1,
+    C = 0,
+}
+
 pub struct Z80Emu {
     pc: u16,
     sp: u16,
@@ -40,6 +49,7 @@ pub struct Z80Emu {
     //internal
     curr_opcode: u32,
     curr_opcode_size: i32,
+    instruction_size: Size,
     src_operand: Option<Operand>,
     dst_operand: Option<Operand>,
 
@@ -51,6 +61,7 @@ impl Z80Emu {
         self.fetch_current_opcode();
         let instruction = &OPCODE_TABLE[self.curr_opcode as u8 as usize];
 
+        self.instruction_size = instruction.size;
         self.src_operand = match &instruction.src_am {
             Some(am_type) => Some(self.call_am(am_type)),
             None => None,
@@ -104,7 +115,15 @@ impl Z80Emu {
             AmType::Register(reg) => self.register_am(*reg),
             AmType::Implied => self.implied_am(),
             AmType::RegIndirect(reg) => self.register_indirect_am(*reg),
-            AmType::BitAddr => self.bit_am(),
+            AmType::BitAddr(offset) => self.bit_am(*offset),
+        }
+    }
+
+    fn write(&mut self, location: Location, data: u16, size: Size) {
+        match location {
+            Location::Register(reg) => self.write_register(reg, data, size),
+            Location::Memory(addr) => self.write_memory(addr, data, size),
+            Location::Const => panic!("Z80::write: can't write into Location::Const"),
         }
     }
 
@@ -136,6 +155,45 @@ impl Z80Emu {
             Register::SP => self.sp,
         }
     }
+
+    fn write_register(&mut self, register: Register, data: u16, size: Size) {
+        let write_high = |reg, data| -> u16 {
+            let reg_data = reg & 0x00FF;
+            (data << 8) | reg_data
+        };
+        let write_low = |reg, data| -> u16 {
+            let reg_data = reg & 0xFF00;
+            data | reg_data
+        };
+        match register {
+            Register::B => self.bc = write_high(self.bc, data),
+            Register::C => self.bc = write_low(self.bc, data),
+            Register::D => self.de = write_high(self.de, data),
+            Register::E => self.de = write_low(self.de, data),
+            Register::H => self.hl = write_high(self.hl, data),
+            Register::L => self.hl = write_low(self.hl, data),
+            Register::BC => self.bc = data,
+            Register::DE => self.de = data,
+            Register::HL => self.hl = data,
+            Register::IX => self.ix = data,
+            Register::IY => self.iy = data,
+            Register::SP => self.sp = data,
+        }
+    }
+
+    fn get_flag(&self, status: Status) -> bool {
+        let mask = 1 << status as u16;
+        self.af & mask != 0
+    }
+
+    fn set_flag(&mut self, status: Status, set: bool) {
+        let mask = 1 << status as u16;
+        if set {
+            self.af = self.af | mask;
+        } else {
+            self.af = self.af & !mask;
+        }
+    }
 }
 
 /* Addressing modes */
@@ -156,7 +214,6 @@ impl Z80Emu {
     }
 
     fn modified_page_zero_am(&mut self, address: u16) -> Operand {
-        let opcode_data = self.curr_opcode as u8;
         Operand::memory_operand(address, 0)
     }
 
@@ -189,7 +246,7 @@ impl Z80Emu {
         let register_value = self.read_register(register);
         let displacement = sign_extend(byte as u32, Size::Byte) as u16;
         let address = register_value.wrapping_add(displacement);
-        let data = self.read_memory(address, Size::Byte);
+        let data = self.read_memory(address, self.instruction_size);
         Operand::memory_operand(address, data)
     }
 
@@ -204,14 +261,12 @@ impl Z80Emu {
 
     fn register_indirect_am(&mut self, register: Register) -> Operand {
         let address = self.read_register(register);
-        let data = self.read_memory(address, Size::Byte);
+        let data = self.read_memory(address, self.instruction_size);
         Operand::memory_operand(address, data)
     }
 
-    fn bit_am(&mut self) -> Operand {
-        // TODO used for bit manipulation instructions and bit number contains in opcode,
-        // may be it will be calculates in handlers
-        Operand::constant_operand(0)
+    fn bit_am(&mut self, bit_offseet: u16) -> Operand {
+        Operand::constant_operand(bit_offseet)
     }
 }
 
@@ -220,53 +275,62 @@ impl Z80Emu {
 impl Z80Emu {
     // load data from src to dst (load 8 or 16 bits)
     fn LD(&mut self) {
-        // src value u8
-        // destination pointer u8
-        // match self.instruction.size {
-        //     Size::Byte => {
-        //         let src_value = *(self.src_ptr as *const u8);
-        //         unsafe {
-        //             *(self.dst_ptr as *mut u8) = src_value;
-        //         }
-        //     },
-        //     Size::Word => {
-        //         let src_value = *(self.src_ptr as *const u16);
-        //         unsafe {
-        //             *(self.dst_ptr as *mut u16) = src_value;
-        //         }
-        //     },
-        //     Size::Long => (),
-        // }
+        let src_data = self.src_operand.as_ref().unwrap().data;
+        let dst_location = self.dst_operand.as_ref().unwrap().location;
+
+        self.write(dst_location, src_data, self.instruction_size)
     }
 
     // push data on the stack
     fn PUSH(&mut self) {
-        // at first decrements sp
-        // save high-order bits of selected register
-        // decrements sp again
-        // save low-order bits of selected register
+        self.sp -= 2;
+
+        let address = self.sp;
+        let data = self.src_operand.as_ref().unwrap().data;
+        self.write_memory(address, data, self.instruction_size);
     }
 
     // pop data from the stack
     fn POP(&mut self) {
-        // save data from stack to low-order bits of selected register
-        // increment sp
-        // save data from stack to high-order bits of selected register
+        let address = self.pc;
+        let data = self.read_memory(address, self.instruction_size);
+
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, data, self.instruction_size);
+
+        self.pc += 2;
     }
 
     // exchange data between registers
     fn EX(&mut self) {
+        let reg_a = self.src_operand.as_ref().unwrap().location;
+        let data_a = self.src_operand.as_ref().unwrap().data;
+        let reg_b = self.dst_operand.as_ref().unwrap().location;
+        let data_b = self.dst_operand.as_ref().unwrap().data;
 
+        self.write(reg_a, data_b, self.instruction_size);
+        self.write(reg_b, data_a, self.instruction_size);
     }
 
     // exchange all 2-bytes registers between its pair
     fn EXX(&mut self) {
-
+        std::mem::swap(&mut self.bc, &mut self.bc_);
+        std::mem::swap(&mut self.de, &mut self.de_);
+        std::mem::swap(&mut self.hl, &mut self.hl_);
     }
 
     // transfer data from memory to memory
     fn LDI(&mut self) {
+        let data = self.read_memory(self.hl, Size::Byte);
+        self.write_memory(self.de, data, Size::Byte);
 
+        self.hl += 1;
+        self.de += 1;
+        self.bc -= 1;
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
     }
 
     fn LDIR(&mut self) {

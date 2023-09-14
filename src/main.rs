@@ -1,7 +1,13 @@
+#[macro_use]
+extern crate log;
+extern crate env_logger;
+
 extern crate spriter;
 extern crate rand;
 
+use std::fs::File;
 use std::io;
+use std::io::Write;
 
 use spriter::Key;
 use spriter::if_pressed;
@@ -51,6 +57,11 @@ fn main() {
             let input = input.trim_end();
             let new_pc = u32::from_str_radix(input, 16).expect(&format!("unexpected str format '{}'", input));
             cpu.set_pc(new_pc);
+        });
+        if_pressed!(Key::Z, {
+            let z80_dump = bus.z80_dump();
+            let mut f = File::create("z80_dump").unwrap();
+            f.write_all(z80_dump).unwrap();
         });
         if_pressed!(Key::Escape, {
             spriter::program_stop();

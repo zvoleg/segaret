@@ -35,9 +35,10 @@ pub(in crate::hardware::z80) enum AmType {
     Register(Register),
     Implied,
     RegIndirect(Register),
-    BitAddr,
+    BitAddr(u16),
 }
 
+#[derive(Clone, Copy)]
 pub(in crate::hardware::z80) enum Location {
     Memory(u16),
     Register(Register),
@@ -79,5 +80,6 @@ impl Operand {
 pub(in crate::hardware::z80) struct Instruction {
     pub(in crate::hardware::z80) src_am: Option<AmType>,
     pub(in crate::hardware::z80) dst_am: Option<AmType>,
+    pub(in crate::hardware::z80) size: Size,
     pub(in crate::hardware::z80) handler: fn(&mut z80_emu::Z80Emu),
 }

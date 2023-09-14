@@ -299,13 +299,7 @@ impl Mc68k {
     }
 
     fn get_status(&self, status: Status) -> bool {
-        let mask = match status {
-            Status::X => 1 << Status::X as u16,
-            Status::N => 1 << Status::N as u16,
-            Status::Z => 1 << Status::Z as u16,
-            Status::V => 1 << Status::V as u16,
-            Status::C => 1 << Status::C as u16,
-        };
+        let mask = 1 << status as u16;
         self.sr & mask != 0
     }
 
