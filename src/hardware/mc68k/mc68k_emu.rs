@@ -2,6 +2,7 @@ extern crate lazy_static;
 
 use std::fmt;
 
+use crate::hardware::is_negate;
 use crate::hardware::mc68k::instruction_set;
 use crate::hardware::mc68k::instruction_set::instruction_meta_data_types::*;
 
@@ -2375,14 +2376,6 @@ impl Mc68k {
     pub(crate) fn ILLEAGL(&mut self) {
         self.prepare_exception();
         self.pc = self.vector_table.illegal_instruction();
-    }
-}
-
-fn is_negate(data: u32, size: Size) -> bool {
-    match size {
-        Size::Byte => data & 0x80 != 0,
-        Size::Word => data & 0x8000 != 0,
-        Size::Long => data & 0x80000000 != 0,
     }
 }
 

@@ -43,3 +43,11 @@ pub fn sign_extend(data: u32, size: Size) -> u32 {
         Size::Long => data,
     }
 }
+
+pub fn is_negate(data: u32, size: Size) -> bool {
+    match size {
+        Size::Byte => data & 0x80 != 0,
+        Size::Word => data & 0x8000 != 0,
+        Size::Long => data & 0x80000000 != 0,
+    }
+}

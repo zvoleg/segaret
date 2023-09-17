@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use lazy_static::lazy_static;
 
-use crate::hardware::{sign_extend, Size};
+use crate::hardware::{sign_extend, Size, is_negate};
 
 use super::{Z80Bus, Instruction, Operand, AmType, Location, Register};
 
@@ -194,6 +194,15 @@ impl Z80Emu {
             self.af = self.af & !mask;
         }
     }
+
+    fn get_accumulator(&self) -> u16 {
+        self.af >> 8
+    }
+
+    fn set_accumulator(&mut self, data: u16) {
+        self.af &= 0x00FF;
+        self.af |= data << 8;
+    }
 }
 
 /* Addressing modes */
@@ -334,18 +343,47 @@ impl Z80Emu {
     }
 
     fn LDIR(&mut self) {
+        self.LDI();
 
+        if self.bc - 1 != 0 {
+            self.pc -= 2;
+        }
     }
 
     fn LDD(&mut self) {
+        let data = self.read_memory(self.hl, Size::Byte);
+        self.write_memory(self.de, data, Size::Byte);
 
+        self.hl -= 1;
+        self.de -= 1;
+        self.bc -= 1;
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
     }
 
     fn LDDR(&mut self) {
+        self.LDD();
 
+        if self.bc - 1 != 0 {
+            self.pc -= 2;
+        }
     }
 
     fn CPI(&mut self) {
+        let acc = self.get_accumulator();
+        let data = self.read_memory(self.hl, Size::Byte);
+
+        let res = acc - data;
+
+        self.hl += 1;
+        self.bc -= 1;
+
+        self.set_flag(Status::S, is_negate(res as u32, Size::Byte));
+        self.set_flag(Status::Z, res == 0);
+        self.set_flag(Status::H, res & 0x4 != 0);
+        self.set_flag(Status::N, true);
 
     }
 
