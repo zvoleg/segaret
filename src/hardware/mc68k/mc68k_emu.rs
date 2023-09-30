@@ -2,11 +2,14 @@ extern crate lazy_static;
 
 use std::fmt;
 
+use crate::hardware::get_msb;
 use crate::hardware::is_negate;
+use crate::hardware::is_zero;
 use crate::hardware::mc68k::instruction_set;
 use crate::hardware::mc68k::instruction_set::instruction_meta_data_types::*;
 
 use crate::hardware::mc68k::instruction_set::InstructionProcess;
+use crate::hardware::msb_is_set;
 
 use super::Location;
 use super::LocationType;
@@ -596,7 +599,7 @@ impl Mc68k {
 
         // set status codes
         self.set_status(Status::N, is_negate(src_data, size));
-        self.set_status(Status::Z, is_zero(src_data));
+        self.set_status(Status::Z, is_zero(src_data, size));
 
         self.set_status(Status::V, false);
         self.set_status(Status::C, false);
@@ -738,7 +741,7 @@ impl Mc68k {
         self.write(location, data, Size::Long);
 
         self.set_status(Status::N, is_negate(data, Size::Long));
-        self.set_status(Status::Z, is_zero(data));
+        self.set_status(Status::Z, is_zero(data, Size::Long));
 
         self.set_status(Status::V, false);
         self.set_status(Status::C, false);
@@ -875,7 +878,7 @@ impl Mc68k {
         self.call_addressing_mode();
 
         let negate = is_negate(self.ea_operand, Size::Byte);
-        let zero = is_zero(self.ea_operand);
+        let zero = is_zero(self.ea_operand, Size::Byte);
         let overflow = false;
         let carry = false;
 
@@ -895,7 +898,7 @@ impl Mc68k {
         self.call_addressing_mode();
 
         let is_negate = is_negate(self.ea_operand, self.instruction.as_ref().size());
-        let is_zero = is_zero(self.ea_operand);
+        let is_zero = is_zero(self.ea_operand, self.instruction.as_ref().size());
 
         self.set_status(Status::N, is_negate);
         self.set_status(Status::Z, is_zero);
@@ -1075,7 +1078,7 @@ impl Mc68k {
         };
 
         let is_negate = is_negate(result, size);
-        let is_zero = is_zero(result);
+        let is_zero = is_zero(result, size);
 
         self.set_status(Status::X, carry);
         self.set_status(Status::N, is_negate);
@@ -1124,7 +1127,7 @@ impl Mc68k {
         let carry = sm && dm || !rm && dm || sm && !rm;
 
         let is_negate = is_negate(result, size);
-        let is_zero = is_zero(result);
+        let is_zero = is_zero(result, size);
 
         self.set_status(Status::X, carry);
         self.set_status(Status::N, is_negate);
@@ -1159,7 +1162,7 @@ impl Mc68k {
             let carry = sm && dm || !rm && dm || sm && !rm;
 
             let is_negate = is_negate(result, size);
-            let is_zero = is_zero(result);
+            let is_zero = is_zero(result, size);
 
             self.set_status(Status::X, carry);
             self.set_status(Status::N, is_negate);
@@ -1255,7 +1258,7 @@ impl Mc68k {
         };
 
         let is_negate = is_negate(result, size);
-        let is_zero = is_zero(result);
+        let is_zero = is_zero(result, size);
 
         self.set_status(Status::X, carry);
         self.set_status(Status::N, is_negate);
@@ -1302,7 +1305,7 @@ impl Mc68k {
         let carry = sm && !dm || rm && !dm || sm && rm;
 
         let is_negate = is_negate(result, size);
-        let is_zero = is_zero(result);
+        let is_zero = is_zero(result, size);
 
         self.set_status(Status::X, carry);
         self.set_status(Status::N, is_negate);
@@ -1337,7 +1340,7 @@ impl Mc68k {
             let carry = sm && !dm || rm && !dm || sm && rm;
 
             let is_negate = is_negate(result, size);
-            let is_zero = is_zero(result);
+            let is_zero = is_zero(result, size);
 
             self.set_status(Status::X, carry);
             self.set_status(Status::N, is_negate);
@@ -1424,7 +1427,7 @@ impl Mc68k {
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
 
         self.set_status(Status::Z, zero);
         self.set_status(Status::N, negate);
@@ -1454,7 +1457,7 @@ impl Mc68k {
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
 
         self.set_status(Status::Z, zero);
         self.set_status(Status::N, negate);
@@ -1483,7 +1486,7 @@ impl Mc68k {
         let overflow = !sm && dm && !rm || sm && !dm && rm;
         let carry = sm && !dm || rm && !dm || sm && rm;
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
 
         self.set_status(Status::Z, zero);
         self.set_status(Status::N, negate);
@@ -1511,7 +1514,7 @@ impl Mc68k {
         self.write(location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
 
         self.set_status(Status::N, negate);
         self.set_status(Status::Z, zero);
@@ -1529,7 +1532,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let carry = !zero; // в описании инструкции указано !zero, в таблице вычисления флагов dm || rm
 
         let dm = msb_is_set(self.ea_operand, size);
@@ -1560,7 +1563,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
 
         let dm = msb_is_set(self.ea_operand, size);
         let rm = msb_is_set(result, size);
@@ -1592,7 +1595,7 @@ impl Mc68k {
         self.write(dst_location, result, Size::Long);
         
         let negate = is_negate(result, Size::Long);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let carry = false;
 
         self.set_status(Status::N, negate);
@@ -1615,7 +1618,7 @@ impl Mc68k {
         self.write(dst_location, result, Size::Long);
         
         let negate = is_negate(result, Size::Long);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let carry = false;
 
         self.set_status(Status::N, negate);
@@ -1649,7 +1652,7 @@ impl Mc68k {
             self.write(dst_location, result as u32, Size::Long);
 
             let negate = is_negate(quotient as u32, size);
-            let zero = is_zero(quotient as u32);
+            let zero = is_zero(quotient as u32, size);
             let carry = false;
 
             self.set_status(Status::N, negate);
@@ -1688,7 +1691,7 @@ impl Mc68k {
             self.write(dst_location, result as u32, Size::Long);
 
             let negate = is_negate(quotient as u32, size);
-            let zero = is_zero(quotient as u32);
+            let zero = is_zero(quotient as u32, size);
             let carry = false;
 
             self.set_status(Status::N, negate);
@@ -1723,7 +1726,7 @@ impl Mc68k {
         }
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1746,7 +1749,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1791,7 +1794,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1815,7 +1818,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1860,7 +1863,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1884,7 +1887,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -1925,7 +1928,7 @@ impl Mc68k {
         self.write(self.ea_location, result, size);
 
         let negate = is_negate(result, size);
-        let zero = is_zero(result);
+        let zero = is_zero(result, size);
         let overflow = false;
         let carry = false;
         
@@ -2007,7 +2010,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = false;
 
         self.set_status(Status::N, negate);
@@ -2036,7 +2039,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = msb_changed;
 
         self.set_status(Status::N, negate);
@@ -2077,7 +2080,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = false;
 
         self.set_status(Status::N, negate);
@@ -2100,7 +2103,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = false;
 
         self.set_status(Status::N, negate);
@@ -2143,7 +2146,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = false;
 
         self.set_status(Status::N, negate);
@@ -2167,7 +2170,7 @@ impl Mc68k {
         self.write(location, data, size);
 
         let negate = is_negate(data, size);
-        let zero = is_zero(data);
+        let zero = is_zero(data, size);
         let overflow = false;
 
         self.set_status(Status::N, negate);
@@ -2189,7 +2192,7 @@ impl Mc68k {
         self.write(location, data, Size::Long);
 
         let negate = is_negate(data, Size::Long);
-        let zero = is_zero(data);
+        let zero = is_zero(data, Size::Long);
         let overflow = false;
         let carry = false;
 
@@ -2376,25 +2379,5 @@ impl Mc68k {
     pub(crate) fn ILLEAGL(&mut self) {
         self.prepare_exception();
         self.pc = self.vector_table.illegal_instruction();
-    }
-}
-
-fn is_zero(data: u32) -> bool {
-    data == 0
-}
-
-fn msb_is_set(data: u32, size: Size) -> bool {
-    match size {
-        Size::Byte => data & 0x80 != 0,
-        Size::Word => data & 0x8000 != 0,
-        Size::Long => data & 0x80000000 != 0,
-    }
-}
-
-fn get_msb(data: u32, size: Size) -> u32 {
-    if msb_is_set(data, size) {
-        1
-    } else {
-        0
     }
 }

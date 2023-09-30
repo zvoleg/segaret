@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use lazy_static::lazy_static;
 
-use crate::hardware::{sign_extend, Size, is_negate};
+use crate::hardware::{sign_extend, Size, is_negate, is_zero, msb_is_set, get_msb};
 
 use super::{Z80Bus, Instruction, Operand, AmType, Location, Register};
 
@@ -203,6 +203,17 @@ impl Z80Emu {
         self.af &= 0x00FF;
         self.af |= data << 8;
     }
+
+    fn stack_push(&mut self, data: u16, size: Size) {
+        self.sp = self.sp.wrapping_sub(2);
+        self.write_memory(self.sp, data, size);
+    }
+
+    fn stack_pop(&mut self, size: Size) -> u16 {
+        let data = self.read_memory(self.sp, size);
+        self.sp = self.sp.wrapping_add(2);
+        data
+    }
 }
 
 /* Addressing modes */
@@ -292,22 +303,15 @@ impl Z80Emu {
 
     // push data on the stack
     fn PUSH(&mut self) {
-        self.sp -= 2;
-
-        let address = self.sp;
         let data = self.src_operand.as_ref().unwrap().data;
-        self.write_memory(address, data, self.instruction_size);
+        self.stack_push(data, self.instruction_size)
     }
 
     // pop data from the stack
     fn POP(&mut self) {
-        let address = self.pc;
-        let data = self.read_memory(address, self.instruction_size);
-
+        let data = self.stack_pop(self.instruction_size);
         let location = self.dst_operand.as_ref().unwrap().location;
         self.write(location, data, self.instruction_size);
-
-        self.pc += 2;
     }
 
     // exchange data between registers
@@ -333,9 +337,9 @@ impl Z80Emu {
         let data = self.read_memory(self.hl, Size::Byte);
         self.write_memory(self.de, data, Size::Byte);
 
-        self.hl += 1;
-        self.de += 1;
-        self.bc -= 1;
+        self.hl = self.hl.wrapping_add(1);
+        self.de = self.de.wrapping_add(1);
+        self.bc = self.bc.wrapping_sub(1);
 
         self.set_flag(Status::H, false);
         self.set_flag(Status::N, false);
@@ -354,9 +358,9 @@ impl Z80Emu {
         let data = self.read_memory(self.hl, Size::Byte);
         self.write_memory(self.de, data, Size::Byte);
 
-        self.hl -= 1;
-        self.de -= 1;
-        self.bc -= 1;
+        self.hl = self.hl.wrapping_sub(1);
+        self.de = self.de.wrapping_sub(1);
+        self.bc = self.bc.wrapping_sub(1);
 
         self.set_flag(Status::H, false);
         self.set_flag(Status::N, false);
@@ -375,89 +379,363 @@ impl Z80Emu {
         let acc = self.get_accumulator();
         let data = self.read_memory(self.hl, Size::Byte);
 
-        let res = acc - data;
+        let res = acc.wrapping_sub(data);
 
-        self.hl += 1;
-        self.bc -= 1;
+        self.hl = self.hl.wrapping_add(1);
+        self.bc = self.bc.wrapping_sub(1);
 
         self.set_flag(Status::S, is_negate(res as u32, Size::Byte));
         self.set_flag(Status::Z, res == 0);
         self.set_flag(Status::H, res & 0x4 != 0);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
         self.set_flag(Status::N, true);
-
     }
 
     fn CPIR(&mut self) {
+        let acc = self.get_accumulator();
+        let data = self.read_memory(self.hl, Size::Byte);
 
+        let res = acc.wrapping_sub(data);
+
+        self.hl = self.hl.wrapping_add(1);
+        self.bc = self.bc.wrapping_sub(1);
+
+        self.set_flag(Status::S, is_negate(res as u32, Size::Byte));
+        self.set_flag(Status::Z, res == 0);
+        self.set_flag(Status::H, res & 0x4 != 0);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
+        self.set_flag(Status::N, true);
+
+        if self.bc - 1 != 0 && res != 0 {
+            self.pc = self.pc.wrapping_sub(2);
+        }
     }
 
     fn CPD(&mut self) {
+        let acc = self.get_accumulator();
+        let data = self.read_memory(self.hl, Size::Byte);
 
+        let res = acc.wrapping_sub(data);
+
+        self.hl = self.hl.wrapping_sub(1);
+        self.bc = self.bc.wrapping_sub(1);
+
+        self.set_flag(Status::S, is_negate(res as u32, Size::Byte));
+        self.set_flag(Status::Z, res == 0);
+        self.set_flag(Status::H, res & 0x4 != 0);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
+        self.set_flag(Status::N, true);
     }
 
     fn CPDR(&mut self) {
+        let acc = self.get_accumulator();
+        let data = self.read_memory(self.hl, Size::Byte);
 
+        let res = acc.wrapping_sub(data);
+
+        self.hl = self.hl.wrapping_sub(1);
+        self.bc = self.bc.wrapping_sub(1);
+
+        self.set_flag(Status::S, is_negate(res as u32, Size::Byte));
+        self.set_flag(Status::Z, res == 0);
+        self.set_flag(Status::H, res & 0x4 != 0);
+        self.set_flag(Status::PV, self.bc - 1 != 0);
+        self.set_flag(Status::N, true);
+
+        if self.bc - 1 != 0 && res != 0 {
+            self.pc = self.pc.wrapping_sub(2);
+        }
     }
 
     fn ADD(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = dst_operand.wrapping_add(src_operand);
+        self.write(dst_location, result, self.instruction_size);
+
+        let dst_msb = get_msb(dst_operand as u32, self.instruction_size);
+        let src_msb = get_msb(src_operand as u32, self.instruction_size);
+        let result_msb = get_msb(result as u32, self.instruction_size);
+
+        let overflow = (dst_msb == src_msb) && (dst_msb != result_msb || src_msb != result_msb);
+
+        let (carry_bit_offset, h_bit_offset) = match self.instruction_size {
+            Size::Byte => (7, 3),
+            Size::Word => (15, 11),
+            Size::Long => panic!("Z80::ADD: unsuported command size")
+        };
+
+        let carry = ((result >> carry_bit_offset) & 1) != 0;
+        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, half_carry);
+        self.set_flag(Status::PV, overflow);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn ADC(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let carry_in = self.get_flag(Status::C);
+        let mut carry = 0;
+        if carry_in {
+            carry = 1;
+        }
+     
+        let result = dst_operand.wrapping_add(src_operand).wrapping_add(carry);
+        self.write(dst_location, result, self.instruction_size);
+
+        
+        let (carry_bit_offset, h_bit_offset) = match self.instruction_size {
+            Size::Byte => (7, 3),
+            Size::Word => (15, 11),
+            Size::Long => panic!("Z80::ADD: unsuported command size")
+        };
+        let carry = ((result >> carry_bit_offset) & 1) != 0;
+        
+        let dst_msb = get_msb(dst_operand as u32, self.instruction_size);
+        let src_msb = get_msb(src_operand as u32, self.instruction_size);
+        let result_msb = get_msb(result as u32, self.instruction_size);
+
+        let overflow = ((dst_msb == src_msb) && (dst_msb != result_msb || src_msb != result_msb)) || carry_in != carry;
+
+        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, half_carry);
+        self.set_flag(Status::PV, overflow);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn SUB(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = dst_operand.wrapping_sub(src_operand);
+        self.write(dst_location, result, self.instruction_size);
+
+        let dst_msb = get_msb(dst_operand as u32, self.instruction_size);
+        let src_msb = get_msb(src_operand as u32, self.instruction_size);
+        let result_msb = get_msb(result as u32, self.instruction_size);
+
+        let overflow = (dst_msb != src_msb) && (dst_operand == 0 && result_msb == 1);
+
+        let (carry_bit_offset, h_bit_offset) = match self.instruction_size {
+            Size::Byte => (7, 3),
+            Size::Word => (15, 11),
+            Size::Long => panic!("Z80::ADD: unsuported command size")
+        };
+
+        let carry = ((result >> carry_bit_offset) & 1) != 0;
+        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, half_carry);
+        self.set_flag(Status::PV, overflow);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn SBC(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let carry_in = self.get_flag(Status::C);
+        let mut carry = 0;
+        if carry_in {
+            carry = 1;
+        }
+     
+        let result = dst_operand.wrapping_sub(src_operand).wrapping_sub(carry);
+        self.write(dst_location, result, self.instruction_size);
+
+        let dst_msb = get_msb(dst_operand as u32, self.instruction_size);
+        let src_msb = get_msb(src_operand as u32, self.instruction_size);
+        let result_msb = get_msb(result as u32, self.instruction_size);
+
+        let overflow = (dst_msb != src_msb) && (dst_operand == 0 && result_msb == 1);
+
+        let (carry_bit_offset, h_bit_offset) = match self.instruction_size {
+            Size::Byte => (7, 3),
+            Size::Word => (15, 11),
+            Size::Long => panic!("Z80::ADD: unsuported command size")
+        };
+
+        let carry = ((result >> carry_bit_offset) & 1) != 0;
+        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, half_carry);
+        self.set_flag(Status::PV, overflow);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn AND(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = src_operand & dst_operand;
+        self.write(dst_location, result, self.instruction_size);
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, true);
+        self.set_flag(Status::PV, result & 1 == 0);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, false);
     }
 
     fn OR(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = src_operand | dst_operand;
+        self.write(dst_location, result, self.instruction_size);
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, true);
+        self.set_flag(Status::PV, result & 1 == 0);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, false);
     }
 
     fn XOR(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = src_operand ^ dst_operand;
+        self.write(dst_location, result, self.instruction_size);
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, true);
+        self.set_flag(Status::PV, result & 1 == 0);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, false);
     }
 
     fn CP(&mut self) {
+        let src_operand = self.src_operand.as_ref().unwrap().data;
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
 
+        let result = dst_operand.wrapping_sub(src_operand);
+
+        let dst_msb = get_msb(dst_operand as u32, self.instruction_size);
+        let src_msb = get_msb(src_operand as u32, self.instruction_size);
+        let result_msb = get_msb(result as u32, self.instruction_size);
+
+        let overflow = (dst_msb != src_msb) && (dst_operand == 0 && result_msb == 1);
+
+        let (carry_bit_offset, h_bit_offset) = match self.instruction_size {
+            Size::Byte => (7, 3),
+            Size::Word => (15, 11),
+            Size::Long => panic!("Z80::ADD: unsuported command size")
+        };
+
+        let carry = ((result >> carry_bit_offset) & 1) != 0;
+        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, half_carry);
+        self.set_flag(Status::PV, overflow);
+        self.set_flag(Status::N, true);
+        self.set_flag(Status::C, carry);
     }
 
     fn INC(&mut self) {
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = dst_operand.wrapping_add(1);
+        self.write(dst_location, dst_operand, self.instruction_size);
+
+        match self.instruction_size {
+            Size::Byte => {
+                self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+                self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+                self.set_flag(Status::H, (result >> 3) & 1 == 1);
+                self.set_flag(Status::PV, dst_operand == 0x7F);
+                self.set_flag(Status::N, false);
+            },
+            _ => panic!("Z80::INC: unexpected instruction size"),
+        }
     }
 
     // BCD addition
     fn DEC(&mut self) {
+        let dst_operand = self.dst_operand.as_ref().unwrap().data;
+        let dst_location =self.dst_operand.as_ref().unwrap().location;
 
+        let result = dst_operand.wrapping_sub(1);
+        self.write(dst_location, dst_operand, self.instruction_size);
+
+        match self.instruction_size {
+            Size::Byte => {
+                self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+                self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+                self.set_flag(Status::H, (result >> 4) & 1 == 1);
+                self.set_flag(Status::PV, dst_operand == 0x80);
+                self.set_flag(Status::N, true);
+            },
+            _ => panic!("Z80::INC: unexpected instruction size"),
+        }
     }
 
     // Inverts accumulator (one's complement)
     fn CPL(&mut self) {
+        let result = !self.get_accumulator();
+        self.set_accumulator(result);
 
+        self.set_flag(Status::H, true);
+        self.set_flag(Status::N, true);
     }
 
     // Inverts accumulator (two's complement)
     fn NEG(&mut self) {
+        let acc = self.get_accumulator();
+        let result = (!acc).wrapping_add(1);
+        self.set_accumulator(result);
 
+        self.set_flag(Status::S, is_negate(result as u32, self.instruction_size));
+        self.set_flag(Status::Z, is_zero(result as u32, self.instruction_size));
+        self.set_flag(Status::H, (result >> 4) & 1 == 1);
+        self.set_flag(Status::PV, acc == 0x80);
+        self.set_flag(Status::N, true);
+        self.set_flag(Status::C, acc != 0);
     }
 
     // Inverts cary flag in F register
     fn CCF(&mut self) {
-
+        let carry = self.get_flag(Status::C);
+        self.set_flag(Status::H, carry);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, !carry);
     }
 
     // Set cary flag in F register
     fn SCF(&mut self) {
-
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, true);
     }
 
     fn NOP(&mut self) {
@@ -465,7 +743,7 @@ impl Z80Emu {
     }
 
     fn HALT(&mut self) {
-
+        self.pc = self.pc - 1;
     }
 
     // disable the maskable interrupt
@@ -484,95 +762,368 @@ impl Z80Emu {
     }
 
     fn RLCA(&mut self) {
+        let acc = self.get_accumulator();
+        
+        let msb = acc >> 7;
+        let carry = msb == 1;
+        
+        let result = (acc << 1) | msb;
+        self.set_accumulator(result);
 
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RLA(&mut self) {
+        let acc = self.get_accumulator();
 
+        let poped_carry = match self.get_flag(Status::C) {
+            true => 1,
+            false => 0,
+        };
+        let msb = acc >> 7;
+        let carry = msb == 1;
+
+        let result = (acc << 1) | poped_carry;
+        self.set_accumulator(acc);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RRCA(&mut self) {
+        let acc = self.get_accumulator();
+        
+        let lsb: u16 = acc & 1;
+        let carry = lsb == 1;
+        
+        let result = (acc >> 1) | (lsb << 7);
+        self.set_accumulator(result);
 
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RRA(&mut self) {
+        let acc = self.get_accumulator();
 
+        let poped_carry = match self.get_flag(Status::C) {
+            true => 1,
+            false => 0,
+        };
+        let lsb = acc & 1;
+        let carry = lsb == 1;
+
+        let result = (acc >> 1) | (poped_carry << 7);
+        self.set_accumulator(acc);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RLC(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        
+        let msb = data >> 7;
+        let carry = msb == 1;
+        
+        let result = (data << 1) | msb;
 
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RL(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let poped_carry = match self.get_flag(Status::C) {
+            true => 1,
+            false => 0,
+        };
+        let msb = data >> 7;
+        let carry = msb == 1;
+
+        let result = (data << 1) | poped_carry;
+
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RRC(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let lsb: u16 = data & 1;
+        let carry = lsb == 1;
+        
+        let result = (data >> 1) | (lsb << 7);
+        
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RR(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let poped_carry = match self.get_flag(Status::C) {
+            true => 1,
+            false => 0,
+        };
+        let lsb = data & 1;
+        let carry = lsb == 1;
+
+        let result = (data >> 1) | (poped_carry << 7);
+        
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn SLA(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let msb = data >> 7;
+        let carry = msb == 1;
+
+        let result = data << 1;
+
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn SRA(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let msb = get_msb(data as u32, self.instruction_size);
+        let lsb = data & 1;
+        let carry = lsb == 1;
+
+        let msb_offste = match self.instruction_size {
+            Size::Byte => 7,
+            Size::Word => 15,
+            Size::Long => panic!("Z80::SRA: unexpected instruction size")
+        };
+
+        let result = (data >> 1) | ((msb as u16) << msb_offste);
+        
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn SRL(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
 
+        let lsb = data & 1;
+        let carry = lsb == 1;
+
+        let result = data >> 1;
+        
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
+
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::N, false);
+        self.set_flag(Status::C, carry);
     }
 
     fn RLD(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        let acc = self.get_accumulator();
+        
+        let data_low_bits = data & 0x0F;
+        let data_high_bits = (data & 0xF0) >> 4;
+        let acc_low_bits = acc & 0x0F;
+        
+        let data_res = (data_low_bits << 4) | acc_low_bits;
 
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, data_res, self.instruction_size);
+
+        let acc_res = (acc & 0xF0) | data_high_bits;
+        self.set_accumulator(acc_res);
+
+        self.set_flag(Status::S, is_negate(acc_res as u32, Size::Byte));
+        self.set_flag(Status::N, is_negate(acc_res as u32, Size::Byte));
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::PV, acc_res % 2 == 0);
+        self.set_flag(Status::N, false);
     }
 
     fn RRD(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        let acc = self.get_accumulator();
+        
+        let data_low_bits = data & 0x0F;
+        let data_high_bits = (data & 0xF0) >> 4;
+        let acc_low_bits = acc & 0x0F;
+        
+        let data_res = (acc_low_bits << 4) | data_high_bits;
 
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, data_res, self.instruction_size);
+
+        let acc_res = (acc & 0xF0) | data_low_bits;
+        self.set_accumulator(acc_res);
+
+        self.set_flag(Status::S, is_negate(acc_res as u32, Size::Byte));
+        self.set_flag(Status::N, is_negate(acc_res as u32, Size::Byte));
+        self.set_flag(Status::H, false);
+        self.set_flag(Status::PV, acc_res % 2 == 0);
+        self.set_flag(Status::N, false);
     }
 
     fn BIT(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        let bit_offset = self.src_operand.as_ref().unwrap().data;
 
+        let result = data & (1 << bit_offset) == 0;
+
+        self.set_flag(Status::Z, result);
+        self.set_flag(Status::H, true);
+        self.set_flag(Status::N, false);
     }
 
     fn SET(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        let bit_offset = self.src_operand.as_ref().unwrap().data;
 
+        let result = data | (1 << bit_offset);
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
     }
 
     fn RES(&mut self) {
+        let data = self.dst_operand.as_ref().unwrap().data;
+        let bit_offset = self.src_operand.as_ref().unwrap().data;
 
+        let result = data & !(1 << bit_offset);
+        let location = self.dst_operand.as_ref().unwrap().location;
+        self.write(location, result, self.instruction_size);
     }
 
     fn JP(&mut self) {
+        let address = self.dst_operand.as_ref().unwrap().data;
+        self.pc = address;
+    }
 
+    fn JR(&mut self) {
+        let condition = match self.curr_opcode {
+            0x18 => true, // unconditional branching
+            0x38 => self.get_flag(Status::C),
+            0x30 => !self.get_flag(Status::C),
+            0x28 => self.get_flag(Status::Z),
+            0x20 => !self.get_flag(Status::Z),
+            _ => panic!("Z80::JR: unsupported opcode byte for condition selecting"),
+        };
+
+        if condition {
+            let address_ofset = self.dst_operand.as_ref().unwrap().data;
+            self.pc = self.pc.wrapping_add(address_ofset);
+        }
     }
 
     fn DJNZ(&mut self) {
+        let mut reg_b = self.read_register(Register::B);
+        reg_b = reg_b.wrapping_sub(1);
+        self.write_register(Register::B, reg_b, Size::Byte);
 
+        if reg_b != 0 {
+            let address_offset = self.dst_operand.as_ref().unwrap().data;
+            self.pc = self.pc.wrapping_add(address_offset);
+        }
     }
 
     fn CALL(&mut self) {
+        let condition = if let Some(condition_bits) = self.dst_operand.as_ref() {
+            match condition_bits.data {
+                0b000 => !self.get_flag(Status::Z),
+                0b001 => self.get_flag(Status::Z),
+                0b010 => !self.get_flag(Status::C),
+                0b011 => self.get_flag(Status::C),
+                0b100 => !self.get_flag(Status::PV),
+                0b101 => self.get_flag(Status::PV),
+                0b110 => !self.get_flag(Status::S),
+                0b111 => self.get_flag(Status::S),
+                _ => panic!("Z80::CALL: unexpected bit pattern for condition determination")
+            }
+        } else {
+            true
+        };
 
+        if condition {
+            self.stack_push(self.pc, Size::Word);
+            
+            let address = self.dst_operand.as_ref().unwrap().data;
+            self.pc = address;
+        }
     }
 
     fn RET(&mut self) {
+        let condition = if let Some(condition_bits) = self.dst_operand.as_ref() {
+            match condition_bits.data {
+                0b000 => !self.get_flag(Status::Z),
+                0b001 => self.get_flag(Status::Z),
+                0b010 => !self.get_flag(Status::C),
+                0b011 => self.get_flag(Status::C),
+                0b100 => !self.get_flag(Status::PV),
+                0b101 => self.get_flag(Status::PV),
+                0b110 => !self.get_flag(Status::S),
+                0b111 => self.get_flag(Status::S),
+                _ => panic!("Z80::CALL: unexpected bit pattern for condition determination")
+            }
+        } else {
+            true
+        };
 
+        if condition {
+            let address = self.stack_pop(Size::Word);
+            self.pc = address;
+        }
     }
 
     fn RETI(&mut self) {
+        let address = self.stack_pop(Size::Word);
+        self.pc = address;
 
+        // maybe there need to pop the active interrupt
     }
 
     fn RETN(&mut self) {
-
+        let address = self.stack_pop(Size::Word);
+        self.pc = address;
+        self.iff1 = self.iff2;
     }
 
     fn RST(&mut self) {
-
+        self.stack_push(self.pc, Size::Word);
+        let address = self.dst_operand.as_ref().unwrap().data;
+        self.pc = address;
     }
 
     fn IN(&mut self) {

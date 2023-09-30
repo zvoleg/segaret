@@ -51,3 +51,27 @@ pub fn is_negate(data: u32, size: Size) -> bool {
         Size::Long => data & 0x80000000 != 0,
     }
 }
+
+fn is_zero(data: u32, size: Size) -> bool {
+    match size {
+        Size::Byte => data & 0xFF == 0,
+        Size::Word => data & 0xFFFF == 0,
+        Size::Long => data == 0,
+    }
+}
+
+fn msb_is_set(data: u32, size: Size) -> bool {
+    match size {
+        Size::Byte => data & 0x80 != 0,
+        Size::Word => data & 0x8000 != 0,
+        Size::Long => data & 0x80000000 != 0,
+    }
+}
+
+fn get_msb(data: u32, size: Size) -> u32 {
+    if msb_is_set(data, size) {
+        1
+    } else {
+        0
+    }
+}
