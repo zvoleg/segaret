@@ -10,7 +10,7 @@ impl Cartridge {
     pub fn init(rom_file: &str) -> Self {
         let mut file = File::open(rom_file).unwrap();
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer);
+        let _ = file.read_to_end(&mut buffer);
 
         Self {
             rom: buffer,

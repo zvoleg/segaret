@@ -30,6 +30,8 @@ macro_rules! am {
     (de_) => { AmType::Register(Register::DE_) };
     (hl) => { AmType::Register(Register::HL) };
     (hl_) => { AmType::Register(Register::HL_) };
+    (i) => { AmType::Register(Register::I) };
+    (r) => { AmType::Register(Register::R) };
     (ix) => { AmType::Register(Register::IX) };
     (iy) => { AmType::Register(Register::IY) };
     (sp) => { AmType::Register(Register::SP) };
@@ -49,6 +51,8 @@ macro_rules! am {
 
     (idx_ix) => { AmType::Indexed(Register::IX) };
     (idx_iy) => { AmType::Indexed(Register::IY) };
+
+    ($offset:literal) => { AmType::BitAddr($offset) };
 }
 
 #[macro_export]

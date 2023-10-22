@@ -32,6 +32,8 @@ pub(in crate::hardware::z80) enum Register {
     DE_,
     HL,
     HL_,
+    I,
+    R,
     IX,
     IY,
     SP,
