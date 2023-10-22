@@ -1,8 +1,7 @@
 use super::Size;
 
 pub mod z80_emu;
-
-pub(in crate::hardware::z80) mod instruction_set;
+pub(in crate::hardware::z80) mod macros;
 
 pub trait Z80Bus {
     fn read(&self, address: u16, size: Size) -> u16;
@@ -11,15 +10,28 @@ pub trait Z80Bus {
 
 #[derive(Clone, Copy)]
 pub(in crate::hardware::z80) enum Register {
+    A,
+    A_,
     B,
+    B_,
     C,
+    C_,
     D,
+    D_,
     E,
+    E_,
     H,
+    H_,
     L,
+    L_,
+    AF,
+    AF_,
     BC,
+    BC_,
     DE,
+    DE_,
     HL,
+    HL_,
     IX,
     IY,
     SP,
