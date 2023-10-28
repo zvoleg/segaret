@@ -1,12 +1,11 @@
+[workspace]
+members = ["mc68k_emu", "z80_emu", "sg_vdp_emu", "hardware"]
+
 [package]
-name = "mc68k_emu"
+name = "segaret"
 version = "0.1.0"
 authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[profile.dev]
-debug-assertions = false
 
 [dependencies]
 lazy_static = "1.4.0"
@@ -14,3 +13,9 @@ spriter = { git="https://github.com/zvoleg/spriter" }
 log = "0.4.17"
 env_logger = "0.10.0"
 rand = "*"
+
+mc68k_emu = { path = "mc68k_emu" }
+z80_emu = { path = "z80_emu" }
+sg_vdp_emu = { path = "sg_vdp_emu" }
+disassembler = { path = "disassembler" }
+hardware = { path = "hardware" }

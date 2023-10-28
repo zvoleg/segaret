@@ -1,0 +1,10 @@
+[package]
+name = "sg_vdp_emu"
+version = "0.1.0"
+authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
+edition = "2021"
+
+[dependencies]
+spriter = { git="https://github.com/zvoleg/spriter" }
+rand = "*"
+hardware = { path = "../hardware" }

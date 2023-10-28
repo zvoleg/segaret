@@ -1,22 +1,25 @@
 extern crate spriter;
 extern crate rand;
 
+use disassembler;
+
+use cartridge::cartridge::Cartridge;
+use mc68k_emu::mc68k_emu::Mc68k;
+use z80_emu::z80_emu::Z80Emu;
+use sg_vdp_emu::Vdp;
+
 use std::fs::File;
 use std::io;
 use std::io::Write;
 
-use hardware::z80::z80_emu::Z80Emu;
 use spriter::Key;
 use spriter::if_pressed;
 use spriter::Color;
 
-mod hardware;
-pub mod disassembler;
+pub mod bus;
+pub mod cartridge;
 
-use hardware::mc68k::mc68k_emu::Mc68k;
-use hardware::bus::Bus;
-use hardware::cartridge::cartridge::Cartridge;
-use hardware::vdp::Vdp;
+use bus::Bus;
 
 fn main() {
     let (runner, mut window) = spriter::init("segaret", 640, 448);
@@ -24,10 +27,10 @@ fn main() {
     canvas.set_clear_color(Color::from_u32(0xAAAAAA));
 
     let cartridge = Cartridge::init("pop.md");
-    let mut vdp = Vdp::init(canvas);
-
     let mut bus = Bus::init(cartridge, &mut vdp);
-    vdp.set_bus(&mut bus);
+    
+    
+    let mut vdp = Vdp::init(canvas, std::ptr::null_mut());
 
     let disassembler = disassembler::Disassembler::new("pop_test_01");
     let rom_ptr = bus.get_rom_ptr();
