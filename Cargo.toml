@@ -5,8 +5,12 @@ authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[profile.dev]
+debug-assertions = false
 
 [dependencies]
 lazy_static = "1.4.0"
 spriter = { git="https://github.com/zvoleg/spriter" }
+log = "0.4.17"
+env_logger = "0.10.0"
 rand = "*"

@@ -45,7 +45,7 @@ pub struct Mc68k {
     vector_table: VectorTable,
 
     reg: [u32; 17], // idx 15 and 16 are ssp and usp
-    pub(in crate::hardware)  pc: u32,
+    pub(crate)  pc: u32,
 
     sr: u16,
     mode: Mode, // user/supervisor
@@ -925,7 +925,7 @@ impl Mc68k {
                 },
                 Size::Long => panic!("Bcc: unexpected displacement size"),
             };
-            self.clock_counter += clock_corection as u32;
+            self.clock_counter = self.clock_counter.wrapping_add(clock_corection as u32);
         }
     }
 

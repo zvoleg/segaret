@@ -3,6 +3,8 @@ use crate::hardware::Size;
 use crate::hardware::cartridge::cartridge::Cartridge;
 
 use super::mc68k::Mc68kBus;
+use super::z80::Z80Bus;
+use super::z80::z80_emu::Z80Emu;
 
 pub struct Bus {
     cartridge: Cartridge,
@@ -10,7 +12,8 @@ pub struct Bus {
     z80_ram: Vec<u8>,
 
     vdp: *mut Vdp,
-    cpu: *mut Mc68k,
+    mc68k_cpu: *mut Mc68k,
+    z80_cpu: *mut Z80Emu,
 }
 
 impl Bus {
@@ -22,12 +25,17 @@ impl Bus {
 
             
             vdp: vdp,
-            cpu: std::ptr::null_mut(),
+            mc68k_cpu: std::ptr::null_mut(),
+            z80_cpu: std::ptr::null_mut(),
         }
     }
 
-    pub(crate) fn set_cpu(&mut self, cpu: *mut Mc68k) {
-        self.cpu = cpu;
+    pub(crate) fn set_mc68k_cpu(&mut self, cpu: *mut Mc68k) {
+        self.mc68k_cpu = cpu;
+    }
+
+    pub(crate) fn set_z80_cpu(&mut self, cpu: *mut Z80Emu) {
+        self.z80_cpu = cpu;
     }
 
     pub(crate) fn get_rom_ptr(&self) -> *const u8 {
@@ -36,7 +44,7 @@ impl Bus {
 
     pub fn send_interrupt(&self, interrupt_level: usize) {
         unsafe {
-            (*self.cpu).interrupt(interrupt_level);
+            (*self.mc68k_cpu).interrupt(interrupt_level);
         }
     }
 
@@ -84,11 +92,16 @@ impl Mc68kBus for Bus {
     }
 
     fn write(&mut self, address: usize, data: u32, size: Size) {
-        if address >= 0xA00000 || address <= 0xA0FFFF {
+        if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
             self.z80_ram[address] = data as u8;
-        }
-        if address == 0xC00000 || address == 0xC00002 {
+        } else if address == 0xA11200 {
+            if data == 0x100 {
+                unsafe {
+                    (*self.z80_cpu).reset();
+                }
+            }
+        } else if address == 0xC00000 || address == 0xC00002 {
             unsafe {
                 (*self.vdp).write_data_port(data as u16);
             }
@@ -113,6 +126,37 @@ impl Mc68kBus for Bus {
                     *ram_ptr_casted = data.to_be();
                 },
             }
+        }
+    }
+}
+
+impl Z80Bus for Bus {
+    fn read(&self, address: u16, size: Size) -> u16 {
+        let address = (address & 0xFFFF) as usize;
+        match size {
+            Size::Byte => self.z80_ram[address] as u16,
+            Size::Word => unsafe {
+                let mut ram_ptr = self.z80_ram.as_ptr();
+                ram_ptr = ram_ptr.offset(address as isize);
+                let data = ram_ptr as *const _ as *const u16;
+                let data = *data;
+                data as u16
+            },
+            Size::Long => panic!("Z80Bus::Bus::read: unsuported size"),
+        }
+    }
+
+    fn write(&mut self, address: u16, data: u16, size: Size) {
+        let address = (address & 0xFFFF) as usize;
+        match size {
+            Size::Byte => self.z80_ram[address] = data as u8,
+            Size::Word => unsafe {
+                let mut ram_ptr = self.z80_ram.as_mut_ptr();
+                ram_ptr = ram_ptr.offset(address as isize);
+                let ram_ptr_casted = ram_ptr as *mut _ as *mut u16;
+                *ram_ptr_casted = data;
+            },
+            Size::Long => panic!("Z80Bus::Bus::write: unsuported size"),
         }
     }
 }

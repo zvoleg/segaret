@@ -5,6 +5,7 @@ use std::fs::File;
 use std::io;
 use std::io::Write;
 
+use hardware::z80::z80_emu::Z80Emu;
 use spriter::Key;
 use spriter::if_pressed;
 use spriter::Color;
@@ -30,8 +31,10 @@ fn main() {
 
     let disassembler = disassembler::Disassembler::new("pop_test_01");
     let rom_ptr = bus.get_rom_ptr();
-    let mut cpu = Mc68k::init(&mut bus, rom_ptr, disassembler);
-    bus.set_cpu(&mut cpu);
+    let mut mc68k_cpu = Mc68k::init(&mut bus, rom_ptr, disassembler);
+    let mut z80_cpu = Z80Emu::new(&mut bus);
+    bus.set_mc68k_cpu(&mut mc68k_cpu);
+    bus.set_z80_cpu(&mut z80_cpu);
 
     let mut auto_state = false;
 
@@ -41,18 +44,19 @@ fn main() {
         });
         if_pressed!(Key::C, {
             auto_state = false;
-            cpu.clock();
+            mc68k_cpu.clock();
             vdp.clock();
+            z80_cpu.clock();
         });
         if_pressed!(Key::S, {
-            cpu.save();
+            mc68k_cpu.save();
         });
         if_pressed!(Key::P, {
             let mut input = String::new();
             io::stdin().read_line(&mut input).unwrap();
             let input = input.trim_end();
             let new_pc = u32::from_str_radix(input, 16).expect(&format!("unexpected str format '{}'", input));
-            cpu.set_pc(new_pc);
+            mc68k_cpu.set_pc(new_pc);
         });
         if_pressed!(Key::Z, {
             let z80_dump = bus.z80_dump();
@@ -63,8 +67,9 @@ fn main() {
             spriter::program_stop();
         });
         if auto_state {
-            cpu.clock();
+            mc68k_cpu.clock();
             vdp.clock();
+            z80_cpu.clock();
         };
         true
     });

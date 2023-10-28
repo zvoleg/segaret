@@ -215,6 +215,30 @@ impl Z80Emu {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.pc = 0;
+        self.sp = 0;
+        self.i = 0;
+        self.r = 0;
+        self.af = 0;
+        self.af_ = 0;
+        self.bc = 0;
+        self.de = 0;
+        self.hl = 0;
+        self.bc_ = 0;
+        self.de_ = 0;
+        self.hl_ = 0;
+        self.ix = 0;
+        self.iy = 0;
+        self.iff1 = false;
+        self.iff2 = false;
+        self.curr_opcode = 0;
+        self.curr_opcode_size = 0;
+        self.instruction_size = Size::Byte;
+        self.src_operand = None;
+        self.dst_operand = None;
+    }
+
     pub fn clock(&mut self) {
         self.fetch_current_opcode();
         let opcode_idx = self.curr_opcode as u8 as usize;
