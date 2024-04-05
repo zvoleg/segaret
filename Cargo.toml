@@ -1,16 +1,5 @@
-[package]
-name = "mc68k_emu"
-version = "0.1.0"
-authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-[profile.dev]
-debug-assertions = false
+members = ["m68k_emu"] #, "z80_emu", "sg_vdp_emu"]
 
-[dependencies]
-lazy_static = "1.4.0"
-spriter = { git="https://github.com/zvoleg/spriter" }
-log = "0.4.17"
-env_logger = "0.10.0"
-rand = "*"
+resolver = "2"
