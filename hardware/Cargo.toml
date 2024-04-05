@@ -1,5 +1,0 @@
-[package]
-name = "hardware"
-version = "0.1.0"
-authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
-edition = "2021"
