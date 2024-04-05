@@ -5,5 +5,4 @@ authors = ["zvoleg <oleg.zaitsevv@gmail.com>"]
 edition = "2021"
 
 [dependencies]
-hardware = { path = "../hardware" }
 lazy_static = "1.4.0"

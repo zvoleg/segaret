@@ -1,5 +1,3 @@
-use hardware::Size;
-
 use spriter::Color;
 use spriter::Canvas;
 use rand;
