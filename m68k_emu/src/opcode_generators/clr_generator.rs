@@ -1,6 +1,6 @@
 use crate::{
-    addressing_mode_set::AddressingModeType,
-    instruction_set::integer_arithmetic::CLR, operation::Operation, primitives::Size, range,
+    addressing_mode_set::AddressingModeType, instruction_set::integer_arithmetic::CLR,
+    operation::Operation, primitives::Size, range,
 };
 
 use super::OpcodeMaskGenerator;
@@ -32,7 +32,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
     for size in [Size::Byte, Size::Word, Size::Long] {
         for am_type in am_types {
             for idx in range!(am_type) {
-                let instruction = Box::new(CLR {size: size});
+                let instruction = Box::new(CLR { size: size });
                 let am = am_type.addressing_mode_by_type(idx, size);
 
                 let base_mask = instruction.generate_mask();
@@ -54,7 +54,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
                         }
                     }
                 };
-                
+
                 let operation = Operation::new(instruction, vec![am], cycles);
                 table[opcode] = operation;
             }

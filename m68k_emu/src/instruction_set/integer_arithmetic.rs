@@ -1,5 +1,6 @@
 use crate::{
-    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet, primitives::Size
+    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
+    primitives::Size,
 };
 
 use super::{RegisterFieldMode, WriteDirection};

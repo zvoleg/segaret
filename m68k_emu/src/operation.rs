@@ -1,6 +1,4 @@
-use crate::{
-    addressing_mode_set::AddressingMode, instruction_set::Instruction,
-};
+use crate::{addressing_mode_set::AddressingMode, instruction_set::Instruction};
 
 /// Operation is composition of an instruction and the addressing modes
 /// Also an Operation contains information about cycles amount

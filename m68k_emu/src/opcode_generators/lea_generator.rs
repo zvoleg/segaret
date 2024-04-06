@@ -1,5 +1,9 @@
 use crate::{
-    addressing_mode_set::{AddressRegister, AddressingModeType}, instruction_set::data_movement::LEA, operation::Operation, primitives::Size, range
+    addressing_mode_set::{AddressRegister, AddressingModeType},
+    instruction_set::data_movement::LEA,
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;
@@ -26,17 +30,20 @@ pub(crate) fn generate(table: &mut [Operation]) {
             for idx in range!(am_type) {
                 let instruction = Box::new(LEA());
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Byte); // For the LEA instruction is not matter of the data size pointed by am
-                let dst_am = Box::new(AddressRegister{reg: address_reg_idx});
+                let dst_am = Box::new(AddressRegister {
+                    reg: address_reg_idx,
+                });
 
                 let base_mask = instruction.generate_mask();
                 let opcode = base_mask | (address_reg_idx << 9) | am_type.generate_mask(idx);
-                
+
                 let mut cycles = match am_type {
-                    AddressingModeType::AddressRegisterIndexed | AddressingModeType::ProgramCounterIndexed => 2,
+                    AddressingModeType::AddressRegisterIndexed
+                    | AddressingModeType::ProgramCounterIndexed => 2,
                     _ => 0,
                 };
                 cycles += am_type.additional_clocks(Size::Long);
-                
+
                 let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
                 table[opcode] = operation;
             }

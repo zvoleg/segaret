@@ -32,7 +32,7 @@ pub(crate) mod ext_generator;
 // pub(crate) mod jmp_generator;
 // pub(crate) mod jsr_generator;
 pub(crate) mod lea_generator;
-// pub(crate) mod link_generator;
+pub(crate) mod link_generator;
 // pub(crate) mod lsd_generator;
 pub(crate) mod move_generator;
 pub(crate) mod movem_generator;
@@ -53,7 +53,7 @@ pub(crate) mod sub_generator;
 // pub(crate) mod tas_generator;
 // pub(crate) mod trap_generator;
 // pub(crate) mod tst_generator;
-// pub(crate) mod unlk_generator;
+pub(crate) mod unlk_generator;
 
 trait OpcodeMaskGenerator {
     fn generate_mask(&self) -> usize;
@@ -66,7 +66,7 @@ impl AddressingModeType {
             AddressingModeType::AddressRegister => Box::new(AddressRegister { reg: reg_idx }),
             AddressingModeType::AddressRegisterIndirect => {
                 Box::new(AddressRegisterIndirect { reg: reg_idx })
-            },
+            }
             AddressingModeType::AddressRegisterPostIncrement => {
                 Box::new(AddressRegisterPostIncrement {
                     reg: reg_idx,
@@ -158,6 +158,8 @@ pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
     pea_generator::generate(table);
     move_generator::generate(table);
     movem_generator::generate(table);
+    link_generator::generate(table);
+    unlk_generator::generate(table);
 }
 
 #[macro_export]

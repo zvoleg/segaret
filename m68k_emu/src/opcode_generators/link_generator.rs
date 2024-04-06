@@ -1,21 +1,35 @@
-use crate::{decoder::{Operation, InstructionData, InstructionType}, addressing_mode::AdrMode, Size};
+use crate::{
+    addressing_mode_set::{AddressRegister, AddressRegisterPreDecrement, Immediate},
+    instruction_set::data_movement::LINK,
+    operation::Operation,
+    primitives::Size,
+    STACK_REGISTER,
+};
+
+use super::OpcodeMaskGenerator;
+
+impl OpcodeMaskGenerator for LINK {
+    fn generate_mask(&self) -> usize {
+        0b0100111001010000
+    }
+}
 
 pub(crate) fn generate(table: &mut [Operation]) {
-    let base_mask = 0b0100111001010000;
+    for address_reg_idx in 0..8 {
+        let instruction = Box::new(LINK());
+        let stack_am = Box::new(AddressRegisterPreDecrement {
+            reg: STACK_REGISTER,
+            size: Size::Long,
+        });
+        let register_am = Box::new(AddressRegister {
+            reg: address_reg_idx,
+        });
+        let immediate_am = Box::new(Immediate { size: Size::Word });
 
-    for reg in 0..8 {
-        let opcode = base_mask | reg;
-        let inst_data = InstructionData::ExtDstAm(AdrMode::AdrReg(reg));
-        let clocks = 16 + AdrMode::AdrReg(reg).additional_clocks(Size::Word);
-        let inst = Operation::new(
-            opcode as u16,
-            "LINK",
-            InstructionType::LINK,
-            inst_data,
-            Size::Word,
-            false,
-            clocks,
-        );
-        table[opcode] = inst;
+        let base_mask = instruction.generate_mask();
+        let opcode = base_mask | address_reg_idx;
+
+        let operation = Operation::new(instruction, vec![stack_am, register_am, immediate_am], 16);
+        table[opcode] = operation;
     }
 }

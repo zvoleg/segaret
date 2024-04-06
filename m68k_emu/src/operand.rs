@@ -2,10 +2,17 @@ use std::collections::VecDeque;
 
 use crate::{primitives::Pointer, Size};
 
+/// The Operand is representation of data which handled by an instruction
+///
+/// `operand_ptr` is a memory location of data
+///
+/// `address_register_ptr` is the pointer to the address register from which an memory address was calculated. The instruction some times needs to access to this data (b.e. MOVEM, LINK)
+///
+/// `operand_address` is the calculated memory address
 pub(crate) struct Operand {
     pub(crate) operand_ptr: Box<dyn Pointer>,
-    pub(crate) address_register_ptr: Option<Box<dyn Pointer>>, // needs for the MOMEM instruction which changes value in the address register after execution
-    pub(crate) operand_address: u32, // needs for the LEA instruction which loads the calculated by addressing mode address value into an address register
+    pub(crate) address_register_ptr: Option<Box<dyn Pointer>>,
+    pub(crate) operand_address: u32,
 }
 
 impl Operand {
@@ -46,6 +53,6 @@ impl OperandSet {
     }
 
     pub(crate) fn next(&mut self) -> Operand {
-        self.operands.pop_front().unwrap()
+        self.operands.pop_back().unwrap()
     }
 }

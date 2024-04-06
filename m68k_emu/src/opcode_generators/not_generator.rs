@@ -1,6 +1,6 @@
 use crate::{
-    addressing_mode_set::AddressingModeType,
-    instruction_set::logical_instructions::NOT, operation::Operation, primitives::Size, range,
+    addressing_mode_set::AddressingModeType, instruction_set::logical_instructions::NOT,
+    operation::Operation, primitives::Size, range,
 };
 
 use super::OpcodeMaskGenerator;
