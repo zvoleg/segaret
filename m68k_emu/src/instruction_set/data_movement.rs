@@ -1,8 +1,7 @@
 use crate::{
     addressing_mode_set::AddressingModeType,
     bus::BusM68k,
-    cpu::M68k,
-    cpu_internals::RegisterType,
+    cpu_internals::{CpuInternals, RegisterType},
     instruction_set::Instruction,
     operand::{Operand, OperandSet},
     primitives::Size,
@@ -16,19 +15,19 @@ pub(crate) struct MOVE {
     pub(crate) size: Size,
 }
 
-impl<T: BusM68k> Instruction<T> for MOVE {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+impl Instruction for MOVE {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let src_operand = operand_set.next();
         let src_data = src_operand.read(self.size);
         let dst_operand = operand_set.next();
         dst_operand.write(src_data, self.size);
 
-        cpu.register_set
+        cpu_internals.register_set
             .sr
             .set_flag(StatusFlag::N, src_data.is_negate(self.size));
-        cpu.register_set.sr.set_flag(StatusFlag::Z, src_data == 0);
-        cpu.register_set.sr.set_flag(StatusFlag::V, false);
-        cpu.register_set.sr.set_flag(StatusFlag::C, false);
+        cpu_internals.register_set.sr.set_flag(StatusFlag::Z, src_data == 0);
+        cpu_internals.register_set.sr.set_flag(StatusFlag::V, false);
+        cpu_internals.register_set.sr.set_flag(StatusFlag::C, false);
     }
 }
 
@@ -36,8 +35,8 @@ pub(crate) struct MOVEA {
     pub(crate) size: Size,
 }
 
-impl<T: BusM68k> Instruction<T> for MOVEA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
+impl Instruction for MOVEA {
+    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let src_data = operand_set.next().read(self.size);
         operand_set.next().write(src_data, self.size);
     }
@@ -57,8 +56,8 @@ pub(crate) struct MOVEM {
     pub(crate) am_register_idx: isize, // needs to determine writes into the sorce register of adressing mode
 }
 
-impl<T: BusM68k> Instruction<T> for MOVEM {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+impl Instruction for MOVEM {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let extension_word = operand_set.next().read(Size::Word);
         let affected_register_offsets =
             self.collect_affected_register_offsets(extension_word as u16);
@@ -67,10 +66,10 @@ impl<T: BusM68k> Instruction<T> for MOVEM {
 
         match self.direction {
             MoveDirection::RegisterToMemory => {
-                self.write_registers_to_memory(&affected_register_offsets, operand_set.next(), cpu)
+                self.write_registers_to_memory(&affected_register_offsets, operand_set.next(), cpu_internals)
             }
             MoveDirection::MemoryToRegister => {
-                self.write_memory_to_registers(&affected_register_offsets, operand_set.next(), cpu)
+                self.write_memory_to_registers(&affected_register_offsets, operand_set.next(), cpu_internals)
             }
         }
     }
@@ -87,15 +86,15 @@ impl MOVEM {
         affected_register_offsets
     }
 
-    fn write_registers_to_memory<T: BusM68k>(
+    fn write_registers_to_memory(
         &self,
         affected_register_offsets: &[isize],
         dst_operand: Operand,
-        cpu: &mut M68k<T>,
+        cpu_internals: &mut CpuInternals,
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPreDecrement => {
-                let register_ptr = cpu.register_set.get_register_ptr(7, RegisterType::Address);
+                let register_ptr = cpu_internals.register_set.get_register_ptr(7, RegisterType::Address);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = register_ptr.read_offset(self.size, -1 * reg_offset);
@@ -119,7 +118,7 @@ impl MOVEM {
                 );
             }
             _ => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu_internals.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = register_ptr.read_offset(self.size, *reg_offset);
@@ -132,15 +131,15 @@ impl MOVEM {
         }
     }
 
-    fn write_memory_to_registers<T: BusM68k>(
+    fn write_memory_to_registers(
         &self,
         affected_register_offsets: &[isize],
         dst_operand: Operand,
-        cpu: &mut M68k<T>,
+        cpu_internals: &mut CpuInternals,
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPostIncrement => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu_internals.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 let mut am_register_writed = false;
                 for reg_offset in affected_register_offsets {
@@ -161,7 +160,7 @@ impl MOVEM {
                 }
             }
             _ => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu_internals.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = dst_operand
@@ -181,8 +180,8 @@ pub(crate) struct MOVEP {
     pub(crate) direction: MoveDirection,
 }
 
-impl<T: BusM68k> Instruction<T> for MOVEP {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
+impl Instruction for MOVEP {
+    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let iterations = self.size as isize;
         let first_operand = operand_set.next();
         let second_operand = operand_set.next();
@@ -212,18 +211,18 @@ pub(crate) struct MOVEQ {
     pub(crate) data: u32,
 }
 
-impl<T: BusM68k> Instruction<T> for MOVEQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu_state: &mut M68k<T>) {
+impl Instruction for MOVEQ {
+    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
         let data = self.data.sign_extend(Size::Byte);
         operand_set.next().operand_ptr.write(data, Size::Long);
 
-        cpu_state
+        cpu_interanls
             .register_set
             .sr
             .set_flag(StatusFlag::N, data.is_negate(Size::Long));
-        cpu_state.register_set.sr.set_flag(StatusFlag::Z, data == 0);
-        cpu_state.register_set.sr.set_flag(StatusFlag::V, false);
-        cpu_state.register_set.sr.set_flag(StatusFlag::C, false);
+        cpu_interanls.register_set.sr.set_flag(StatusFlag::Z, data == 0);
+        cpu_interanls.register_set.sr.set_flag(StatusFlag::V, false);
+        cpu_interanls.register_set.sr.set_flag(StatusFlag::C, false);
     }
 }
 
@@ -231,8 +230,8 @@ pub(crate) struct EXG {
     pub(crate) mode: ExchangeMode,
 }
 
-impl<T: BusM68k> Instruction<T> for EXG {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
+impl Instruction for EXG {
+    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let first_operand = operand_set.next();
         let second_operand = operand_set.next();
         let first_data = first_operand.read(Size::Long);
@@ -244,8 +243,8 @@ impl<T: BusM68k> Instruction<T> for EXG {
 
 pub(crate) struct LEA();
 
-impl<T: BusM68k> Instruction<T> for LEA {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+impl Instruction for LEA {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let address = operand_set.next().operand_address;
         let dst_reg = operand_set.next();
         dst_reg.write(address, Size::Long);
@@ -253,8 +252,8 @@ impl<T: BusM68k> Instruction<T> for LEA {
 }
 pub(crate) struct PEA();
 
-impl<T: BusM68k> Instruction<T> for PEA {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+impl Instruction for PEA {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let address = operand_set.next().operand_address;
         let dst_operand = operand_set.next();
         dst_operand.write(address, Size::Long);
@@ -264,35 +263,35 @@ pub(crate) struct LINK {
     pub(crate) register: usize,
 }
 
-impl<T: BusM68k> Instruction<T> for LINK {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let address_register_ptr = cpu
-            .register_set
-            .get_register_ptr(self.register, RegisterType::Address);
-        let address = address_register_ptr.read(Size::Long);
-        cpu.push(address, Size::Long);
-        let stack_address = cpu.get_stack_address();
-        address_register_ptr.write(stack_address, Size::Long);
-        let displacement = operand_set
-            .next()
-            .operand_ptr
-            .read(Size::Word)
-            .sign_extend(Size::Word);
-        cpu.set_stack_address(stack_address.wrapping_add(displacement));
+impl Instruction for LINK {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        // let address_register_ptr = cpu
+        //     .register_set
+        //     .get_register_ptr(self.register, RegisterType::Address);
+        // let address = address_register_ptr.read(Size::Long);
+        // cpu.push(address, Size::Long);
+        // let stack_address = cpu.get_stack_address();
+        // address_register_ptr.write(stack_address, Size::Long);
+        // let displacement = operand_set
+        //     .next()
+        //     .operand_ptr
+        //     .read(Size::Word)
+        //     .sign_extend(Size::Word);
+        // cpu.set_stack_address(stack_address.wrapping_add(displacement));
     }
 }
 pub(crate) struct UNLK {
     pub(crate) register: usize,
 }
 
-impl<T: BusM68k> Instruction<T> for UNLK {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
-        let address_register_ptr = cpu
-            .register_set
-            .get_register_ptr(self.register, RegisterType::Address);
-        let address = address_register_ptr.read(Size::Long);
-        cpu.set_stack_address(address);
-        let data = cpu.pop(Size::Long);
-        address_register_ptr.write(data, Size::Long);
+impl Instruction for UNLK {
+    fn execute(&self, _: OperandSet, cpu_internals: &mut CpuInternals) {
+        // let address_register_ptr = cpu
+        //     .register_set
+        //     .get_register_ptr(self.register, RegisterType::Address);
+        // let address = address_register_ptr.read(Size::Long);
+        // cpu.set_stack_address(address);
+        // let data = cpu.pop(Size::Long);
+        // address_register_ptr.write(data, Size::Long);
     }
 }

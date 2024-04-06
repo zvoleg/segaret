@@ -44,3 +44,19 @@ impl RegisterSet {
         }
     }
 }
+
+pub(crate) struct CpuInternals {
+    pub(crate) register_set: RegisterSet,
+    pub(crate) cycles: u32,
+    pub(crate) trap_vector: Option<u32>,
+}
+
+impl CpuInternals {
+    pub(crate) fn new() -> Self {
+        Self {
+            register_set: RegisterSet::new(),
+            cycles: 0,
+            trap_vector: None,
+        }
+    }
+}

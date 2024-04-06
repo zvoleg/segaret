@@ -1,5 +1,5 @@
 use crate::{
-    addressing_mode_set::AddressingModeType, bus::BusM68k,
+    addressing_mode_set::AddressingModeType,
     instruction_set::integer_arithmetic::CLR, operation::Operation, primitives::Size, range,
 };
 
@@ -17,7 +17,7 @@ impl OpcodeMaskGenerator for CLR {
     }
 }
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

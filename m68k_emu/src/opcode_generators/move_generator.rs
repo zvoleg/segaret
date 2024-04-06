@@ -2,7 +2,6 @@ use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterDisplacement, AddressingModeType, DataRegister,
     },
-    bus::BusM68k,
     instruction_set::{
         data_movement::{MOVE, MOVEA, MOVEP, MOVEQ},
         system_control::{MOVE_from_SR, MOVE_to_CCR, MOVE_to_SR, MOVE_USP},
@@ -14,7 +13,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_move(table);
     generate_movea(table);
     generate_moveq(table);
@@ -43,7 +42,7 @@ fn swap_addressing_mod_mask(mask: usize) -> usize {
     (h << 3) | l
 }
 
-fn generate_move<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_move(table: &mut [Operation]) {
     let dst_am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -113,7 +112,7 @@ impl OpcodeMaskGenerator for MOVEA {
     }
 }
 
-fn generate_movea<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_movea(table: &mut [Operation]) {
     let src_am_tyeps = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -161,7 +160,7 @@ impl OpcodeMaskGenerator for MOVEQ {
     }
 }
 
-fn generate_moveq<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_moveq(table: &mut [Operation]) {
     for reg in 0..8 {
         for data in 0..=0xFF {
             let instruction = Box::new(MOVEQ { data: data });
@@ -190,7 +189,7 @@ impl OpcodeMaskGenerator for MOVEP {
     }
 }
 
-fn generate_movep<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_movep(table: &mut [Operation]) {
     for data_reg in 0..8 {
         for size in [Size::Word, Size::Long] {
             for direction in [
@@ -233,7 +232,7 @@ impl OpcodeMaskGenerator for MOVE_to_CCR {
     }
 }
 
-fn generate_move_to_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_move_to_ccr(table: &mut [Operation]) {
     let src_am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -272,7 +271,7 @@ impl OpcodeMaskGenerator for MOVE_from_SR {
     }
 }
 
-fn generate_move_from_sr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_move_from_sr(table: &mut [Operation]) {
     let dst_am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -312,7 +311,7 @@ impl OpcodeMaskGenerator for MOVE_to_SR {
     }
 }
 
-fn generate_move_to_sr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_move_to_sr(table: &mut [Operation]) {
     let src_am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -356,7 +355,7 @@ impl OpcodeMaskGenerator for MOVE_USP {
     }
 }
 
-fn generate_move_usp<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_move_usp(table: &mut [Operation]) {
     for direction in [
         MoveDirection::RegisterToMemory,
         MoveDirection::MemoryToRegister,

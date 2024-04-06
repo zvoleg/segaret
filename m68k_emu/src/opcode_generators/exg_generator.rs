@@ -1,6 +1,5 @@
 use crate::{
     addressing_mode_set::{AddressRegister, AddressingMode, DataRegister},
-    bus::BusM68k,
     instruction_set::{data_movement::EXG, ExchangeMode},
     operation::Operation,
 };
@@ -15,7 +14,7 @@ impl OpcodeMaskGenerator for EXG {
     }
 }
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     for reg_x in 0..8 {
         for mode in [
             ExchangeMode::DataToData,

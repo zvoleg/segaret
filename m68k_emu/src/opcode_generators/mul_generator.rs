@@ -1,6 +1,5 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister},
-    bus::BusM68k,
     instruction_set::integer_arithmetic::{MULS, MULU},
     operation::Operation,
     primitives::Size,
@@ -9,7 +8,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_muls(table);
     generate_mulu(table);
 }
@@ -20,7 +19,7 @@ impl OpcodeMaskGenerator for MULS {
     }
 }
 
-fn generate_muls<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_muls(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -60,7 +59,7 @@ impl OpcodeMaskGenerator for MULU {
     }
 }
 
-fn generate_mulu<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_mulu(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

@@ -5,7 +5,6 @@ use crate::{
         AddressingMode, AddressingModeType, DataRegister, Immediate, Implied,
         ProgramCounterDisplacement, ProgramCounterIndexed,
     },
-    bus::BusM68k,
     operation::Operation,
     primitives::Size,
 };
@@ -141,7 +140,7 @@ impl AddressingModeType {
     }
 }
 
-pub(crate) fn generate_opcode_list<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
     and_generator::generate(table);
     eor_generator::generate(table);
     or_generator::generate(table);

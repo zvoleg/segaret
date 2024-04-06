@@ -1,5 +1,5 @@
 use crate::{
-    addressing_mode_set::DataRegister, bus::BusM68k, instruction_set::integer_arithmetic::EXT,
+    addressing_mode_set::DataRegister, instruction_set::integer_arithmetic::EXT,
     operation::Operation, primitives::Size,
 };
 
@@ -17,7 +17,7 @@ impl OpcodeMaskGenerator for EXT {
     }
 }
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     for size in [Size::Word, Size::Long] {
         for data_reg_idx in 0..8 {
             let instruction = Box::new(EXT { size: size });

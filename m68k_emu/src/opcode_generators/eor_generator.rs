@@ -1,6 +1,5 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
-    bus::BusM68k,
     instruction_set::{
         logical_instructions::{EOR, EORI},
         system_control::{EORI_to_CCR, EORI_to_SR},
@@ -12,7 +11,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_eor(table);
     generate_eori(table);
     generate_eori_to_ccr(table);
@@ -31,7 +30,7 @@ impl OpcodeMaskGenerator for EOR {
     }
 }
 
-fn generate_eor<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_eor(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -87,7 +86,7 @@ impl OpcodeMaskGenerator for EORI {
     }
 }
 
-fn generate_eori<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_eori(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -135,7 +134,7 @@ impl OpcodeMaskGenerator for EORI_to_CCR {
     }
 }
 
-fn generate_eori_to_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_eori_to_ccr(table: &mut [Operation]) {
     let instruction = Box::new(EORI_to_CCR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
@@ -149,7 +148,7 @@ impl OpcodeMaskGenerator for EORI_to_SR {
     }
 }
 
-fn generate_eori_to_sr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_eori_to_sr(table: &mut [Operation]) {
     let instruction = Box::new(EORI_to_SR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();

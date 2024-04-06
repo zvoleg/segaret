@@ -1,5 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressRegister, AddressingModeType}, bus::BusM68k, instruction_set::data_movement::LEA, operation::Operation, primitives::Size, range
+    addressing_mode_set::{AddressRegister, AddressingModeType}, instruction_set::data_movement::LEA, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
@@ -10,7 +10,7 @@ impl OpcodeMaskGenerator for LEA {
     }
 }
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterDisplacement,

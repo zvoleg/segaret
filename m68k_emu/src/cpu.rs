@@ -1,22 +1,18 @@
 use crate::{
     bus::BusM68k,
-    cpu_internals::{RegisterSet, RegisterType},
+    cpu_internals::{CpuInternals, RegisterType},
     instruction_set::program_control::NOP,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
-    primitives::{MemoryPtr, Pointer, Size}, STACK_REGISTER,
+    primitives::{MemoryPtr, Pointer, Size},
+    STACK_REGISTER,
 };
 
-// lazy_static! {
-//     static ref table: Vec<Operation<dyn BusM68k>> = {};
-// }
-
 pub struct M68k<T: BusM68k> {
-    pub(crate) register_set: RegisterSet,
-    pub(crate) cycles: u32,
+    pub(crate) internals: CpuInternals,
 
-    operation_set: Vec<Operation<T>>,
+    operation_set: Vec<Operation>,
     bus: T,
 }
 
@@ -25,13 +21,12 @@ where
     T: BusM68k,
 {
     pub fn new(bus: T) -> Self {
-        let mut table: Vec<Operation<T>> = Vec::with_capacity(0x10000);
+        let mut table: Vec<Operation> = Vec::with_capacity(0x10000);
         table.resize_with(0x10000, || Operation::new(Box::new(NOP()), Vec::new(), 5));
         generate_opcode_list(&mut table);
         Self {
+            internals: CpuInternals::new(),
             operation_set: table,
-            register_set: RegisterSet::new(),
-            cycles: 0,
             bus: bus,
         }
     }
@@ -46,14 +41,15 @@ where
 
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
-            operands.add(am.get_operand(&mut self.register_set, &self.bus));
+            operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
-        instruction.execute(operands, self);
+        instruction.execute(operands, &mut self.internals);
     }
 
     pub(crate) fn push(&mut self, data: u32, size: Size) {
         let stack_register_ptr = self
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let address = stack_register_ptr.read(Size::Long) - size as u32; // predecrement
@@ -64,6 +60,7 @@ where
 
     pub(crate) fn pop(&mut self, size: Size) -> u32 {
         let stack_register_ptr = self
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let address = stack_register_ptr.read(Size::Long);
@@ -74,6 +71,7 @@ where
 
     pub(crate) fn get_stack_address(&mut self) -> u32 {
         let stack_register_ptr = self
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         stack_register_ptr.read(Size::Long)
@@ -81,6 +79,7 @@ where
 
     pub(crate) fn set_stack_address(&mut self, address: u32) {
         let stack_register_ptr = self
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         stack_register_ptr.write(address, Size::Long);
@@ -89,7 +88,7 @@ where
     fn fetch_opcode(&mut self) -> u16 {
         let opcode_ptr = MemoryPtr::new(
             self.bus
-                .set_address(self.register_set.get_and_increment_pc()),
+                .set_address(self.internals.register_set.get_and_increment_pc()),
         );
         opcode_ptr.read(Size::Word) as u16
     }

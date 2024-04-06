@@ -1,5 +1,4 @@
-use crate::bus::BusM68k;
-use crate::cpu::M68k;
+use crate::cpu_internals::CpuInternals;
 use crate::operand::OperandSet;
 
 pub(crate) mod bit_manipulation;
@@ -13,8 +12,8 @@ pub(crate) mod program_control;
 pub(crate) mod system_control;
 
 ///
-pub(crate) trait Instruction<T: BusM68k> {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>);
+pub(crate) trait Instruction {
+    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals);
 }
 
 /// It is used for MOVEM, MOVE_USP and MOVEP instructions

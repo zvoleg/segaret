@@ -1,6 +1,5 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
-    bus::BusM68k,
     instruction_set::{
         logical_instructions::{AND, ANDI},
         system_control::{ANDI_to_CCR, ANDI_to_SR},
@@ -13,7 +12,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_and_mem_to_reg(table);
     generate_and_reg_to_mem(table);
     generate_andi(table);
@@ -34,7 +33,7 @@ impl OpcodeMaskGenerator for AND {
     }
 }
 
-fn generate_and_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_and_mem_to_reg(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -83,7 +82,7 @@ fn generate_and_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     }
 }
 
-fn generate_and_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_and_reg_to_mem(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -135,7 +134,7 @@ impl OpcodeMaskGenerator for ANDI {
     }
 }
 
-fn generate_andi<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_andi(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -183,7 +182,7 @@ impl OpcodeMaskGenerator for ANDI_to_CCR {
     }
 }
 
-fn generate_andi_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_andi_ccr(table: &mut [Operation]) {
     let instruction = Box::new(ANDI_to_CCR());
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![], 20);
@@ -196,7 +195,7 @@ impl OpcodeMaskGenerator for ANDI_to_SR {
     }
 }
 
-fn generate_andi_sr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_andi_sr(table: &mut [Operation]) {
     let instruction = Box::new(ANDI_to_SR());
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![], 20);

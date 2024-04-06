@@ -1,6 +1,5 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
-    bus::BusM68k,
     instruction_set::{
         logical_instructions::{OR, ORI},
         system_control::{ORI_to_CCR, ORI_to_SR},
@@ -13,7 +12,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_or_mem_to_reg(table);
     generate_or_reg_to_mem(table);
     generate_ori(table);
@@ -34,7 +33,7 @@ impl OpcodeMaskGenerator for OR {
     }
 }
 
-fn generate_or_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_or_mem_to_reg(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -80,7 +79,7 @@ fn generate_or_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     }
 }
 
-fn generate_or_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_or_reg_to_mem(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -134,7 +133,7 @@ impl OpcodeMaskGenerator for ORI {
     }
 }
 
-fn generate_ori<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_ori(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -181,7 +180,7 @@ impl OpcodeMaskGenerator for ORI_to_CCR {
     }
 }
 
-fn generate_ori_to_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_ori_to_ccr(table: &mut [Operation]) {
     let instruction = Box::new(ORI_to_CCR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
@@ -195,7 +194,7 @@ impl OpcodeMaskGenerator for ORI_to_SR {
     }
 }
 
-fn generate_ori_to_sr<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_ori_to_sr(table: &mut [Operation]) {
     let instruction = Box::new(ORI_to_SR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();

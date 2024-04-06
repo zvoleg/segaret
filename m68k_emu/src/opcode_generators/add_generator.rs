@@ -3,7 +3,6 @@ use crate::{
         AddressRegister, AddressRegisterPreDecrement, AddressingMode, AddressingModeType,
         DataRegister, Immediate,
     },
-    bus::BusM68k,
     instruction_set::{
         integer_arithmetic::{ADD, ADDA, ADDI, ADDQ, ADDX},
         RegisterFieldMode, WriteDirection,
@@ -15,7 +14,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
+pub(crate) fn generate(table: &mut [Operation]) {
     generate_add_mem_to_reg(table);
     generate_add_reg_to_mem(table);
     generate_adda(table);
@@ -37,7 +36,7 @@ impl OpcodeMaskGenerator for ADD {
     }
 }
 
-fn generate_add_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_add_mem_to_reg(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister, // Word and Long only
@@ -95,7 +94,7 @@ fn generate_add_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     }
 }
 
-fn generate_add_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_add_reg_to_mem(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -146,7 +145,7 @@ impl OpcodeMaskGenerator for ADDA {
     }
 }
 
-fn generate_adda<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_adda(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -205,7 +204,7 @@ impl OpcodeMaskGenerator for ADDI {
     }
 }
 
-fn generate_addi<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_addi(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -260,7 +259,7 @@ impl OpcodeMaskGenerator for ADDQ {
     }
 }
 
-fn generate_addq<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_addq(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -322,7 +321,7 @@ impl OpcodeMaskGenerator for ADDX {
     }
 }
 
-fn generate_addx<T: BusM68k>(table: &mut [Operation<T>]) {
+fn generate_addx(table: &mut [Operation]) {
     for mode in [
         RegisterFieldMode::DataRegister,
         RegisterFieldMode::PreDecrement,
