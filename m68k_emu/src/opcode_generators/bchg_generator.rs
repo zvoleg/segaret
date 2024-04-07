@@ -1,78 +1,91 @@
-use crate::{decoder::{Operation, InstructionData, InstructionType}, adr_mode, addressing_mode::AdrMode, Size};
+use crate::{
+    addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
+    instruction_set::bit_manipulation::BCHG,
+    operation::Operation,
+    primitives::Size,
+    range,
+};
+
+use super::OpcodeMaskGenerator;
 
 pub(crate) fn generate(table: &mut [Operation]) {
     generate_bchg_reg(table);
-    generate_bchg_i(table);
+    generate_bchg_immediate(table);
+}
+
+impl OpcodeMaskGenerator for BCHG {
+    fn generate_mask(&self) -> usize {
+        0b0000000001000000
+    }
 }
 
 fn generate_bchg_reg(table: &mut [Operation]) {
-    let base_mask = 0b0000000101000000;
-
     let am_types = [
-    AddressingModeType::DataRegister,
-    AddressingModeType::AddressRegisterIndirect,
-    AddressingModeType::AddressRegisterPreDecrement,
-    AddressingModeType::AddressRegisterPostIncrement,
-    AddressingModeType::AddressRegisterDisplacement,
-    AddressingModeType::AddressRegisterIndexed,
-    AddressingModeType::AbsShort,
-    AddressingModeType::AbsLong,
+        AddressingModeType::DataRegister,
+        AddressingModeType::AddressRegisterIndirect,
+        AddressingModeType::AddressRegisterPreDecrement,
+        AddressingModeType::AddressRegisterPostIncrement,
+        AddressingModeType::AddressRegisterDisplacement,
+        AddressingModeType::AddressRegisterIndexed,
+        AddressingModeType::AbsShort,
+        AddressingModeType::AbsLong,
+    ];
 
-    for reg in 0..8 {
+    for data_reg_idx in 0..8 {
         for am_type in am_types {
-            let mask = reg << 9 | usize::from(am);
-            let opcode = base_mask | mask;
-            let inst_data = InstructionData::SrcDstAm(AdrMode::DataReg(reg), *am);
-            let size = match am {
-                AddressingModeType::DataRegister => Size::Long,
-                _ => Size::Byte,
-            };
-            let clocks = 8 + am_type.additional_clocks(size);
-            let inst = Operation::new(
-                opcode as u16,
-                "BCHG",
-                InstructionType::BCHG,
-                inst_data,
-                size,
-                false,
-                clocks,
-            );
-            table[opcode] = inst;
+            for idx in range!(am_type) {
+                let size = match am_type {
+                    AddressingModeType::DataRegister => Size::Long,
+                    _ => Size::Byte,
+                };
+
+                let instruction = Box::new(BCHG { size: size });
+                let src_am = Box::new(DataRegister { reg: data_reg_idx });
+                let dst_am = am_type.addressing_mode_by_type(idx, size);
+
+                let base_mask = instruction.generate_mask();
+                let opcode =
+                    base_mask | (data_reg_idx << 9) | (1 << 8) | am_type.generate_mask(idx);
+
+                let cycles = 8 + am_type.additional_clocks(size);
+
+                let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
+                table[opcode] = operation;
+            }
         }
     }
 }
 
-fn generate_bchg_i(table: &mut [Operation]) {
-    let base_mask = 0b0000100001000000;
-
+fn generate_bchg_immediate(table: &mut [Operation]) {
     let am_types = [
-    AddressingModeType::DataRegister,
-    AddressingModeType::AddressRegisterIndirect,
-    AddressingModeType::AddressRegisterPreDecrement,
-    AddressingModeType::AddressRegisterPostIncrement,
-    AddressingModeType::AddressRegisterDisplacement,
-    AddressingModeType::AddressRegisterIndexed,
-    AddressingModeType::AbsShort,
-    AddressingModeType::AbsLong,
+        AddressingModeType::DataRegister,
+        AddressingModeType::AddressRegisterIndirect,
+        AddressingModeType::AddressRegisterPreDecrement,
+        AddressingModeType::AddressRegisterPostIncrement,
+        AddressingModeType::AddressRegisterDisplacement,
+        AddressingModeType::AddressRegisterIndexed,
+        AddressingModeType::AbsShort,
+        AddressingModeType::AbsLong,
+    ];
 
     for am_type in am_types {
-        let mask = usize::from(am);
-        let opcode = base_mask | mask;
-        let inst_data = InstructionData::SrcDstAm(AdrMode::Immediate, *am);
-        let size = match am {
-            AddressingModeType::DataRegister => Size::Long,
-            _ => Size::Byte,
-        };
-        let clocks = 12 + am_type.additional_clocks(size);
-        let inst = Operation::new(
-            opcode as u16,
-            "BCHG",
-            InstructionType::BCHG,
-            inst_data,
-            size,
-            false,
-            clocks,
-        );
-        table[opcode] = inst;
+        for idx in range!(am_type) {
+            let size = match am_type {
+                AddressingModeType::DataRegister => Size::Long,
+                _ => Size::Byte,
+            };
+
+            let instruction = Box::new(BCHG { size: size });
+            let src_am = Box::new(Immediate { size: Size::Byte });
+            let dst_am = am_type.addressing_mode_by_type(idx, size);
+
+            let base_mask = instruction.generate_mask();
+            let opcode = base_mask | (1 << 11) | am_type.generate_mask(idx);
+
+            let cycles = 12 + am_type.additional_clocks(size);
+
+            let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
+            table[opcode] = operation;
+        }
     }
 }
