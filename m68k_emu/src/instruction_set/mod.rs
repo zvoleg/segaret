@@ -42,3 +42,9 @@ pub(crate) enum ExchangeMode {
     AddressToAddress = 0b01001,
     DataToAddress = 0b10001,
 }
+
+#[derive(Clone, Copy)]
+pub(crate) enum ShiftDirection {
+    Right = 0,
+    Left = 1,
+}

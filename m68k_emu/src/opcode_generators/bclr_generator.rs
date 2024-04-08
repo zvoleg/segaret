@@ -62,8 +62,6 @@ fn generate_bclr_reg(table: &mut [Operation]) {
 }
 
 fn generate_bclr_immediate(table: &mut [Operation]) {
-    let base_mask = 0b0000100010000000;
-
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

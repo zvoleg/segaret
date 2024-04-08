@@ -2,8 +2,8 @@ use crate::{
     addressing_mode_set::{
         AbsLong, AbsShort, AddressRegister, AddressRegisterDisplacement, AddressRegisterIndexed,
         AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
-        AddressingMode, AddressingModeType, DataRegister, Immediate, Implied,
-        ProgramCounterDisplacement, ProgramCounterIndexed,
+        AddressingMode, AddressingModeType, DataRegister, Immediate, ProgramCounterDisplacement,
+        ProgramCounterIndexed,
     },
     operation::Operation,
     primitives::Size,
@@ -12,15 +12,15 @@ use crate::{
 // pub(crate) mod abcd_generator;
 pub(crate) mod add_generator;
 pub(crate) mod and_generator;
-// pub(crate) mod asd_generator;
+pub(crate) mod asd_generator;
 // pub(crate) mod bcc_generator;
 pub(crate) mod bchg_generator;
 pub(crate) mod bclr_generator;
-// pub(crate) mod bra_generator;
+pub(crate) mod bra_generator;
 pub(crate) mod bset_generator;
-// pub(crate) mod bsr_generator;
+pub(crate) mod bsr_generator;
 pub(crate) mod btst_generator;
-// pub(crate) mod chk_generator;
+pub(crate) mod chk_generator;
 pub(crate) mod clr_generator;
 pub(crate) mod cmp_generator;
 // pub(crate) mod dbcc_generator;
@@ -28,31 +28,31 @@ pub(crate) mod div_generator;
 pub(crate) mod eor_generator;
 pub(crate) mod exg_generator;
 pub(crate) mod ext_generator;
-// pub(crate) mod illegal_generator;
-// pub(crate) mod jmp_generator;
-// pub(crate) mod jsr_generator;
+pub(crate) mod illegal_generator;
+pub(crate) mod jmp_generator;
+pub(crate) mod jsr_generator;
 pub(crate) mod lea_generator;
 pub(crate) mod link_generator;
-// pub(crate) mod lsd_generator;
+pub(crate) mod lsd_generator;
 pub(crate) mod move_generator;
 pub(crate) mod movem_generator;
 pub(crate) mod mul_generator;
 // pub(crate) mod nbcd_generator;
 pub(crate) mod neg_generator;
-// pub(crate) mod nop_generator;
+pub(crate) mod nop_generator;
 pub(crate) mod not_generator;
 pub(crate) mod or_generator;
 pub(crate) mod pea_generator;
-// pub(crate) mod rod_generator;
-// pub(crate) mod rtr_generator;
-// pub(crate) mod rts_generator;
+pub(crate) mod rod_generator;
+pub(crate) mod rtr_generator;
+pub(crate) mod rts_generator;
 // pub(crate) mod sbcd_generator;
 // pub(crate) mod scc_generator;
 pub(crate) mod sub_generator;
-// pub(crate) mod swap_generator;
+pub(crate) mod swap_generator;
 // pub(crate) mod tas_generator;
 // pub(crate) mod trap_generator;
-// pub(crate) mod tst_generator;
+pub(crate) mod tst_generator;
 pub(crate) mod unlk_generator;
 
 trait OpcodeMaskGenerator {
@@ -92,7 +92,6 @@ impl AddressingModeType {
             AddressingModeType::AbsShort => Box::new(AbsShort()),
             AddressingModeType::AbsLong => Box::new(AbsLong()),
             AddressingModeType::Immediate => Box::new(Immediate { size: size }),
-            AddressingModeType::Implied => Box::new(Implied()),
         }
     }
 
@@ -112,9 +111,7 @@ impl AddressingModeType {
         };
         if size == Size::Long {
             match self {
-                AddressingModeType::DataRegister
-                | AddressingModeType::AddressRegister
-                | AddressingModeType::Implied => (),
+                AddressingModeType::DataRegister | AddressingModeType::AddressRegister => (),
                 _ => cycles += 4,
             }
         }
@@ -135,12 +132,22 @@ impl AddressingModeType {
             AddressingModeType::AbsShort => 0b111000,
             AddressingModeType::AbsLong => 0b111001,
             AddressingModeType::Immediate => 0b111100,
-            AddressingModeType::Implied => 0b000000,
         }
     }
 }
 
 pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
+    bra_generator::generate(table);
+    bsr_generator::generate(table);
+    jmp_generator::generate(table);
+    jsr_generator::generate(table);
+    rtr_generator::generate(table);
+    rts_generator::generate(table);
+    tst_generator::generate(table);
+    asd_generator::generate(table);
+    lsd_generator::generate(table);
+    rod_generator::generate(table);
+    swap_generator::generate(table);
     and_generator::generate(table);
     eor_generator::generate(table);
     or_generator::generate(table);
@@ -164,6 +171,9 @@ pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
     movem_generator::generate(table);
     link_generator::generate(table);
     unlk_generator::generate(table);
+    chk_generator::generate(table);
+    illegal_generator::generate(table);
+    nop_generator::generate(table);
 }
 
 #[macro_export]
@@ -182,7 +192,6 @@ macro_rules! range {
             AddressingModeType::AbsShort => 0..1,
             AddressingModeType::AbsLong => 0..1,
             AddressingModeType::Immediate => 0..1,
-            AddressingModeType::Implied => 0..1,
         }
     };
 }

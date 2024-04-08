@@ -1,36 +1,46 @@
-use crate::{decoder::{Operation, InstructionData, InstructionType}, adr_mode, Size, addressing_mode::AdrMode};
+use crate::{
+    addressing_mode_set::AddressingModeType, instruction_set::program_control::JSR,
+    operation::Operation, primitives::Size, range,
+};
+
+use super::OpcodeMaskGenerator;
+
+impl OpcodeMaskGenerator for JSR {
+    fn generate_mask(&self) -> usize {
+        0b0100111010000000
+    }
+}
 
 pub(crate) fn generate(table: &mut [Operation]) {
-    let base_mask = 0b0100111010000000;
-
     let am_types = [
-    AddressingModeType::AddressRegisterIndirect,
-    AddressingModeType::AddressRegisterDisplacement,
-    AddressingModeType::AddressRegisterIndexed,
-    AddressingModeType::AbsShort,
-    AddressingModeType::AbsLong,
-    AddressingModeType::ProgramCounterDisplacement,
-    AddressingModeType::ProgramCounterIndexed,
+        AddressingModeType::AddressRegisterIndirect,
+        AddressingModeType::AddressRegisterDisplacement,
+        AddressingModeType::AddressRegisterIndexed,
+        AddressingModeType::AbsShort,
+        AddressingModeType::AbsLong,
+        AddressingModeType::ProgramCounterDisplacement,
+        AddressingModeType::ProgramCounterIndexed,
+    ];
 
     for am_type in am_types {
-        let mask = usize::from(am);
-        let opcode = base_mask | mask;
-        let inst_data = InstructionData::DstAm(*am);
-        let mut clocks = match am {
-            AdrMode::AbsLong => 8,
-            AdrMode::AbsShort | AddressingModeType::DataRegister | AdrMode::PcIndDisp => 10,
-            _ => 12,
-        };
-        clocks += am_type.additional_clocks(Size::Byte);
-        let inst = Operation::new(
-            opcode as u16,
-            "JSR",
-            InstructionType::JSR,
-            inst_data,
-            Size::Byte,
-            false,
-            clocks,
-        );
-        table[opcode] = inst;
+        for idx in range!(am_type) {
+            let instruction = Box::new(JSR());
+            let am = am_type.addressing_mode_by_type(idx, Size::Long);
+
+            let base_mask = instruction.generate_mask();
+            let opcode = base_mask | am_type.generate_mask(idx);
+
+            let mut cycles = match am_type {
+                AddressingModeType::AbsLong => 8,
+                AddressingModeType::AbsShort
+                | AddressingModeType::DataRegister
+                | AddressingModeType::ProgramCounterDisplacement => 10,
+                _ => 12,
+            };
+            cycles += am_type.additional_clocks(Size::Byte);
+
+            let operation = Operation::new(instruction, vec![am], cycles);
+            table[opcode] = operation;
+        }
     }
 }

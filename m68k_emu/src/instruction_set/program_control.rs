@@ -1,6 +1,11 @@
-use crate::{cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet};
+use crate::{
+    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
+    primitives::Size,
+};
 
-pub(crate) struct TST();
+pub(crate) struct TST {
+    pub(crate) size: Size,
+}
 
 impl Instruction for TST {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
@@ -28,14 +33,18 @@ impl Instruction for Scc {
         todo!()
     }
 }
-pub(crate) struct BRA();
+pub(crate) struct BRA {
+    pub(crate) displacement: u32,
+}
 
 impl Instruction for BRA {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
         todo!()
     }
 }
-pub(crate) struct BSR();
+pub(crate) struct BSR {
+    pub(crate) displacement: u32,
+}
 
 impl Instruction for BSR {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {

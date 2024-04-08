@@ -21,7 +21,6 @@ pub(crate) enum AddressingModeType {
     AbsShort,
     AbsLong,
     Immediate,
-    Implied,
 }
 
 pub(crate) trait AddressingMode {
@@ -262,17 +261,5 @@ impl AddressingMode for Immediate {
 
     fn type_info(&self) -> AddressingModeType {
         AddressingModeType::Immediate
-    }
-}
-
-pub(crate) struct Implied();
-
-impl AddressingMode for Implied {
-    fn get_operand(&self, _: &mut RegisterSet, _: &dyn BusM68k) -> Operand {
-        Operand::new(MemoryPtr::new_boxed(std::ptr::null_mut()), None, 0)
-    }
-
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::Implied
     }
 }
