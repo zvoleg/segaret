@@ -39,7 +39,10 @@ fn generate_bchg_reg(table: &mut [Operation]) {
                     _ => Size::Byte,
                 };
 
-                let instruction = Box::new(BCHG { size: size });
+                let instruction = Box::new(BCHG {
+                    bit_number_src_size: Size::Long,
+                    size: size,
+                });
                 let src_am = Box::new(DataRegister { reg: data_reg_idx });
                 let dst_am = am_type.addressing_mode_by_type(idx, size);
 
@@ -75,7 +78,10 @@ fn generate_bchg_immediate(table: &mut [Operation]) {
                 _ => Size::Byte,
             };
 
-            let instruction = Box::new(BCHG { size: size });
+            let instruction = Box::new(BCHG {
+                bit_number_src_size: Size::Byte,
+                size: size,
+            });
             let src_am = Box::new(Immediate { size: Size::Byte });
             let dst_am = am_type.addressing_mode_by_type(idx, size);
 
