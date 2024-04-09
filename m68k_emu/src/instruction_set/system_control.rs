@@ -102,7 +102,9 @@ impl Instruction for ILLEAGL {
     }
 }
 
-pub(crate) struct TRAP();
+pub(crate) struct TRAP {
+    pub(crate) vector: u32,
+}
 
 impl Instruction for TRAP {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {

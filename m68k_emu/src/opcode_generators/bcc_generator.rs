@@ -1,8 +1,20 @@
-use crate::{decoder::{Operation, Condition, InstructionData, InstructionType}, Size};
+use crate::{
+    instruction_set::{program_control::Bcc, Condition},
+    operation::Operation,
+};
+
+use super::OpcodeMaskGenerator;
+
+impl OpcodeMaskGenerator for Bcc {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b0110000000000000;
+        base_mask |= (self.condition as usize) << 8;
+        base_mask |= self.displacement as usize;
+        base_mask
+    }
+}
 
 pub(crate) fn generate(table: &mut [Operation]) {
-    let base_mask = 0b0110000000000000;
-
     let condition_set = vec![
         Condition::TRUE,
         Condition::FALSE,
@@ -23,41 +35,14 @@ pub(crate) fn generate(table: &mut [Operation]) {
     ];
 
     for condition in condition_set {
-        for displasement in 0..=0xFF {
-            let mask = usize::from(condition) << 8 | displasement;
-            let opcode = base_mask | mask;
-            let inst_data = InstructionData::ConditionDisp(condition, displasement as u32);
-            let inst = Operation::new(
-                opcode as u16,
-                inst_name(condition),
-                InstructionType::Bcc,
-                inst_data,
-                Size::Byte,
-                false,
-                10,
-            );
-            table[opcode] = inst;
+        for displasement in 0..0x100 {
+            let instruction = Box::new(Bcc {
+                condition: condition,
+                displacement: displasement,
+            });
+            let opcode = instruction.generate_mask();
+            let operation = Operation::new(instruction, vec![], 10);
+            table[opcode] = operation;
         }
-    }
-}
-
-fn inst_name(condition: Condition) -> &'static str {
-    match condition {
-        Condition::TRUE => "BTRUE",
-        Condition::FALSE => "BFALSE",
-        Condition::HI => "BHI",
-        Condition::LS => "BLS",
-        Condition::CC => "BCC",
-        Condition::CS => "BCS",
-        Condition::NE => "BNE",
-        Condition::EQ => "BEQ",
-        Condition::VC => "BVC",
-        Condition::VS => "BVS",
-        Condition::PL => "BPL",
-        Condition::MI => "BMI",
-        Condition::GE => "BGE",
-        Condition::LT => "BLT",
-        Condition::GT => "BGT",
-        Condition::LE => "BLE",
     }
 }

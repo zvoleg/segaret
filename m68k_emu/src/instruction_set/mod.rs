@@ -48,3 +48,23 @@ pub(crate) enum ShiftDirection {
     Right = 0,
     Left = 1,
 }
+
+#[derive(Clone, Copy)]
+pub(crate) enum Condition {
+    TRUE = 0b0000,
+    FALSE = 0b0001,
+    HI = 0b0010,
+    LS = 0b0011,
+    CC = 0b0100,
+    CS = 0b0101,
+    NE = 0b0110,
+    EQ = 0b0111,
+    VC = 0b1000,
+    VS = 0b1001,
+    PL = 0b1010,
+    MI = 0b1011,
+    GE = 0b1100,
+    LT = 0b1101,
+    GT = 0b1110,
+    LE = 0b1111,
+}

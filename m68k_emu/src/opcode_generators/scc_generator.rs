@@ -1,8 +1,22 @@
-use crate::{decoder::{Operation, Condition, InstructionData, InstructionType}, Size, adr_mode, addressing_mode::AdrMode};
+use crate::{
+    addressing_mode_set::AddressingModeType,
+    instruction_set::{program_control::Scc, Condition},
+    operation::Operation,
+    primitives::Size,
+    range,
+};
+
+use super::OpcodeMaskGenerator;
+
+impl OpcodeMaskGenerator for Scc {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b0101000011000000;
+        base_mask |= (self.condition as usize) << 8;
+        base_mask
+    }
+}
 
 pub(crate) fn generate(table: &mut [Operation]) {
-    let base_mask = 0b0101000011000000;
-
     let condition_set = vec![
         Condition::TRUE,
         Condition::FALSE,
@@ -23,55 +37,35 @@ pub(crate) fn generate(table: &mut [Operation]) {
     ];
 
     let am_types = [
-    AddressingModeType::DataRegister,
-    AddressingModeType::AddressRegisterIndirect,
-    AddressingModeType::AddressRegisterPostIncrement,
-    AddressingModeType::AddressRegisterPreDecrement,
-    AddressingModeType::AddressRegisterDisplacement,
-    AddressingModeType::AddressRegisterIndexed,
-    AddressingModeType::AbsShort,
-    AddressingModeType::AbsLong,
+        AddressingModeType::DataRegister,
+        AddressingModeType::AddressRegisterIndirect,
+        AddressingModeType::AddressRegisterPostIncrement,
+        AddressingModeType::AddressRegisterPreDecrement,
+        AddressingModeType::AddressRegisterDisplacement,
+        AddressingModeType::AddressRegisterIndexed,
+        AddressingModeType::AbsShort,
+        AddressingModeType::AbsLong,
+    ];
 
     for condition in condition_set {
         for am_type in am_types {
-            let mask = usize::from(condition) << 8 | usize::from(am);
-            let opcode = base_mask | mask;
-            let inst_data = InstructionData::ConditionAm(condition, *am);
-            let clocks = match am {
-                AddressingModeType::DataRegister => 4,
-                _ => 8 + am_type.additional_clocks(Size::Byte),
-            };
-            let inst = Operation::new(
-                opcode as u16,
-                inst_name(condition),
-                InstructionType::Scc,
-                inst_data,
-                Size::Byte,
-                false,
-                clocks,
-            );
-            table[opcode] = inst;
-        }
-    }
-}
+            for idx in range!(am_type) {
+                let instruction = Box::new(Scc {
+                    condition: condition,
+                });
+                let am = am_type.addressing_mode_by_type(idx, Size::Byte);
 
-fn inst_name(condition: Condition) -> &'static str {
-    match condition {
-        Condition::TRUE => "STRUE",
-        Condition::FALSE => "SFALSE",
-        Condition::HI => "SHI",
-        Condition::LS => "SLS",
-        Condition::CC => "SCC",
-        Condition::CS => "SCS",
-        Condition::NE => "SNE",
-        Condition::EQ => "SEQ",
-        Condition::VC => "SVC",
-        Condition::VS => "SVS",
-        Condition::PL => "SPL",
-        Condition::MI => "SMI",
-        Condition::GE => "SGE",
-        Condition::LT => "SLT",
-        Condition::GT => "SGT",
-        Condition::LE => "SLE",
+                let base_mask = instruction.generate_mask();
+                let opcode = base_mask | am_type.generate_mask(idx);
+
+                let cycles = match am_type {
+                    AddressingModeType::DataRegister => 4,
+                    _ => 8 + am_type.additional_clocks(Size::Byte),
+                };
+
+                let operation = Operation::new(instruction, vec![am], cycles);
+                table[opcode] = operation;
+            }
+        }
     }
 }

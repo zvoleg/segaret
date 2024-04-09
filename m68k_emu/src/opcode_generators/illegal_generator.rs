@@ -1,7 +1,4 @@
-use crate::{
-    instruction_set::system_control::ILLEAGL,
-    operation::{self, Operation},
-};
+use crate::{instruction_set::system_control::ILLEAGL, operation::Operation};
 
 use super::OpcodeMaskGenerator;
 

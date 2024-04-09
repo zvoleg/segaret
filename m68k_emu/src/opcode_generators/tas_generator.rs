@@ -1,13 +1,17 @@
 use crate::{
-    addressing_mode::AdrMode,
-    adr_mode,
-    decoder::{InstructionData, InstructionType, Operation},
-    Size,
+    addressing_mode_set::AddressingModeType, instruction_set::multiprocessor_instructions::TAS,
+    operation::Operation, primitives::Size, range,
 };
 
-pub(crate) fn generate(table: &mut [Operation]) {
-    let base_mask = 0b0100101011000000;
+use super::OpcodeMaskGenerator;
 
+impl OpcodeMaskGenerator for TAS {
+    fn generate_mask(&self) -> usize {
+        0b0100101011000000
+    }
+}
+
+pub(crate) fn generate(table: &mut [Operation]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -20,22 +24,20 @@ pub(crate) fn generate(table: &mut [Operation]) {
     ];
 
     for am_type in am_types {
-        let mask = usize::from(am);
-        let opcode = base_mask | mask;
-        let inst_data = InstructionData::DstAm(*am);
-        let clocks = match am {
-            AddressingModeType::DataRegister => 4,
-            _ => 14 + am_type.additional_clocks(Size::Byte),
-        };
-        let inst = Operation::new(
-            opcode as u16,
-            "TAS",
-            InstructionType::TAS,
-            inst_data,
-            Size::Byte,
-            false,
-            clocks,
-        );
-        table[opcode] = inst;
+        for idx in range!(am_type) {
+            let instruction = Box::new(TAS());
+            let am = am_type.addressing_mode_by_type(idx, Size::Byte);
+
+            let base_mask = instruction.generate_mask();
+            let opcode = base_mask | am_type.generate_mask(idx);
+
+            let cycles = match am_type {
+                AddressingModeType::DataRegister => 4,
+                _ => 14 + am_type.additional_clocks(Size::Byte),
+            };
+
+            let operation = Operation::new(instruction, vec![am], cycles);
+            table[opcode] = operation;
+        }
     }
 }

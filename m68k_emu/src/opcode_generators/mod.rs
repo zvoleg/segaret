@@ -13,7 +13,7 @@ use crate::{
 pub(crate) mod add_generator;
 pub(crate) mod and_generator;
 pub(crate) mod asd_generator;
-// pub(crate) mod bcc_generator;
+pub(crate) mod bcc_generator;
 pub(crate) mod bchg_generator;
 pub(crate) mod bclr_generator;
 pub(crate) mod bra_generator;
@@ -23,7 +23,7 @@ pub(crate) mod btst_generator;
 pub(crate) mod chk_generator;
 pub(crate) mod clr_generator;
 pub(crate) mod cmp_generator;
-// pub(crate) mod dbcc_generator;
+pub(crate) mod dbcc_generator;
 pub(crate) mod div_generator;
 pub(crate) mod eor_generator;
 pub(crate) mod exg_generator;
@@ -47,11 +47,11 @@ pub(crate) mod rod_generator;
 pub(crate) mod rtr_generator;
 pub(crate) mod rts_generator;
 // pub(crate) mod sbcd_generator;
-// pub(crate) mod scc_generator;
+pub(crate) mod scc_generator;
 pub(crate) mod sub_generator;
 pub(crate) mod swap_generator;
-// pub(crate) mod tas_generator;
-// pub(crate) mod trap_generator;
+pub(crate) mod tas_generator;
+pub(crate) mod trap_generator;
 pub(crate) mod tst_generator;
 pub(crate) mod unlk_generator;
 
@@ -137,6 +137,9 @@ impl AddressingModeType {
 }
 
 pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
+    bcc_generator::generate(table);
+    dbcc_generator::generate(table);
+    scc_generator::generate(table);
     bra_generator::generate(table);
     bsr_generator::generate(table);
     jmp_generator::generate(table);
@@ -172,7 +175,9 @@ pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
     link_generator::generate(table);
     unlk_generator::generate(table);
     chk_generator::generate(table);
+    tas_generator::generate(table);
     illegal_generator::generate(table);
+    trap_generator::generate(table);
     nop_generator::generate(table);
 }
 

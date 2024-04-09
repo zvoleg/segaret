@@ -1,40 +1,41 @@
-use crate::{decoder::{Operation, InstructionData, InstructionType, Condition}, addressing_mode::AdrMode, Size};
+use crate::{
+    instruction_set::system_control::{TRAP, TRAPV},
+    operation::Operation,
+};
+
+use super::OpcodeMaskGenerator;
 
 pub(crate) fn generate(table: &mut [Operation]) {
     generate_trap(table);
     generate_trapv(table);
 }
 
-fn generate_trap(table: &mut [Operation]) {
-    let base_mask: usize = 0b0100111001000000;
+impl OpcodeMaskGenerator for TRAP {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b0100111001000000;
+        base_mask |= self.vector as usize;
+        base_mask
+    }
+}
 
-    for vector in 0..=0xF {
-        let opcode = base_mask | vector;
-        let inst_data = InstructionData::ConditionAm(Condition::TRUE, AdrMode::Implied(vector));
-        let inst = Operation::new(
-            opcode as u16,
-            "TRAPTRUE",
-            InstructionType::TRAPcc,
-            inst_data,
-            Size::Byte,
-            false,
-            38,
-        );
-        table[opcode] = inst;
+fn generate_trap(table: &mut [Operation]) {
+    for vector in 0..0x10 {
+        let instruction = Box::new(TRAP { vector: vector });
+        let opcode = instruction.generate_mask();
+        let operation = Operation::new(instruction, vec![], 38);
+        table[opcode] = operation;
+    }
+}
+
+impl OpcodeMaskGenerator for TRAPV {
+    fn generate_mask(&self) -> usize {
+        0b0100111001110110
     }
 }
 
 fn generate_trapv(table: &mut [Operation]) {
-    let opcode: usize = 0b0100111001110110;
-    let inst_data = InstructionData::ConditionAm(Condition::VS, AdrMode::Implied(7));
-    let inst = Operation::new(
-        opcode as u16,
-        "TRAPV",
-        InstructionType::TRAPcc,
-        inst_data,
-        Size::Byte,
-        false,
-        38,
-    );
-    table[opcode] = inst;
+    let instruction = Box::new(TRAPV());
+    let opcode = instruction.generate_mask();
+    let operation = Operation::new(instruction, vec![], 38);
+    table[opcode] = operation;
 }

@@ -3,6 +3,8 @@ use crate::{
     primitives::Size,
 };
 
+use super::Condition;
+
 pub(crate) struct TST {
     pub(crate) size: Size,
 }
@@ -12,21 +14,28 @@ impl Instruction for TST {
         todo!()
     }
 }
-pub(crate) struct Bcc();
+pub(crate) struct Bcc {
+    pub(crate) condition: Condition,
+    pub(crate) displacement: u32,
+}
 
 impl Instruction for Bcc {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
         todo!()
     }
 }
-pub(crate) struct DBcc();
+pub(crate) struct DBcc {
+    pub(crate) condition: Condition,
+}
 
 impl Instruction for DBcc {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
         todo!()
     }
 }
-pub(crate) struct Scc();
+pub(crate) struct Scc {
+    pub(crate) condition: Condition,
+}
 
 impl Instruction for Scc {
     fn execute(&self, operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
