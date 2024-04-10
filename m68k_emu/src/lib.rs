@@ -31,6 +31,20 @@ impl IsNegate for u32 {
     }
 }
 
+trait IsZero {
+    fn is_zero(&self, size: Size) -> bool;
+}
+
+impl IsZero for u32 {
+    fn is_zero(&self, size: Size) -> bool {
+        match size {
+            Size::Byte => self & 0xFF == 0,
+            Size::Word => self & 0xFFFF == 0,
+            Size::Long => self & 0xFFFFFFFF == 0,
+        }
+    }
+}
+
 trait SignExtending {
     fn sign_extend(&self, size: Size) -> Self;
 }
@@ -45,6 +59,20 @@ impl SignExtending for u32 {
             }
         } else {
             *self
+        }
+    }
+}
+
+trait MsbIsSet {
+    fn msb_is_set(&self, size: Size) -> bool;
+}
+
+impl MsbIsSet for u32 {
+    fn msb_is_set(&self, size: Size) -> bool {
+        match size {
+            Size::Byte => self & 0x80 != 0,
+            Size::Word => self & 0x8000 != 0,
+            Size::Long => self & 0x80000000 != 0,
         }
     }
 }

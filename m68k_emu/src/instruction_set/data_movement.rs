@@ -21,16 +21,11 @@ impl Instruction for MOVE {
         let dst_operand = operand_set.next();
         dst_operand.write(src_data, self.size);
 
-        cpu_internals
-            .register_set
-            .sr
-            .set_flag(StatusFlag::N, src_data.is_negate(self.size));
-        cpu_internals
-            .register_set
-            .sr
-            .set_flag(StatusFlag::Z, src_data == 0);
-        cpu_internals.register_set.sr.set_flag(StatusFlag::V, false);
-        cpu_internals.register_set.sr.set_flag(StatusFlag::C, false);
+        let sr = &mut cpu_internals.register_set.sr;
+        sr.set_flag(StatusFlag::N, src_data.is_negate(self.size));
+        sr.set_flag(StatusFlag::Z, src_data == 0);
+        sr.set_flag(StatusFlag::V, false);
+        sr.set_flag(StatusFlag::C, false);
     }
 }
 
@@ -197,15 +192,15 @@ pub(crate) struct MOVEP {
 
 impl Instruction for MOVEP {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
+        let src_operand = operand_set.next();
+        let dst_operand = operand_set.next();
+        let src_data = src_operand.read(self.size);
         let iterations = self.size as isize;
-        let first_operand = operand_set.next();
-        let second_operand = operand_set.next();
         match self.direction {
             MoveDirection::RegisterToMemory => {
                 for i in 0..iterations {
-                    let data = first_operand.operand_ptr.read(self.size);
-                    let byte_ = data >> self.size as isize - i;
-                    second_operand
+                    let byte_ = src_data >> self.size as isize - i;
+                    dst_operand
                         .operand_ptr
                         .write_offset(byte_, Size::Byte, 2 * i);
                 }
@@ -213,10 +208,10 @@ impl Instruction for MOVEP {
             MoveDirection::MemoryToRegister => {
                 let mut data = 0;
                 for i in 0..iterations {
-                    let byte_ = second_operand.operand_ptr.read_offset(Size::Byte, 2 * i);
+                    let byte_ = src_operand.operand_ptr.read_offset(Size::Byte, 2 * i);
                     data |= (byte_ as u32) << i;
                 }
-                first_operand.operand_ptr.write(data, self.size);
+                dst_operand.operand_ptr.write(data, self.size);
             }
         }
     }
@@ -227,20 +222,20 @@ pub(crate) struct MOVEQ {
 }
 
 impl Instruction for MOVEQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data = self.data.sign_extend(Size::Byte);
         operand_set.next().operand_ptr.write(data, Size::Long);
 
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::N, data.is_negate(Size::Long));
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::Z, data == 0);
-        cpu_interanls.register_set.sr.set_flag(StatusFlag::V, false);
-        cpu_interanls.register_set.sr.set_flag(StatusFlag::C, false);
+        cpu_internals.register_set.sr.set_flag(StatusFlag::V, false);
+        cpu_internals.register_set.sr.set_flag(StatusFlag::C, false);
     }
 }
 

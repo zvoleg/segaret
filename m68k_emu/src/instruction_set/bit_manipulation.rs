@@ -1,5 +1,5 @@
 use crate::{
-    cpu, cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
+    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
     primitives::Size, status_flag::StatusFlag,
 };
 
@@ -9,7 +9,7 @@ pub(crate) struct BCHG {
 }
 
 impl Instruction for BCHG {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let mut bit_number = operand_set.next().read(self.bit_number_src_size);
         match self.size {
             Size::Byte => bit_number %= 8,
@@ -23,7 +23,7 @@ impl Instruction for BCHG {
         let result = data ^ (1 << bit_number);
         operand.write(result, self.size);
 
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -36,7 +36,7 @@ pub(crate) struct BCLR {
 }
 
 impl Instruction for BCLR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let mut bit_number = operand_set.next().read(self.bit_number_src_size);
         match self.size {
             Size::Byte => bit_number %= 8,
@@ -50,7 +50,7 @@ impl Instruction for BCLR {
         let result = data & !(1 << bit_number);
         operand.write(result, self.size);
 
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -63,7 +63,7 @@ pub(crate) struct BSET {
 }
 
 impl Instruction for BSET {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let mut bit_number = operand_set.next().read(self.bit_number_src_size);
         match self.size {
             Size::Byte => bit_number %= 8,
@@ -77,7 +77,7 @@ impl Instruction for BSET {
         let result = data | (1 << bit_number);
         operand.write(result, self.size);
 
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -90,7 +90,7 @@ pub(crate) struct BTST {
 }
 
 impl Instruction for BTST {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let mut bit_number = operand_set.next().read(self.bit_number_src_size);
         match self.size {
             Size::Byte => bit_number %= 8,
@@ -102,7 +102,7 @@ impl Instruction for BTST {
         let data = operand.read(self.size);
         let bit = (data >> bit_number) & 1;
 
-        cpu_interanls
+        cpu_internals
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);

@@ -26,7 +26,6 @@ pub(crate) fn generate(table: &mut [Operation]) {
 impl OpcodeMaskGenerator for ADD {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1101000000000000;
-        base_mask |= (self.direction as usize) << 8;
         base_mask |= match self.size {
             Size::Byte => 0b00,
             Size::Word => 0b01,
@@ -64,15 +63,15 @@ fn generate_add_mem_to_reg(table: &mut [Operation]) {
                         }
                         _ => (),
                     };
-                    let instruction = Box::new(ADD {
-                        size: size,
-                        direction: WriteDirection::ToDataRegister,
-                    });
-                    let data_reg_am = Box::new(DataRegister { reg: data_reg_idx });
-                    let am = am_type.addressing_mode_by_type(idx, size);
+                    let instruction = Box::new(ADD { size: size });
+                    let src_am = am_type.addressing_mode_by_type(idx, size);
+                    let dst_am = Box::new(DataRegister { reg: data_reg_idx });
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask
+                        | (data_reg_idx << 9)
+                        | ((WriteDirection::ToDataRegister as usize) << 8)
+                        | am_type.generate_mask(idx);
 
                     let mut cycles = if size == Size::Byte || size == Size::Word {
                         4
@@ -86,7 +85,7 @@ fn generate_add_mem_to_reg(table: &mut [Operation]) {
                     };
                     cycles += am_type.additional_clocks(size);
 
-                    let operation = Operation::new(instruction, vec![am, data_reg_am], cycles);
+                    let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
                     table[opcode] = operation;
                 }
             }
@@ -109,15 +108,15 @@ fn generate_add_reg_to_mem(table: &mut [Operation]) {
         for data_reg_idx in 0..8 {
             for am_type in am_types {
                 for idx in range!(am_type) {
-                    let instruction = Box::new(ADD {
-                        size: size,
-                        direction: WriteDirection::ToMemory,
-                    });
-                    let data_reg_am = Box::new(DataRegister { reg: data_reg_idx });
-                    let am = am_type.addressing_mode_by_type(idx, size);
+                    let instruction = Box::new(ADD { size: size });
+                    let src_am = Box::new(DataRegister { reg: data_reg_idx });
+                    let dst_am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask
+                        | (data_reg_idx << 9)
+                        | ((WriteDirection::ToMemory as usize) << 8)
+                        | am_type.generate_mask(idx);
 
                     let mut cycles = match size {
                         Size::Byte | Size::Word => 8,
@@ -125,7 +124,7 @@ fn generate_add_reg_to_mem(table: &mut [Operation]) {
                     };
                     cycles += am_type.additional_clocks(size);
 
-                    let operation = Operation::new(instruction, vec![data_reg_am, am], cycles);
+                    let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
                     table[opcode] = operation;
                 }
             }
@@ -166,10 +165,10 @@ fn generate_adda(table: &mut [Operation]) {
             for am_type in am_types {
                 for idx in range!(am_type) {
                     let instruction = Box::new(ADDA { size: size });
-                    let addressregister_am = Box::new(AddressRegister {
+                    let src_am = am_type.addressing_mode_by_type(idx, size);
+                    let dst_am = Box::new(AddressRegister {
                         reg: address_reg_idx,
                     });
-                    let am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
                     let opcode = base_mask | (address_reg_idx << 9) | am_type.generate_mask(idx);
@@ -183,8 +182,7 @@ fn generate_adda(table: &mut [Operation]) {
                     };
                     cycles += am_type.additional_clocks(size);
 
-                    let operation =
-                        Operation::new(instruction, vec![am, addressregister_am], cycles);
+                    let operation = Operation::new(instruction, vec![src_am, dst_am], cycles);
                     table[opcode] = operation;
                 }
             }
@@ -279,6 +277,7 @@ fn generate_addq(table: &mut [Operation]) {
                     let instruction = Box::new(ADDQ {
                         size: size,
                         data: data,
+                        to_address_reg: am_type == AddressingModeType::AddressRegister,
                     });
                     let am = am_type.addressing_mode_by_type(idx, size);
 

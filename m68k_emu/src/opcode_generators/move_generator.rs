@@ -1,6 +1,7 @@
 use crate::{
     addressing_mode_set::{
-        AddressRegister, AddressRegisterDisplacement, AddressingModeType, DataRegister,
+        AddressRegister, AddressRegisterDisplacement, AddressingMode, AddressingModeType,
+        DataRegister,
     },
     instruction_set::{
         data_movement::{MOVE, MOVEA, MOVEP, MOVEQ},
@@ -204,6 +205,15 @@ fn generate_movep(table: &mut [Operation]) {
                     let data_register_am = Box::new(DataRegister { reg: data_reg });
                     let address_indireact_am =
                         Box::new(AddressRegisterDisplacement { reg: adr_reg });
+                    let am_list: Vec<Box<dyn AddressingMode>> = match direction {
+                        MoveDirection::RegisterToMemory => {
+                            vec![data_register_am, address_indireact_am]
+                        }
+
+                        MoveDirection::MemoryToRegister => {
+                            vec![address_indireact_am, data_register_am]
+                        }
+                    };
 
                     let base_mask = instruction.generate_mask();
                     let opcode = base_mask | (data_reg << 9) | adr_reg;
@@ -214,11 +224,7 @@ fn generate_movep(table: &mut [Operation]) {
                         Size::Long => 24,
                     };
 
-                    let operation = Operation::new(
-                        instruction,
-                        vec![data_register_am, address_indireact_am],
-                        cycles,
-                    );
+                    let operation = Operation::new(instruction, am_list, cycles);
                     table[opcode] = operation;
                 }
             }

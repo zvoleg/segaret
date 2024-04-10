@@ -31,7 +31,6 @@ impl OpcodeMaskGenerator for SUB {
             Size::Word => 0b01,
             Size::Long => 0b10,
         } << 6;
-        base_mask |= (self.direction as usize) << 8;
         base_mask
     }
 }
@@ -65,17 +64,17 @@ fn generate_sub_mem_to_reg(table: &mut [Operation]) {
                         _ => (),
                     };
 
-                    let instruction = Box::new(SUB {
-                        size: size,
-                        direction: WriteDirection::ToDataRegister,
-                    });
+                    let instruction = Box::new(SUB { size: size });
                     let src_am = am_type.addressing_mode_by_type(idx, size);
                     let dst_am = Box::new(DataRegister {
                         reg: data_register_idx,
                     });
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_register_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask
+                        | (data_register_idx << 9)
+                        | ((WriteDirection::ToDataRegister as usize) << 8)
+                        | am_type.generate_mask(idx);
 
                     let mut cycles = if size == Size::Byte || size == Size::Word {
                         4
@@ -112,17 +111,17 @@ fn generate_sub_reg_to_mem(table: &mut [Operation]) {
         for data_register_idx in 0..8 {
             for am_type in am_types {
                 for idx in range!(am_type) {
-                    let instruction = Box::new(SUB {
-                        size: size,
-                        direction: WriteDirection::ToMemory,
-                    });
+                    let instruction = Box::new(SUB { size: size });
                     let src_am = Box::new(DataRegister {
                         reg: data_register_idx,
                     });
                     let dst_am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_register_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask
+                        | (data_register_idx << 9)
+                        | ((WriteDirection::ToMemory as usize) << 8)
+                        | am_type.generate_mask(idx);
 
                     let mut cycles = match size {
                         Size::Byte | Size::Word => 8,
@@ -283,6 +282,7 @@ fn generate_subq(table: &mut [Operation]) {
                     let instruction = Box::new(SUBQ {
                         size: size,
                         data: data,
+                        to_address_reg: am_type == AddressingModeType::AddressRegister,
                     });
                     let am = am_type.addressing_mode_by_type(idx, size);
 
