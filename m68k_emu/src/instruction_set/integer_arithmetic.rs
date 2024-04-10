@@ -1,9 +1,9 @@
 use crate::{
-    cpu, cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
+    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
     primitives::Size, status_flag::StatusFlag, IsNegate, IsZero, MsbIsSet, SignExtending,
 };
 
-use super::{RegisterFieldMode, WriteDirection};
+use super::RegisterFieldMode;
 
 pub(crate) struct ADD {
     pub(crate) size: Size,

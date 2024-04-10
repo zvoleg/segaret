@@ -28,7 +28,6 @@ impl OpcodeMaskGenerator for AND {
             Size::Word => 0b01,
             Size::Long => 0b10,
         } << 6;
-        base_mask |= (self.direction as usize) << 8;
         base_mask
     }
 }
@@ -54,13 +53,12 @@ fn generate_and_mem_to_reg(table: &mut [Operation]) {
                 for idx in range!(am_type) {
                     let instruction = Box::new(AND {
                         size: size,
-                        direction: WriteDirection::ToDataRegister,
                     });
                     let src_am = am_type.addressing_mode_by_type(idx, size);
                     let dst_am = Box::new(DataRegister { reg: data_reg_idx });
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask | (data_reg_idx << 9) | ((WriteDirection::ToDataRegister as usize) << 8) | am_type.generate_mask(idx);
 
                     let mut cycles = if size == Size::Byte || size == Size::Word {
                         4
@@ -99,13 +97,12 @@ fn generate_and_reg_to_mem(table: &mut [Operation]) {
                 for idx in range!(am_type) {
                     let instruction = Box::new(AND {
                         size: size,
-                        direction: WriteDirection::ToMemory,
                     });
                     let src_am = Box::new(DataRegister { reg: data_reg_idx });
                     let dst_am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
-                    let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);
+                    let opcode = base_mask | (data_reg_idx << 9) | ((WriteDirection::ToMemory as usize) << 8) | am_type.generate_mask(idx);
 
                     let mut cycles = if size == Size::Byte || size == Size::Word {
                         8
