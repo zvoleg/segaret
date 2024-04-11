@@ -26,4 +26,9 @@ impl StatusRegister {
     pub(crate) fn get_bit(&self, status_flag: StatusFlag) -> u32 {
         ((self.reg >> status_flag as u16) & 1) as u32
     }
+
+    pub(crate) fn set_ccr(&mut self, ccr: u32) {
+        self.reg &= 0xFF00;
+        self.reg |= ccr as u16;
+    }
 }

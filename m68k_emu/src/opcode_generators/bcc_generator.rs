@@ -1,6 +1,8 @@
 use crate::{
+    addressing_mode_set::{AddressingMode, Immediate},
     instruction_set::{program_control::Bcc, Condition},
     operation::Operation,
+    primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;
@@ -35,13 +37,17 @@ pub(crate) fn generate(table: &mut [Operation]) {
     ];
 
     for condition in condition_set {
-        for displasement in 0..0x100 {
+        for displacement in 0..0x100 {
             let instruction = Box::new(Bcc {
                 condition: condition,
-                displacement: displasement,
+                displacement,
             });
+            let mut am_list: Vec<Box<dyn AddressingMode>> = Vec::new();
+            if displacement == 0 {
+                am_list.push(Box::new(Immediate { size: Size::Word }));
+            }
             let opcode = instruction.generate_mask();
-            let operation = Operation::new(instruction, vec![], 10);
+            let operation = Operation::new(instruction, am_list, 10);
             table[opcode] = operation;
         }
     }

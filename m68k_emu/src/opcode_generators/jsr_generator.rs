@@ -1,6 +1,9 @@
 use crate::{
-    addressing_mode_set::AddressingModeType, instruction_set::program_control::JSR,
-    operation::Operation, primitives::Size, range,
+    addressing_mode_set::{AddressRegisterPreDecrement, AddressingModeType},
+    instruction_set::program_control::JSR,
+    operation::Operation,
+    primitives::Size,
+    range, STACK_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;
@@ -25,6 +28,10 @@ pub(crate) fn generate(table: &mut [Operation]) {
     for am_type in am_types {
         for idx in range!(am_type) {
             let instruction = Box::new(JSR());
+            let stack_am = Box::new(AddressRegisterPreDecrement {
+                reg: STACK_REGISTER,
+                size: Size::Long,
+            });
             let am = am_type.addressing_mode_by_type(idx, Size::Long);
 
             let base_mask = instruction.generate_mask();
@@ -39,7 +46,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
             };
             cycles += am_type.additional_clocks(Size::Byte);
 
-            let operation = Operation::new(instruction, vec![am], cycles);
+            let operation = Operation::new(instruction, vec![stack_am, am], cycles);
             table[opcode] = operation;
         }
     }

@@ -30,7 +30,7 @@ pub(crate) struct ANDI {
 
 impl Instruction for ANDI {
     fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        AND {size: self.size}.execute(operand_set, cpu_internals);
+        AND { size: self.size }.execute(operand_set, cpu_internals);
     }
 }
 
@@ -61,7 +61,7 @@ pub(crate) struct EORI {
 
 impl Instruction for EORI {
     fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        EOR {size: self.size}.execute(operand_set, cpu_internals);
+        EOR { size: self.size }.execute(operand_set, cpu_internals);
     }
 }
 
@@ -92,7 +92,7 @@ pub(crate) struct ORI {
 
 impl Instruction for ORI {
     fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        OR {size: self.size}.execute(operand_set, cpu_internals);
+        OR { size: self.size }.execute(operand_set, cpu_internals);
     }
 }
 
@@ -102,7 +102,7 @@ pub(crate) struct NOT {
 
 impl Instruction for NOT {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        let operand =  operand_set.next();
+        let operand = operand_set.next();
         let data = operand.read(self.size);
 
         let result = !data;

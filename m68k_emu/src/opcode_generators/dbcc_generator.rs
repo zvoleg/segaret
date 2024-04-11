@@ -1,7 +1,8 @@
 use crate::{
-    addressing_mode_set::DataRegister,
+    addressing_mode_set::{DataRegister, Immediate},
     instruction_set::{program_control::DBcc, Condition},
     operation::Operation,
+    primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;
@@ -39,12 +40,13 @@ pub(crate) fn generate(table: &mut [Operation]) {
             let instruction = Box::new(DBcc {
                 condition: condition,
             });
-            let am = Box::new(DataRegister { reg: data_reg_x });
+            let data_reg_am = Box::new(DataRegister { reg: data_reg_x });
+            let displacement_am = Box::new(Immediate { size: Size::Word });
 
             let base_mask = instruction.generate_mask();
             let opcode = base_mask | data_reg_x;
 
-            let operation = Operation::new(instruction, vec![am], 10);
+            let operation = Operation::new(instruction, vec![data_reg_am, displacement_am], 10);
             table[opcode] = operation;
         }
     }
