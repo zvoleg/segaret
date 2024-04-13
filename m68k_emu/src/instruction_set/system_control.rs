@@ -1,104 +1,184 @@
-use crate::{cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet};
+use crate::{
+    cpu_internals::{CpuInternals, RegisterType},
+    instruction_set::Instruction,
+    operand::OperandSet,
+    primitives::Size,
+    status_flag::StatusFlag,
+    IsNegate, STACK_REGISTER,
+};
 
 use super::MoveDirection;
 
-pub(crate) struct MOVE_to_SR();
+pub(crate) struct MOVEtoSR();
 
-impl Instruction for MOVE_to_SR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+impl Instruction for MOVEtoSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Word);
+        cpu_internals.register_set.sr.set_sr(data);
     }
 }
-pub(crate) struct MOVE_from_SR();
 
-impl Instruction for MOVE_from_SR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+pub(crate) struct MOVEfromSR();
+
+impl Instruction for MOVEfromSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        operand.write(cpu_internals.register_set.sr.get_sr() as u32, Size::Word);
     }
 }
-pub(crate) struct MOVE_USP {
+
+pub(crate) struct MOVEUSP {
     pub(crate) direction: MoveDirection,
 }
 
-impl Instruction for MOVE_USP {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+impl Instruction for MOVEUSP {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let usp_reg = cpu_internals
+            .register_set
+            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        match self.direction {
+            MoveDirection::RegisterToMemory => {
+                let data = usp_reg.read(Size::Long);
+                operand.write(data, Size::Long);
+            }
+            MoveDirection::MemoryToRegister => {
+                let data = operand.read(Size::Long);
+                usp_reg.write(data, Size::Long);
+            }
+        }
     }
 }
-pub(crate) struct MOVE_to_CCR();
 
-impl Instruction for MOVE_to_CCR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+pub(crate) struct MOVEtoCCR();
+
+impl Instruction for MOVEtoCCR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Word) & 0xFF; // operand size is word but used only low order byte
+        cpu_internals.register_set.sr.set_ccr(data);
     }
 }
 
 pub(crate) struct RTE();
 
 impl Instruction for RTE {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let sr_operand = operand_set.next();
+        let pc_operand = operand_set.next();
+        let sr = sr_operand.read(Size::Word);
+        cpu_internals.register_set.sr.set_sr(sr);
+        let pc = pc_operand.read(Size::Long);
+        cpu_internals.register_set.pc = pc;
     }
 }
 
-pub(crate) struct ANDI_to_CCR();
+pub(crate) struct ANDItoCCR();
 
-impl Instruction for ANDI_to_CCR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
-    }
-}
-pub(crate) struct ANDI_to_SR();
-
-impl Instruction for ANDI_to_SR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+impl Instruction for ANDItoCCR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Byte);
+        let mut ccr = cpu_internals.register_set.sr.get_ccr();
+        ccr &= data as u16;
+        cpu_internals.register_set.sr.set_ccr(ccr as u32);
     }
 }
 
-pub(crate) struct EORI_to_CCR();
+pub(crate) struct ANDItoSR();
 
-impl Instruction for EORI_to_CCR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
-    }
-}
-pub(crate) struct EORI_to_SR();
-
-impl Instruction for EORI_to_SR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+impl Instruction for ANDItoSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Word);
+        let mut sr = cpu_internals.register_set.sr.get_sr();
+        sr &= data as u16;
+        cpu_internals.register_set.sr.set_sr(sr as u32);
     }
 }
 
-pub(crate) struct ORI_to_CCR();
+pub(crate) struct EORItoCCR();
 
-impl Instruction for ORI_to_CCR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+impl Instruction for EORItoCCR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Byte);
+        let mut ccr = cpu_internals.register_set.sr.get_ccr();
+        ccr ^= data as u16;
+        cpu_internals.register_set.sr.set_ccr(ccr as u32);
     }
 }
-pub(crate) struct ORI_to_SR();
 
-impl Instruction for ORI_to_SR {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+pub(crate) struct EORItoSR();
+
+impl Instruction for EORItoSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Word);
+        let mut sr = cpu_internals.register_set.sr.get_sr();
+        sr ^= data as u16;
+        cpu_internals.register_set.sr.set_sr(sr as u32);
+    }
+}
+
+pub(crate) struct ORItoCCR();
+
+impl Instruction for ORItoCCR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Byte);
+        let mut ccr = cpu_internals.register_set.sr.get_ccr();
+        ccr |= data as u16;
+        cpu_internals.register_set.sr.set_ccr(ccr as u32);
+    }
+}
+
+pub(crate) struct ORItoSR();
+
+impl Instruction for ORItoSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let operand = operand_set.next();
+        let data = operand.read(Size::Word);
+        let mut sr = cpu_internals.register_set.sr.get_sr();
+        sr |= data as u16;
+        cpu_internals.register_set.sr.set_sr(sr as u32);
     }
 }
 
 pub(crate) struct CHK();
 
 impl Instruction for CHK {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let data_reg_operand = operand_set.next();
+        let operand = operand_set.next();
+        let chk_data = data_reg_operand.read(Size::Word);
+        let upper_bound = operand.read(Size::Word);
+
+        let less_zerro = chk_data.is_negate(Size::Word);
+        let greater_upper_bound = (chk_data as i16) > (upper_bound as i16);
+
+        if less_zerro || greater_upper_bound {
+            cpu_internals
+                .register_set
+                .sr
+                .set_flag(StatusFlag::N, less_zerro);
+            // TODO trap to vector 6
+        }
     }
 }
 
 pub(crate) struct ILLEAGL();
 
 impl Instruction for ILLEAGL {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+        let pc_stack_operand = operand_set.next();
+        let sr_stack_operand = operand_set.next();
+
+        pc_stack_operand.write(cpu_internals.register_set.pc, Size::Long);
+        sr_stack_operand.write(cpu_internals.register_set.sr.get_sr() as u32, Size::Word);
+
+        // TODO trap to vector of illegal instruction
     }
 }
 
@@ -107,7 +187,7 @@ pub(crate) struct TRAP {
 }
 
 impl Instruction for TRAP {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         todo!()
     }
 }
@@ -115,7 +195,7 @@ impl Instruction for TRAP {
 pub(crate) struct TRAPV();
 
 impl Instruction for TRAPV {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         todo!()
     }
 }
@@ -123,7 +203,7 @@ impl Instruction for TRAPV {
 pub(crate) struct RESET();
 
 impl Instruction for RESET {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         todo!()
     }
 }

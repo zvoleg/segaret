@@ -5,7 +5,7 @@ use crate::{
     },
     instruction_set::{
         data_movement::{MOVE, MOVEA, MOVEP, MOVEQ},
-        system_control::{MOVE_from_SR, MOVE_to_CCR, MOVE_to_SR, MOVE_USP},
+        system_control::{MOVEfromSR, MOVEtoCCR, MOVEtoSR, MOVEUSP},
         MoveDirection,
     },
     operation::Operation,
@@ -232,7 +232,7 @@ fn generate_movep(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for MOVE_to_CCR {
+impl OpcodeMaskGenerator for MOVEtoCCR {
     fn generate_mask(&self) -> usize {
         0b0100010011000000
     }
@@ -255,7 +255,7 @@ fn generate_move_to_ccr(table: &mut [Operation]) {
 
     for src_am_type in src_am_types {
         for reg_idx in range!(src_am_type) {
-            let instruction = Box::new(MOVE_to_CCR());
+            let instruction = Box::new(MOVEtoCCR());
             let src_am = src_am_type.addressing_mode_by_type(reg_idx, Size::Word);
 
             let base_mask = instruction.generate_mask();
@@ -271,7 +271,7 @@ fn generate_move_to_ccr(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for MOVE_from_SR {
+impl OpcodeMaskGenerator for MOVEfromSR {
     fn generate_mask(&self) -> usize {
         0b0100000011000000
     }
@@ -291,7 +291,7 @@ fn generate_move_from_sr(table: &mut [Operation]) {
 
     for dst_am_type in dst_am_types {
         for reg_idx in range!(dst_am_type) {
-            let instruction = Box::new(MOVE_from_SR());
+            let instruction = Box::new(MOVEfromSR());
             let dst_am = dst_am_type.addressing_mode_by_type(reg_idx, Size::Word);
 
             let base_mask = instruction.generate_mask();
@@ -311,7 +311,7 @@ fn generate_move_from_sr(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for MOVE_to_SR {
+impl OpcodeMaskGenerator for MOVEtoSR {
     fn generate_mask(&self) -> usize {
         0b0100011011000000
     }
@@ -334,7 +334,7 @@ fn generate_move_to_sr(table: &mut [Operation]) {
 
     for src_am_type in src_am_types {
         for reg_idx in range!(src_am_type) {
-            let instruction = Box::new(MOVE_to_SR());
+            let instruction = Box::new(MOVEtoSR());
             let src_am = src_am_type.addressing_mode_by_type(reg_idx, Size::Word);
 
             let base_mask = instruction.generate_mask();
@@ -350,7 +350,7 @@ fn generate_move_to_sr(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for MOVE_USP {
+impl OpcodeMaskGenerator for MOVEUSP {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b0100111001100000;
         base_mask |= match self.direction {
@@ -367,7 +367,7 @@ fn generate_move_usp(table: &mut [Operation]) {
         MoveDirection::MemoryToRegister,
     ] {
         for reg in 0..8 {
-            let instruction = Box::new(MOVE_USP {
+            let instruction = Box::new(MOVEUSP {
                 direction: direction,
             });
             let am = Box::new(AddressRegister { reg: reg });

@@ -2,7 +2,7 @@ use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
     instruction_set::{
         logical_instructions::{AND, ANDI},
-        system_control::{ANDI_to_CCR, ANDI_to_SR},
+        system_control::{ANDItoCCR, ANDItoSR},
         WriteDirection,
     },
     operation::Operation,
@@ -175,28 +175,30 @@ fn generate_andi(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ANDI_to_CCR {
+impl OpcodeMaskGenerator for ANDItoCCR {
     fn generate_mask(&self) -> usize {
         0b0000001000111100
     }
 }
 
 fn generate_andi_ccr(table: &mut [Operation]) {
-    let instruction = Box::new(ANDI_to_CCR());
+    let instruction = Box::new(ANDItoCCR());
+    let am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
-    let operation = Operation::new(instruction, vec![], 20);
+    let operation = Operation::new(instruction, vec![am], 20);
     table[opcode] = operation;
 }
 
-impl OpcodeMaskGenerator for ANDI_to_SR {
+impl OpcodeMaskGenerator for ANDItoSR {
     fn generate_mask(&self) -> usize {
         0b0000001001111100
     }
 }
 
 fn generate_andi_sr(table: &mut [Operation]) {
-    let instruction = Box::new(ANDI_to_SR());
+    let instruction = Box::new(ANDItoSR());
+    let am = Box::new(Immediate { size: Size::Word });
     let opcode = instruction.generate_mask();
-    let operation = Operation::new(instruction, vec![], 20);
+    let operation = Operation::new(instruction, vec![am], 20);
     table[opcode] = operation;
 }

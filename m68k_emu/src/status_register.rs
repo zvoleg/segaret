@@ -31,4 +31,16 @@ impl StatusRegister {
         self.reg &= 0xFF00;
         self.reg |= ccr as u16;
     }
+
+    pub(crate) fn set_sr(&mut self, data: u32) {
+        self.reg = data as u16;
+    }
+
+    pub(crate) fn get_sr(&mut self) -> u16 {
+        self.reg
+    }
+
+    pub(crate) fn get_ccr(&self) -> u16 {
+        self.reg & 0xFF
+    }
 }

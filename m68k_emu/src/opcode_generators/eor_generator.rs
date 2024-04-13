@@ -2,7 +2,7 @@ use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
     instruction_set::{
         logical_instructions::{EOR, EORI},
-        system_control::{EORI_to_CCR, EORI_to_SR},
+        system_control::{EORItoCCR, EORItoSR},
     },
     operation::Operation,
     primitives::Size,
@@ -128,29 +128,29 @@ fn generate_eori(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for EORI_to_CCR {
+impl OpcodeMaskGenerator for EORItoCCR {
     fn generate_mask(&self) -> usize {
         0b0000101000111100
     }
 }
 
 fn generate_eori_to_ccr(table: &mut [Operation]) {
-    let instruction = Box::new(EORI_to_CCR());
+    let instruction = Box::new(EORItoCCR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![src_am], 20);
     table[opcode] = operation;
 }
 
-impl OpcodeMaskGenerator for EORI_to_SR {
+impl OpcodeMaskGenerator for EORItoSR {
     fn generate_mask(&self) -> usize {
         0b0000101001111100
     }
 }
 
 fn generate_eori_to_sr(table: &mut [Operation]) {
-    let instruction = Box::new(EORI_to_SR());
-    let src_am = Box::new(Immediate { size: Size::Byte });
+    let instruction = Box::new(EORItoSR());
+    let src_am = Box::new(Immediate { size: Size::Word });
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![src_am], 20);
     table[opcode] = operation;

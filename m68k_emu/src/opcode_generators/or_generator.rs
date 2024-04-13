@@ -2,7 +2,7 @@ use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
     instruction_set::{
         logical_instructions::{OR, ORI},
-        system_control::{ORI_to_CCR, ORI_to_SR},
+        system_control::{ORItoCCR, ORItoSR},
         WriteDirection,
     },
     operation::Operation,
@@ -173,29 +173,29 @@ fn generate_ori(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ORI_to_CCR {
+impl OpcodeMaskGenerator for ORItoCCR {
     fn generate_mask(&self) -> usize {
         0b0000000000111100
     }
 }
 
 fn generate_ori_to_ccr(table: &mut [Operation]) {
-    let instruction = Box::new(ORI_to_CCR());
+    let instruction = Box::new(ORItoCCR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![src_am], 20);
     table[opcode] = operation;
 }
 
-impl OpcodeMaskGenerator for ORI_to_SR {
+impl OpcodeMaskGenerator for ORItoSR {
     fn generate_mask(&self) -> usize {
         0b0000000001111100
     }
 }
 
 fn generate_ori_to_sr(table: &mut [Operation]) {
-    let instruction = Box::new(ORI_to_SR());
-    let src_am = Box::new(Immediate { size: Size::Byte });
+    let instruction = Box::new(ORItoSR());
+    let src_am = Box::new(Immediate { size: Size::Word });
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![src_am], 20);
     table[opcode] = operation;

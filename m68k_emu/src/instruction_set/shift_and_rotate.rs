@@ -1,5 +1,5 @@
 use crate::{
-    cpu_internals::{self, CpuInternals},
+    cpu_internals::CpuInternals,
     instruction_set::Instruction,
     operand::{Operand, OperandSet},
     primitives::Size,
