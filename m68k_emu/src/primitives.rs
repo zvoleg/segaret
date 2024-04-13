@@ -97,8 +97,15 @@ impl MemoryPtr {
         unsafe {
             match size {
                 Size::Byte => *ptr as u32,
-                Size::Word => *(ptr as *mut u16) as u32,
-                Size::Long => *(ptr as *mut u32),
+                Size::Word => {
+                    let mut data = *(ptr as *mut u16);
+                    data = data.to_be();
+                    data as u32
+                },
+                Size::Long => {
+                    let data = *(ptr as *mut u32);
+                    data.to_be()
+                },
             }
         }
     }
@@ -107,46 +114,10 @@ impl MemoryPtr {
         unsafe {
             match size {
                 Size::Byte => *ptr = data as u8,
-                Size::Word => *(ptr as *mut u16) = data as u16,
-                Size::Long => *(ptr as *mut u32) = data,
+                Size::Word => *(ptr as *mut u16) = (data as u16).to_be(),
+                Size::Long => *(ptr as *mut u32) = data.to_be(),
             }
         }
-    }
-}
-
-pub(crate) struct ProgramCounterPtr(*mut u8);
-
-impl ProgramCounterPtr {
-    pub(crate) fn new(ptr: *mut u8) -> Self {
-        Self(ptr)
-    }
-
-    pub(crate) fn new_boxed(ptr: *mut u8) -> Box<Self> {
-        Box::new(Self::new(ptr))
-    }
-}
-
-pub(crate) struct StatusRegisterPtr(*mut u8);
-
-impl StatusRegisterPtr {
-    pub(crate) fn new(ptr: *mut u8) -> Self {
-        Self(ptr)
-    }
-
-    pub(crate) fn new_boxed(ptr: *mut u8) -> Box<Self> {
-        Box::new(Self::new(ptr))
-    }
-}
-
-pub(crate) struct ConditionCodePtr(*mut u8);
-
-impl ConditionCodePtr {
-    pub(crate) fn new(ptr: *mut u8) -> Self {
-        Self(ptr)
-    }
-
-    pub(crate) fn new_boxed(ptr: *mut u8) -> Box<Self> {
-        Box::new(Self::new(ptr))
     }
 }
 
@@ -209,86 +180,16 @@ impl Pointer for MemoryPtr {
 
     fn read_offset(&self, size: Size, offset: isize) -> u32 {
         unsafe {
-            let offset_ptr = self.0.offset(offset * size as isize);
+            let offset_ptr = self.0.offset(offset);
             self.read_ptr(offset_ptr, size)
         }
     }
 
     fn write_offset(&self, data: u32, size: Size, offset: isize) {
         unsafe {
-            let offset_ptr = self.0.offset(offset * size as isize);
+            let offset_ptr = self.0.offset(offset);
             self.write_ptr(offset_ptr, data, size);
         }
-    }
-}
-
-impl Pointer for ProgramCounterPtr {
-    fn read(&self, size: Size) -> u32 {
-        unsafe {
-            match size {
-                Size::Byte => panic!("ProgramCounterPtr: read: program counter register can't be to addressed by Byte size"),
-                Size::Word => *(self.0 as *mut u16) as u32,
-                Size::Long => *(self.0 as *mut u32),
-            }
-        }
-    }
-
-    fn write(&self, data: u32, size: Size) {
-        unsafe {
-            match size {
-                Size::Byte => panic!("ProgramCounterPtr: write: program counter register can't be to addressed by Byte size"),
-                Size::Word => *(self.0 as *mut u32) = data.sign_extend(size),
-                Size::Long => *(self.0 as *mut u32) = data,
-            }
-        }
-    }
-
-    fn read_offset(&self, _: Size, _: isize) -> u32 {
-        panic!("ProgramCounterPtr: read_offset: program counter register can't interact with memory by offset")
-    }
-
-    fn write_offset(&self, _: u32, _: Size, _: isize) {
-        panic!("ProgramCounterPtr: write_offset: program counter register can't interact with memory by offset")
-    }
-}
-
-impl Pointer for StatusRegisterPtr {
-    fn read(&self, size: Size) -> u32 {
-        todo!()
-    }
-
-    fn write(&self, data: u32, size: Size) {
-        todo!()
-    }
-
-    fn read_offset(&self, _: Size, _: isize) -> u32 {
-        panic!(
-            "StatusRegisterPtr: read_offset: status register can't interact with memory by offset"
-        )
-    }
-
-    fn write_offset(&self, _: u32, _: Size, _: isize) {
-        panic!(
-            "StatusRegisterPtr: write_offset: status register can't interact with memory by offset"
-        )
-    }
-}
-
-impl Pointer for ConditionCodePtr {
-    fn read(&self, size: Size) -> u32 {
-        todo!()
-    }
-
-    fn write(&self, data: u32, size: Size) {
-        todo!()
-    }
-
-    fn read_offset(&self, _: Size, _: isize) -> u32 {
-        panic!("ConditionCodePtr: read_offset: condition code register can't interact with memory by offset")
-    }
-
-    fn write_offset(&self, _: u32, _: Size, _: isize) {
-        panic!("ConditionCodePtr: write_offset: condition code register can't interact with memory by offset")
     }
 }
 
@@ -376,7 +277,8 @@ mod tests {
         let mut data = 0u32;
         let ptr = MemoryPtr(&mut data as *mut _ as *mut u8);
         ptr.write(0xFF, Size::Byte);
-        assert_eq!(ptr.read(Size::Word), 0xFF);
+        let res = ptr.read(Size::Word);
+        assert_eq!(res, 0xFF);
     }
 
     #[test]

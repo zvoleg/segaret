@@ -5,14 +5,14 @@ use crate::{addressing_mode_set::AddressingMode, instruction_set::Instruction};
 pub(crate) struct Operation {
     pub(crate) instruction: Box<dyn Instruction>,
     pub(crate) addressing_mode_list: Vec<Box<dyn AddressingMode>>,
-    pub(crate) cycles: u32,
+    pub(crate) cycles: i32,
 }
 
 impl Operation {
     pub(crate) fn new(
         instruction: Box<dyn Instruction>,
         addressing_mode_list: Vec<Box<dyn AddressingMode>>,
-        cycles: u32,
+        cycles: i32,
     ) -> Self {
         Self {
             instruction,

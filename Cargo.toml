@@ -3,3 +3,18 @@
 members = ["m68k_emu"] #, "z80_emu", "sg_vdp_emu"]
 
 resolver = "2"
+
+[package]
+name = "segaret"
+version = "0.0.1"
+edition = "2021"
+
+[profile.dev]
+debug-assertions = false
+
+[dependencies.m68k_emu]
+path = "./m68k_emu"
+
+[dependencies]
+
+spriter = { git="https://github.com/zvoleg/spriter" }

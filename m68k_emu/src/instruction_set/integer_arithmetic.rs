@@ -1,6 +1,7 @@
 use crate::{
     cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
-    primitives::Size, status_flag::StatusFlag, IsNegate, IsZero, MsbIsSet, SignExtending,
+    primitives::Size, status_flag::StatusFlag, vectors::DIVISION_BY_ZERO, IsNegate, IsZero,
+    MsbIsSet, SignExtending,
 };
 
 use super::RegisterFieldMode;
@@ -500,7 +501,7 @@ impl Instruction for DIVS {
         let dst_data = dst_operand.read(Size::Word) as i32;
 
         if src_data == 0 {
-            // TODO call trap
+            cpu_internals.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
@@ -539,7 +540,7 @@ impl Instruction for DIVU {
         let dst_data = dst_operand.read(Size::Word);
 
         if src_data == 0 {
-            // TODO call trap
+            cpu_internals.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);

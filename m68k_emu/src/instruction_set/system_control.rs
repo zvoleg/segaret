@@ -188,7 +188,7 @@ pub(crate) struct TRAP {
 }
 
 impl Instruction for TRAP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+    fn execute(&self, _: OperandSet, _: &mut CpuInternals) {
         todo!()
     }
 }
@@ -196,7 +196,7 @@ impl Instruction for TRAP {
 pub(crate) struct TRAPV();
 
 impl Instruction for TRAPV {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+    fn execute(&self, _: OperandSet, _: &mut CpuInternals) {
         todo!()
     }
 }

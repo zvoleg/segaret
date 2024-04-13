@@ -96,7 +96,7 @@ impl AddressingModeType {
         }
     }
 
-    fn additional_clocks(&self, size: Size) -> u32 {
+    fn additional_clocks(&self, size: Size) -> i32 {
         let mut cycles = match self {
             AddressingModeType::AddressRegisterIndirect => 4,
             AddressingModeType::AddressRegisterPostIncrement => 4,

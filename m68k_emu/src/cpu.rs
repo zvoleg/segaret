@@ -1,8 +1,8 @@
 use crate::{
     bus::BusM68k,
     cpu_internals::{CpuInternals, RegisterSet, RegisterType},
-    header::{self, Header},
-    instruction_set::{program_control::NOP, system_control::ILLEAGL},
+    header::Header,
+    instruction_set::system_control::ILLEAGL,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
@@ -29,7 +29,7 @@ where
             Operation::new(Box::new(ILLEAGL()), Vec::new(), 5)
         });
         generate_opcode_list(&mut table);
-        let header_ptr = bus.set_address(0);
+        let header_ptr = MemoryPtr::new(bus.set_address(0));
         let header = Header::new(header_ptr);
         let mut internals = CpuInternals::new();
         M68k::<T>::reset(&header, &mut internals.register_set);
@@ -48,6 +48,7 @@ where
         // it is needed because when an instruction will execute, it needs the mutable reference to self
         let operation_set = self.operation_set.as_ptr();
         let operation = unsafe { &*operation_set.offset(opcode as isize) };
+        self.internals.cycles = operation.cycles;
 
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {

@@ -12,7 +12,7 @@ impl OpcodeMaskGenerator for TST {
             Size::Byte => 0b00,
             Size::Word => 0b01,
             Size::Long => 0b10,
-        };
+        } << 6;
         base_mask
     }
 }
