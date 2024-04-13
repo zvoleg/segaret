@@ -4,6 +4,7 @@ use crate::{
     operand::OperandSet,
     primitives::Size,
     status_flag::StatusFlag,
+    vectors::{CHK_INSTRUCTION, ILLEGAL_INSTRUCTION, RESET_SP},
     IsNegate, STACK_REGISTER,
 };
 
@@ -163,7 +164,7 @@ impl Instruction for CHK {
                 .register_set
                 .sr
                 .set_flag(StatusFlag::N, less_zerro);
-            // TODO trap to vector 6
+            cpu_internals.trap = Some(CHK_INSTRUCTION);
         }
     }
 }
@@ -178,7 +179,7 @@ impl Instruction for ILLEAGL {
         pc_stack_operand.write(cpu_internals.register_set.pc, Size::Long);
         sr_stack_operand.write(cpu_internals.register_set.sr.get_sr() as u32, Size::Word);
 
-        // TODO trap to vector of illegal instruction
+        cpu_internals.trap = Some(ILLEGAL_INSTRUCTION);
     }
 }
 
@@ -203,7 +204,7 @@ impl Instruction for TRAPV {
 pub(crate) struct RESET();
 
 impl Instruction for RESET {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        todo!()
+    fn execute(&self, _: OperandSet, cpu_internals: &mut CpuInternals) {
+        cpu_internals.trap = Some(RESET_SP)
     }
 }

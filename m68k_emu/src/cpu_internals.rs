@@ -48,7 +48,7 @@ impl RegisterSet {
 pub(crate) struct CpuInternals {
     pub(crate) register_set: RegisterSet,
     pub(crate) cycles: i32,
-    pub(crate) trap_vector: Option<u32>,
+    pub(crate) trap: Option<usize>,
 }
 
 impl CpuInternals {
@@ -56,7 +56,7 @@ impl CpuInternals {
         Self {
             register_set: RegisterSet::new(),
             cycles: 0,
-            trap_vector: None,
+            trap: None,
         }
     }
 }

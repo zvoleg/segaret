@@ -1,12 +1,13 @@
 use crate::{
     bus::BusM68k,
-    cpu_internals::{CpuInternals, RegisterType},
+    cpu_internals::{CpuInternals, RegisterSet, RegisterType},
     header::{self, Header},
-    instruction_set::program_control::NOP,
+    instruction_set::{program_control::NOP, system_control::ILLEAGL},
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
     primitives::{MemoryPtr, Pointer, Size},
+    vectors::{RESET_PC, RESET_SP},
     STACK_REGISTER,
 };
 
@@ -24,12 +25,16 @@ where
 {
     pub fn new(bus: T) -> Self {
         let mut table: Vec<Operation> = Vec::with_capacity(0x10000);
-        table.resize_with(0x10000, || Operation::new(Box::new(NOP()), Vec::new(), 5));
+        table.resize_with(0x10000, || {
+            Operation::new(Box::new(ILLEAGL()), Vec::new(), 5)
+        });
         generate_opcode_list(&mut table);
         let header_ptr = bus.set_address(0);
         let header = Header::new(header_ptr);
+        let mut internals = CpuInternals::new();
+        M68k::<T>::reset(&header, &mut internals.register_set);
         Self {
-            internals: CpuInternals::new(),
+            internals: internals,
             header: header,
             operation_set: table,
             bus: bus,
@@ -50,44 +55,15 @@ where
         }
         let instruction = &operation.instruction;
         instruction.execute(operands, &mut self.internals);
-    }
-
-    pub(crate) fn push(&mut self, data: u32, size: Size) {
-        let stack_register_ptr = self
-            .internals
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let address = stack_register_ptr.read(Size::Long) - size as u32; // predecrement
-        stack_register_ptr.write(address, Size::Long);
-        let memory_ptr = MemoryPtr::new(self.bus.set_address(address));
-        memory_ptr.write(data, size);
-    }
-
-    pub(crate) fn pop(&mut self, size: Size) -> u32 {
-        let stack_register_ptr = self
-            .internals
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let address = stack_register_ptr.read(Size::Long);
-        stack_register_ptr.write(address + size as u32, Size::Long); // postincrement
-        let memory_ptr = MemoryPtr::new(self.bus.set_address(address));
-        memory_ptr.read(size)
-    }
-
-    pub(crate) fn get_stack_address(&mut self) -> u32 {
-        let stack_register_ptr = self
-            .internals
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register_ptr.read(Size::Long)
-    }
-
-    pub(crate) fn set_stack_address(&mut self, address: u32) {
-        let stack_register_ptr = self
-            .internals
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register_ptr.write(address, Size::Long);
+        if let Some(vector) = self.internals.trap {
+            if vector == RESET_SP {
+                M68k::<T>::reset(&self.header, &mut self.internals.register_set);
+            } else {
+                let vector_address = self.header.get_vector(vector);
+                self.internals.register_set.pc = vector_address;
+            }
+            self.internals.trap = None;
+        }
     }
 
     fn fetch_opcode(&mut self) -> u16 {
@@ -96,5 +72,14 @@ where
                 .set_address(self.internals.register_set.get_and_increment_pc()),
         );
         opcode_ptr.read(Size::Word) as u16
+    }
+
+    fn reset(header: &Header, register_set: &mut RegisterSet) {
+        let stack_pointer = header.get_vector(RESET_SP);
+        let stack_register = register_set.get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        stack_register.write(stack_pointer, Size::Long);
+
+        let pc = header.get_vector(RESET_PC);
+        register_set.pc = pc;
     }
 }
