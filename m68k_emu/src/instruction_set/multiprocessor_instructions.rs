@@ -6,11 +6,11 @@ use crate::{
 pub(crate) struct TAS();
 
 impl Instruction for TAS {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
         let data = operand.read(Size::Byte);
 
-        let sr = &mut cpu_interanls.register_set.sr;
+        let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Byte));
         sr.set_flag(StatusFlag::Z, data.is_zero(Size::Byte));
         sr.set_flag(StatusFlag::V, false);

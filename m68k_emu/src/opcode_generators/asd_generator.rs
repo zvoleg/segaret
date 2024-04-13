@@ -1,7 +1,7 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister},
     instruction_set::{
-        shift_and_rotate::{ASd_data_reg, ASd_implied, ASd_memory},
+        shift_and_rotate::{ASdDataReg, ASdImplied, ASdMemory},
         ShiftDirection,
     },
     operation::Operation,
@@ -17,7 +17,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
     generate_asd_mem(table);
 }
 
-impl OpcodeMaskGenerator for ASd_data_reg {
+impl OpcodeMaskGenerator for ASdDataReg {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000100000;
         base_mask |= match self.size {
@@ -35,7 +35,7 @@ fn generate_asd_data_reg(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 for data_reg_y_idx in 0..8 {
-                    let instruction = Box::new(ASd_data_reg {
+                    let instruction = Box::new(ASdDataReg {
                         size: size,
                         direction: direction,
                     });
@@ -62,7 +62,7 @@ fn generate_asd_data_reg(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ASd_implied {
+impl OpcodeMaskGenerator for ASdImplied {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000000000;
         base_mask |= match self.size {
@@ -81,12 +81,13 @@ fn generate_asd_implied(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 for data_reg_idx in 0..8 {
-                    let instruction = Box::new(ASd_implied {
+                    let count = if count == 0 { 8 } else { count };
+                    let instruction = Box::new(ASdImplied {
                         size: size,
                         direction: direction,
                         count: count,
                     });
-                    let dst_am = Box::new(DataRegister { reg: data_reg_idx });
+                    let am = Box::new(DataRegister { reg: data_reg_idx });
 
                     let base_mask = instruction.generate_mask();
                     let opcode = base_mask | data_reg_idx;
@@ -96,7 +97,7 @@ fn generate_asd_implied(table: &mut [Operation]) {
                         Size::Long => 8,
                     };
 
-                    let operation = Operation::new(instruction, vec![dst_am], cycles);
+                    let operation = Operation::new(instruction, vec![am], cycles);
                     table[opcode] = operation;
                 }
             }
@@ -104,7 +105,7 @@ fn generate_asd_implied(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ASd_memory {
+impl OpcodeMaskGenerator for ASdMemory {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000011000000;
         base_mask |= (self.direction as usize) << 8;
@@ -126,7 +127,7 @@ fn generate_asd_mem(table: &mut [Operation]) {
     for direction in [ShiftDirection::Right, ShiftDirection::Left] {
         for am_type in am_types {
             for idx in range!(am_type) {
-                let instruction = Box::new(ASd_memory {
+                let instruction = Box::new(ASdMemory {
                     direction: direction,
                 });
                 let am = am_type.addressing_mode_by_type(idx, Size::Word);

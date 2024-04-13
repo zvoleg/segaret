@@ -1,7 +1,7 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister},
     instruction_set::{
-        shift_and_rotate::{LSd_data_reg, LSd_implied, LSd_memory},
+        shift_and_rotate::{LSdDataReg, LSdImplied, LSdMemory},
         ShiftDirection,
     },
     operation::Operation,
@@ -17,7 +17,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
     generate_lsd_mem(table);
 }
 
-impl OpcodeMaskGenerator for LSd_data_reg {
+impl OpcodeMaskGenerator for LSdDataReg {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000101000;
         base_mask |= match self.size {
@@ -35,7 +35,7 @@ fn generate_lsd_data_reg(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 for data_reg_y_idx in 0..8 {
-                    let instruction = Box::new(LSd_data_reg {
+                    let instruction = Box::new(LSdDataReg {
                         size: size,
                         direction: direction,
                     });
@@ -62,7 +62,7 @@ fn generate_lsd_data_reg(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for LSd_implied {
+impl OpcodeMaskGenerator for LSdImplied {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000001000;
         base_mask |= match self.size {
@@ -81,7 +81,7 @@ fn generate_lsd_implied(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 for data_reg_idx in 0..8 {
-                    let instruction = Box::new(LSd_implied {
+                    let instruction = Box::new(LSdImplied {
                         size: size,
                         direction: direction,
                         count: count,
@@ -104,7 +104,7 @@ fn generate_lsd_implied(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for LSd_memory {
+impl OpcodeMaskGenerator for LSdMemory {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110001011000000;
         base_mask |= (self.direction as usize) << 8;
@@ -126,7 +126,7 @@ fn generate_lsd_mem(table: &mut [Operation]) {
     for direction in [ShiftDirection::Right, ShiftDirection::Left] {
         for am_type in am_types {
             for idx in range!(am_type) {
-                let instruction = Box::new(LSd_memory {
+                let instruction = Box::new(LSdMemory {
                     direction: direction,
                 });
                 let am = am_type.addressing_mode_by_type(idx, Size::Word);

@@ -11,9 +11,9 @@ pub(crate) struct TST {
 }
 
 impl Instruction for TST {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data = operand_set.next().read(self.size);
-        let sr = &mut cpu_interanls.register_set.sr;
+        let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, data.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
@@ -27,18 +27,18 @@ pub(crate) struct Bcc {
 }
 
 impl Instruction for Bcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read(Size::Word).sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
-        if check_condition(self.condition, &cpu_interanls.register_set.sr) {
-            let pc = &mut cpu_interanls.register_set.pc;
+        if check_condition(self.condition, &cpu_internals.register_set.sr) {
+            let pc = &mut cpu_internals.register_set.pc;
             *pc = pc.wrapping_add(displacement);
         } else {
             let clock_corection = if self.displacement == 0 { 2 } else { -2i32 };
-            cpu_interanls.cycles = cpu_interanls.cycles.wrapping_add(clock_corection);
+            cpu_internals.cycles = cpu_internals.cycles.wrapping_add(clock_corection);
         }
     }
 }
@@ -48,26 +48,26 @@ pub(crate) struct DBcc {
 }
 
 impl Instruction for DBcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data_reg_operand = operand_set.next();
         let displacement_operand = operand_set.next();
         let displacement = displacement_operand
             .read(Size::Word)
             .sign_extend(Size::Word);
 
-        if !check_condition(self.condition, &cpu_interanls.register_set.sr) {
+        if !check_condition(self.condition, &cpu_internals.register_set.sr) {
             let mut counter = data_reg_operand.read(Size::Word);
             counter = counter.wrapping_sub(1);
             data_reg_operand.write(counter, Size::Word);
             if counter != 0xFFFF {
                 // -1
-                let pc = &mut cpu_interanls.register_set.pc;
+                let pc = &mut cpu_internals.register_set.pc;
                 *pc = pc.wrapping_add(displacement);
             } else {
-                cpu_interanls.cycles += 4 // if loop counter expired
+                cpu_internals.cycles += 4 // if loop counter expired
             }
         } else {
-            cpu_interanls.cycles += 2 // if condition true
+            cpu_internals.cycles += 2 // if condition true
         }
     }
 }
@@ -77,9 +77,9 @@ pub(crate) struct Scc {
 }
 
 impl Instruction for Scc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
-        let condition = check_condition(self.condition, &cpu_interanls.register_set.sr);
+        let condition = check_condition(self.condition, &cpu_internals.register_set.sr);
         let result = if condition { 0xFF } else { 0x00 };
         operand.write(result, Size::Byte);
     }
@@ -90,14 +90,14 @@ pub(crate) struct BRA {
 }
 
 impl Instruction for BRA {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read(Size::Word).sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
 
-        let pc = &mut cpu_interanls.register_set.pc;
+        let pc = &mut cpu_internals.register_set.pc;
         *pc = pc.wrapping_add(displacement);
     }
 }
@@ -107,7 +107,7 @@ pub(crate) struct BSR {
 }
 
 impl Instruction for BSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read(Size::Word).sign_extend(Size::Word)
         } else {
@@ -115,7 +115,7 @@ impl Instruction for BSR {
         };
         let stack_operand = operand_set.next();
 
-        let pc = &mut cpu_interanls.register_set.pc;
+        let pc = &mut cpu_internals.register_set.pc;
         stack_operand.write(*pc, Size::Long);
         *pc = pc.wrapping_add(displacement);
     }
@@ -124,20 +124,20 @@ impl Instruction for BSR {
 pub(crate) struct JMP();
 
 impl Instruction for JMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
-        cpu_interanls.register_set.pc = operand.operand_address;
+        cpu_internals.register_set.pc = operand.operand_address;
     }
 }
 
 pub(crate) struct JSR();
 
 impl Instruction for JSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_operand = operand_set.next();
         let operand = operand_set.next();
 
-        let pc = &mut cpu_interanls.register_set.pc;
+        let pc = &mut cpu_internals.register_set.pc;
         stack_operand.write(*pc, Size::Long);
         *pc = operand.operand_address;
     }
@@ -152,26 +152,26 @@ impl Instruction for NOP {
 pub(crate) struct RTR();
 
 impl Instruction for RTR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_ccr_operand = operand_set.next();
         let stack_pc_operand = operand_set.next();
 
         let ccr = stack_ccr_operand.read(Size::Byte);
-        cpu_interanls.register_set.sr.set_ccr(ccr);
+        cpu_internals.register_set.sr.set_ccr(ccr);
 
         let pc = stack_pc_operand.read(Size::Long);
-        cpu_interanls.register_set.pc = pc;
+        cpu_internals.register_set.pc = pc;
     }
 }
 
 pub(crate) struct RTS();
 
 impl Instruction for RTS {
-    fn execute(&self, mut operand_set: OperandSet, cpu_interanls: &mut CpuInternals) {
+    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_pc_operand = operand_set.next();
 
         let pc = stack_pc_operand.read(Size::Long);
-        cpu_interanls.register_set.pc = pc;
+        cpu_internals.register_set.pc = pc;
     }
 }
 

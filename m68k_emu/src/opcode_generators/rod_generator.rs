@@ -1,8 +1,10 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister},
     instruction_set::{
-        shift_and_rotate::{ROd_data_reg, ROd_implied, ROd_memory},
-        ShiftDirection,
+        shift_and_rotate::{
+            ROXdDataReg, ROXdImplied, ROXdMemory, ROdDataReg, ROdImplied, ROdMemory,
+        },
+        Instruction, ShiftDirection,
     },
     operation::Operation,
     primitives::Size,
@@ -17,12 +19,22 @@ pub(crate) fn generate(table: &mut [Operation]) {
     generate_rod_mem(table);
 }
 
-impl OpcodeMaskGenerator for ROd_data_reg {
+impl OpcodeMaskGenerator for ROdDataReg {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b1110000000111000;
+        base_mask |= match self.size {
+            Size::Byte => 0b00,
+            Size::Word => 0b01,
+            Size::Long => 0b10,
+        } << 6;
+        base_mask |= (self.direction as usize) << 8;
+        base_mask
+    }
+}
+
+impl OpcodeMaskGenerator for ROXdDataReg {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000110000;
-        if !self.extended {
-            base_mask |= 1 << 3
-        }
         base_mask |= match self.size {
             Size::Byte => 0b00,
             Size::Word => 0b01,
@@ -34,16 +46,28 @@ impl OpcodeMaskGenerator for ROd_data_reg {
 }
 
 fn generate_rod_data_reg(table: &mut [Operation]) {
-    for extened in [true, false] {
+    for extended in [true, false] {
         for data_reg_x_idx in 0..8 {
             for direction in [ShiftDirection::Right, ShiftDirection::Left] {
                 for size in [Size::Byte, Size::Word, Size::Long] {
                     for data_reg_y_idx in 0..8 {
-                        let instruction = Box::new(ROd_data_reg {
-                            size: size,
-                            direction: direction,
-                            extended: extened,
-                        });
+                        let instruction: Box<dyn Instruction>;
+                        let base_mask: usize;
+                        if extended {
+                            let roxd = Box::new(ROXdDataReg {
+                                size: size,
+                                direction: direction,
+                            });
+                            base_mask = roxd.generate_mask();
+                            instruction = roxd;
+                        } else {
+                            let rod = Box::new(ROdDataReg {
+                                size: size,
+                                direction: direction,
+                            });
+                            base_mask = rod.generate_mask();
+                            instruction = rod;
+                        };
                         let src_am = Box::new(DataRegister {
                             reg: data_reg_x_idx,
                         });
@@ -51,7 +75,6 @@ fn generate_rod_data_reg(table: &mut [Operation]) {
                             reg: data_reg_y_idx,
                         });
 
-                        let base_mask = instruction.generate_mask();
                         let opcode = base_mask | (data_reg_x_idx << 9) | data_reg_y_idx;
 
                         let cycles = match size {
@@ -68,12 +91,23 @@ fn generate_rod_data_reg(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ROd_implied {
+impl OpcodeMaskGenerator for ROdImplied {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b1110000000011000;
+        base_mask |= match self.size {
+            Size::Byte => 0b00,
+            Size::Word => 0b01,
+            Size::Long => 0b10,
+        } << 6;
+        base_mask |= (self.direction as usize) << 8;
+        base_mask |= (self.count as usize) << 9;
+        base_mask
+    }
+}
+
+impl OpcodeMaskGenerator for ROXdImplied {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110000000010000;
-        if !self.extended {
-            base_mask |= 1 << 3
-        }
         base_mask |= match self.size {
             Size::Byte => 0b00,
             Size::Word => 0b01,
@@ -86,20 +120,32 @@ impl OpcodeMaskGenerator for ROd_implied {
 }
 
 fn generate_rod_implied(table: &mut [Operation]) {
-    for extened in [true, false] {
+    for extended in [true, false] {
         for count in 0..8 {
             for direction in [ShiftDirection::Right, ShiftDirection::Left] {
                 for size in [Size::Byte, Size::Word, Size::Long] {
                     for data_reg_idx in 0..8 {
-                        let instruction = Box::new(ROd_implied {
-                            size: size,
-                            direction: direction,
-                            count: count,
-                            extended: extened,
-                        });
+                        let instruction: Box<dyn Instruction>;
+                        let base_mask: usize;
+                        if extended {
+                            let roxd = Box::new(ROXdImplied {
+                                size: size,
+                                direction: direction,
+                                count: count,
+                            });
+                            base_mask = roxd.generate_mask();
+                            instruction = roxd;
+                        } else {
+                            let rod = Box::new(ROdImplied {
+                                size: size,
+                                direction: direction,
+                                count: count,
+                            });
+                            base_mask = rod.generate_mask();
+                            instruction = rod;
+                        };
                         let am = Box::new(DataRegister { reg: data_reg_idx });
 
-                        let base_mask = instruction.generate_mask();
                         let opcode = base_mask | data_reg_idx;
 
                         let cycles = match size {
@@ -116,12 +162,17 @@ fn generate_rod_implied(table: &mut [Operation]) {
     }
 }
 
-impl OpcodeMaskGenerator for ROd_memory {
+impl OpcodeMaskGenerator for ROdMemory {
+    fn generate_mask(&self) -> usize {
+        let mut base_mask = 0b1110011011000000;
+        base_mask |= (self.direction as usize) << 8;
+        base_mask
+    }
+}
+
+impl OpcodeMaskGenerator for ROXdMemory {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b1110010011000000;
-        if !self.extended {
-            base_mask |= 1 << 9
-        }
         base_mask |= (self.direction as usize) << 8;
         base_mask
     }
@@ -142,13 +193,23 @@ fn generate_rod_mem(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for am_type in am_types {
                 for idx in range!(am_type) {
-                    let instruction = Box::new(ROd_memory {
-                        direction: direction,
-                        extended: extened,
-                    });
+                    let instruction: Box<dyn Instruction>;
+                    let base_mask: usize;
+                    if extened {
+                        let roxd = Box::new(ROXdMemory {
+                            direction: direction,
+                        });
+                        base_mask = roxd.generate_mask();
+                        instruction = roxd;
+                    } else {
+                        let rod = Box::new(ROdMemory {
+                            direction: direction,
+                        });
+                        base_mask = rod.generate_mask();
+                        instruction = rod;
+                    }
                     let am = am_type.addressing_mode_by_type(idx, Size::Word);
 
-                    let base_mask = instruction.generate_mask();
                     let opcode = base_mask | am_type.generate_mask(idx);
 
                     let cycles = 8 + am_type.additional_clocks(Size::Word);
