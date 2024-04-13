@@ -1,6 +1,7 @@
 use crate::{
     bus::BusM68k,
     cpu_internals::{CpuInternals, RegisterType},
+    header::{self, Header},
     instruction_set::program_control::NOP,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
@@ -11,6 +12,7 @@ use crate::{
 
 pub struct M68k<T: BusM68k> {
     pub(crate) internals: CpuInternals,
+    header: Header,
 
     operation_set: Vec<Operation>,
     bus: T,
@@ -24,8 +26,11 @@ where
         let mut table: Vec<Operation> = Vec::with_capacity(0x10000);
         table.resize_with(0x10000, || Operation::new(Box::new(NOP()), Vec::new(), 5));
         generate_opcode_list(&mut table);
+        let header_ptr = bus.set_address(0);
+        let header = Header::new(header_ptr);
         Self {
             internals: CpuInternals::new(),
+            header: header,
             operation_set: table,
             bus: bus,
         }

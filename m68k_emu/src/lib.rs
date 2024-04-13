@@ -4,14 +4,15 @@ pub mod cpu;
 mod addressing_mode_set;
 mod cpu_internals;
 mod extension_word;
+mod header;
 mod instruction_set;
+mod opcode_generators;
 mod operand;
 mod operation;
 mod primitives;
 mod status_flag;
 mod status_register;
-// mod decoder;
-mod opcode_generators;
+mod vectors;
 
 use primitives::Size;
 
