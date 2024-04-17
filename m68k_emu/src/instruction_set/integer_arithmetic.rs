@@ -476,8 +476,8 @@ impl Display for EXT {
 impl Instruction for EXT {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
-        let data = operand.read();
-        let result = data.sign_extend(self.target_size);
+        let data = operand.read_sized(self.src_size);
+        let result = data.sign_extend(self.src_size);
         operand.write(result);
 
         let sr = &mut cpu_internals.register_set.sr;

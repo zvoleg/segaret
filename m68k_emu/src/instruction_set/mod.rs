@@ -26,15 +26,6 @@ pub(crate) enum MoveDirection {
     MemoryToRegister = 1,
 }
 
-impl Display for MoveDirection {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MoveDirection::RegisterToMemory => write!(f, "->"),
-            MoveDirection::MemoryToRegister => write!(f, "<-"),
-        }
-    }
-}
-
 #[derive(Clone, Copy)]
 pub(crate) enum WriteDirection {
     ToDataRegister = 0,

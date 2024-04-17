@@ -9,7 +9,7 @@ use crate::{
         MoveDirection,
     },
     operation::Operation,
-    range, Size,
+    range, Size, STACK_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;
@@ -377,14 +377,33 @@ fn generate_move_usp(table: &mut [Operation]) {
             let instruction = Box::new(MOVEUSP {
                 direction: direction,
             });
-            let am = Box::new(AddressRegister {
-                reg: reg,
-                size: Size::Long,
-            });
-
+            let src_am: Box<dyn AddressingMode>;
+            let dst_am: Box<dyn AddressingMode>;
+            match direction {
+                MoveDirection::RegisterToMemory => {
+                    src_am = Box::new(AddressRegister {
+                        reg: STACK_REGISTER,
+                        size: Size::Long,
+                    });
+                    dst_am = Box::new(AddressRegister {
+                        reg: reg,
+                        size: Size::Long,
+                    });
+                }
+                MoveDirection::MemoryToRegister => {
+                    src_am = Box::new(AddressRegister {
+                        reg: reg,
+                        size: Size::Long,
+                    });
+                    dst_am = Box::new(AddressRegister {
+                        reg: STACK_REGISTER,
+                        size: Size::Long,
+                    });
+                }
+            }
             let opcode = instruction.generate_mask() | reg;
 
-            let operation = Operation::new(instruction, vec![am], 6);
+            let operation = Operation::new(instruction, vec![src_am, dst_am], 6);
             table[opcode] = operation;
         }
     }

@@ -1,13 +1,13 @@
 use std::fmt::Display;
 
 use crate::{
-    cpu_internals::{CpuInternals, RegisterType},
+    cpu_internals::CpuInternals,
     instruction_set::Instruction,
     operand::OperandSet,
     primitives::Size,
     status_flag::StatusFlag,
     vectors::{CHK_INSTRUCTION, ILLEGAL_INSTRUCTION, RESET_SP},
-    IsNegate, STACK_REGISTER,
+    IsNegate,
 };
 
 use super::MoveDirection;
@@ -49,26 +49,16 @@ pub(crate) struct MOVEUSP {
 
 impl Display for MOVEUSP {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "MOVEUSP {}", self.direction)
+        write!(f, "MOVEUSP")
     }
 }
 
 impl Instruction for MOVEUSP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        let operand = operand_set.next();
-        let usp_reg = cpu_internals
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        match self.direction {
-            MoveDirection::RegisterToMemory => {
-                let data = usp_reg.read(Size::Long);
-                operand.write(data);
-            }
-            MoveDirection::MemoryToRegister => {
-                let data = operand.read();
-                usp_reg.write(data, Size::Long);
-            }
-        }
+    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
+        let src_operand = operand_set.next();
+        let dst_operand = operand_set.next();
+        let src_data = src_operand.read();
+        dst_operand.write(src_data);
     }
 }
 

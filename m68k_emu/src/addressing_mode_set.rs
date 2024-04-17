@@ -25,7 +25,8 @@ pub(crate) enum AddressingModeType {
 
 pub(crate) trait AddressingMode {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand;
-    fn type_info(&self) -> AddressingModeType;
+    fn disassembly(&self, extension_word: u32) -> String;
+    fn extension_word_length(&self) -> u32;
 }
 
 pub(crate) struct DataRegister {
@@ -39,8 +40,12 @@ impl AddressingMode for DataRegister {
         Operand::new(operand_ptr, None, self.reg as u32, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::DataRegister
+    fn disassembly(&self, _: u32) -> String {
+        format!("D{}", self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        0
     }
 }
 
@@ -55,8 +60,12 @@ impl AddressingMode for AddressRegister {
         Operand::new(operand_ptr, None, self.reg as u32, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegister
+    fn disassembly(&self, _: u32) -> String {
+        format!("A{}", self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        0
     }
 }
 
@@ -73,8 +82,12 @@ impl AddressingMode for AddressRegisterIndirect {
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegisterIndirect
+    fn disassembly(&self, _: u32) -> String {
+        format!("(A{})", self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        0
     }
 }
 
@@ -92,8 +105,12 @@ impl AddressingMode for AddressRegisterPostIncrement {
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegisterPostIncrement
+    fn disassembly(&self, _: u32) -> String {
+        format!("(A{})+", self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        0
     }
 }
 
@@ -112,8 +129,12 @@ impl AddressingMode for AddressRegisterPreDecrement {
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegisterPreDecrement
+    fn disassembly(&self, _: u32) -> String {
+        format!("-(A{})", self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        0
     }
 }
 
@@ -133,8 +154,12 @@ impl AddressingMode for AddressRegisterDisplacement {
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegisterDisplacement
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!("({:04X}, A{})", extension_word, self.reg)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        1
     }
 }
 
@@ -151,7 +176,9 @@ impl AddressingMode for AddressRegisterIndexed {
         let brief_extension_word = BriefExtensionWord::new(extension_word as u16, rs);
         let index_data = brief_extension_word
             .index_register_ptr
-            .read(brief_extension_word.size);
+            .read(brief_extension_word.size)
+            .sign_extend(brief_extension_word.size)
+            .wrapping_mul(brief_extension_word.scale);
         let displacement = brief_extension_word.displacement;
 
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
@@ -161,8 +188,15 @@ impl AddressingMode for AddressRegisterIndexed {
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AddressRegisterIndexed
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!(
+            "{}",
+            BriefExtensionWord::disassembly(&format!("A{}", self.reg), extension_word)
+        )
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        1
     }
 }
 
@@ -180,8 +214,12 @@ impl AddressingMode for ProgramCounterDisplacement {
         Operand::new(operand_ptr, None, address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::ProgramCounterDisplacement
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!("({:04X}, PC)", extension_word)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        1
     }
 }
 
@@ -197,7 +235,9 @@ impl AddressingMode for ProgramCounterIndexed {
         let brief_extension_word = BriefExtensionWord::new(extension_word as u16, rs);
         let index_data = brief_extension_word
             .index_register_ptr
-            .read(brief_extension_word.size);
+            .read(brief_extension_word.size)
+            .sign_extend(brief_extension_word.size)
+            .wrapping_mul(brief_extension_word.scale);
         let displacement = brief_extension_word.displacement;
 
         let mut address = rs.pc;
@@ -206,8 +246,12 @@ impl AddressingMode for ProgramCounterIndexed {
         Operand::new(operand_ptr, None, address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::ProgramCounterIndexed
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!("{}", BriefExtensionWord::disassembly("PC", extension_word))
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        1
     }
 }
 
@@ -223,8 +267,12 @@ impl AddressingMode for AbsShort {
         Operand::new(operand_ptr, None, address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AbsShort
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!("({:04X})", extension_word)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        1
     }
 }
 
@@ -243,8 +291,12 @@ impl AddressingMode for AbsLong {
         Operand::new(operand_ptr, None, address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::AbsLong
+    fn disassembly(&self, extension_word: u32) -> String {
+        format!("({:08X})", extension_word)
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        2
     }
 }
 
@@ -263,7 +315,18 @@ impl AddressingMode for Immediate {
         Operand::new(operand_ptr, None, address, self.size)
     }
 
-    fn type_info(&self) -> AddressingModeType {
-        AddressingModeType::Immediate
+    fn disassembly(&self, extension_word: u32) -> String {
+        match self.size {
+            Size::Byte | Size::Word => format!("#{:04x}", extension_word),
+            Size::Long => format!("#{:08x}", extension_word),
+        }
+    }
+
+    fn extension_word_length(&self) -> u32 {
+        match self.size {
+            Size::Byte => 1,
+            Size::Word => 1,
+            Size::Long => 2,
+        }
     }
 }

@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use crate::SignExtending;
-
 pub(crate) mod address_reg;
 pub(crate) mod data_reg;
 pub(crate) mod memory;

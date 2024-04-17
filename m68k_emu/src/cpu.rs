@@ -49,6 +49,9 @@ where
         // it is needed because when an instruction will execute, it needs the mutable reference to self
         let operation_set = self.operation_set.as_ptr();
         let operation = unsafe { &*operation_set.offset(opcode as isize) };
+
+        let operation_ptr = MemoryPtr::new(self.bus.set_address(opcode_address));
+        println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.internals.cycles = operation.cycles;
 
         let mut operands = OperandSet::new();
@@ -56,7 +59,6 @@ where
             operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
-        println!("{:08X}: {:04X} {}", opcode_address, opcode, instruction);
         instruction.execute(operands, &mut self.internals);
         if let Some(vector) = self.internals.trap {
             if vector == RESET_SP {
