@@ -70,9 +70,11 @@ fn generate_rod_data_reg(table: &mut [Operation]) {
                         };
                         let src_am = Box::new(DataRegister {
                             reg: data_reg_x_idx,
+                            size: Size::Long,
                         });
                         let dst_am = Box::new(DataRegister {
                             reg: data_reg_y_idx,
+                            size,
                         });
 
                         let opcode = base_mask | (data_reg_x_idx << 9) | data_reg_y_idx;
@@ -144,7 +146,10 @@ fn generate_rod_implied(table: &mut [Operation]) {
                             base_mask = rod.generate_mask();
                             instruction = rod;
                         };
-                        let am = Box::new(DataRegister { reg: data_reg_idx });
+                        let am = Box::new(DataRegister {
+                            reg: data_reg_idx,
+                            size,
+                        });
 
                         let opcode = base_mask | data_reg_idx;
 

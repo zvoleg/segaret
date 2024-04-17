@@ -65,7 +65,10 @@ fn generate_add_mem_to_reg(table: &mut [Operation]) {
                     };
                     let instruction = Box::new(ADD { size: size });
                     let src_am = am_type.addressing_mode_by_type(idx, size);
-                    let dst_am = Box::new(DataRegister { reg: data_reg_idx });
+                    let dst_am = Box::new(DataRegister {
+                        reg: data_reg_idx,
+                        size,
+                    });
 
                     let base_mask = instruction.generate_mask();
                     let opcode = base_mask
@@ -109,7 +112,10 @@ fn generate_add_reg_to_mem(table: &mut [Operation]) {
             for am_type in am_types {
                 for idx in range!(am_type) {
                     let instruction = Box::new(ADD { size: size });
-                    let src_am = Box::new(DataRegister { reg: data_reg_idx });
+                    let src_am = Box::new(DataRegister {
+                        reg: data_reg_idx,
+                        size,
+                    });
                     let dst_am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
@@ -168,6 +174,7 @@ fn generate_adda(table: &mut [Operation]) {
                     let src_am = am_type.addressing_mode_by_type(idx, size);
                     let dst_am = Box::new(AddressRegister {
                         reg: address_reg_idx,
+                        size,
                     });
 
                     let base_mask = instruction.generate_mask();
@@ -336,8 +343,8 @@ fn generate_addx(table: &mut [Operation]) {
                     let dst_am: Box<dyn AddressingMode>;
                     match mode {
                         RegisterFieldMode::DataRegister => {
-                            src_am = Box::new(DataRegister { reg: reg_y });
-                            dst_am = Box::new(DataRegister { reg: reg_x });
+                            src_am = Box::new(DataRegister { reg: reg_y, size });
+                            dst_am = Box::new(DataRegister { reg: reg_x, size });
                         }
                         RegisterFieldMode::PreDecrement => {
                             src_am = Box::new(AddressRegisterPreDecrement {

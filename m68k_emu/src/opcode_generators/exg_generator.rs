@@ -2,6 +2,7 @@ use crate::{
     addressing_mode_set::{AddressRegister, AddressingMode, DataRegister},
     instruction_set::{data_movement::EXG, ExchangeMode},
     operation::Operation,
+    primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;
@@ -27,16 +28,34 @@ pub(crate) fn generate(table: &mut [Operation]) {
                 let dst_am: Box<dyn AddressingMode>;
                 match mode {
                     ExchangeMode::DataToData => {
-                        src_am = Box::new(DataRegister { reg: reg_x });
-                        dst_am = Box::new(DataRegister { reg: reg_y });
+                        src_am = Box::new(DataRegister {
+                            reg: reg_x,
+                            size: Size::Long,
+                        });
+                        dst_am = Box::new(DataRegister {
+                            reg: reg_y,
+                            size: Size::Long,
+                        });
                     }
                     ExchangeMode::AddressToAddress => {
-                        src_am = Box::new(AddressRegister { reg: reg_x });
-                        dst_am = Box::new(AddressRegister { reg: reg_y });
+                        src_am = Box::new(AddressRegister {
+                            reg: reg_x,
+                            size: Size::Long,
+                        });
+                        dst_am = Box::new(AddressRegister {
+                            reg: reg_y,
+                            size: Size::Long,
+                        });
                     }
                     ExchangeMode::DataToAddress => {
-                        src_am = Box::new(DataRegister { reg: reg_x });
-                        dst_am = Box::new(AddressRegister { reg: reg_y });
+                        src_am = Box::new(DataRegister {
+                            reg: reg_x,
+                            size: Size::Long,
+                        });
+                        dst_am = Box::new(AddressRegister {
+                            reg: reg_y,
+                            size: Size::Long,
+                        });
                     }
                 }
 

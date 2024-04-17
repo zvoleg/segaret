@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     addressing_mode_set::AddressingModeType,
     cpu_internals::{CpuInternals, RegisterType},
@@ -14,12 +16,18 @@ pub(crate) struct MOVE {
     pub(crate) size: Size,
 }
 
+impl Display for MOVE {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MOVE.{}", self.size)
+    }
+}
+
 impl Instruction for MOVE {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let src_operand = operand_set.next();
-        let src_data = src_operand.read(self.size);
+        let src_data = src_operand.read();
         let dst_operand = operand_set.next();
-        dst_operand.write(src_data, self.size);
+        dst_operand.write(src_data);
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, src_data.is_negate(self.size));
@@ -33,10 +41,16 @@ pub(crate) struct MOVEA {
     pub(crate) size: Size,
 }
 
+impl Display for MOVEA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MOVEA.{}", self.size)
+    }
+}
+
 impl Instruction for MOVEA {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
-        let src_data = operand_set.next().read(self.size);
-        operand_set.next().write(src_data, self.size);
+        let src_data = operand_set.next().read();
+        operand_set.next().write(src_data);
     }
 }
 
@@ -51,12 +65,18 @@ pub(crate) struct MOVEM {
     pub(crate) size: Size,
     pub(crate) direction: MoveDirection,
     pub(crate) addressing_mode_type: AddressingModeType,
-    pub(crate) am_register_idx: isize, // needs to determine writes into the sorce register of adressing mode
+    pub(crate) am_register_idx: isize, // needs to determine the writes into the source register of addressing mode
+}
+
+impl Display for MOVEM {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MOVEM.{}", self.size)
+    }
 }
 
 impl Instruction for MOVEM {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        let extension_word = operand_set.next().read(Size::Word);
+        let extension_word = operand_set.next().read();
         let affected_register_offsets =
             self.collect_affected_register_offsets(extension_word as u16);
 
@@ -190,11 +210,17 @@ pub(crate) struct MOVEP {
     pub(crate) direction: MoveDirection,
 }
 
+impl Display for MOVEP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MOVEP.{}", self.size)
+    }
+}
+
 impl Instruction for MOVEP {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read(self.size);
+        let src_data = src_operand.read();
         let iterations = self.size as isize;
         match self.direction {
             MoveDirection::RegisterToMemory => {
@@ -221,6 +247,12 @@ pub(crate) struct MOVEQ {
     pub(crate) data: u32,
 }
 
+impl Display for MOVEQ {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "MOVEQ #{:02X}", self.data)
+    }
+}
+
 impl Instruction for MOVEQ {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data = self.data.sign_extend(Size::Byte);
@@ -243,36 +275,60 @@ pub(crate) struct EXG {
     pub(crate) mode: ExchangeMode,
 }
 
+impl Display for EXG {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EXG.{}", Size::Long)
+    }
+}
+
 impl Instruction for EXG {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let first_operand = operand_set.next();
         let second_operand = operand_set.next();
-        let first_data = first_operand.read(Size::Long);
-        let second_data = second_operand.read(Size::Long);
-        first_operand.write(second_data, Size::Long);
-        second_operand.write(first_data, Size::Long);
+        let first_data = first_operand.read();
+        let second_data = second_operand.read();
+        first_operand.write(second_data);
+        second_operand.write(first_data);
     }
 }
 
 pub(crate) struct LEA();
 
+impl Display for LEA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LEA")
+    }
+}
+
 impl Instruction for LEA {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let address = operand_set.next().operand_address;
         let dst_reg = operand_set.next();
-        dst_reg.write(address, Size::Long);
+        dst_reg.write(address);
     }
 }
 pub(crate) struct PEA();
+
+impl Display for PEA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PEA")
+    }
+}
 
 impl Instruction for PEA {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         let address = operand_set.next().operand_address;
         let dst_operand = operand_set.next();
-        dst_operand.write(address, Size::Long);
+        dst_operand.write(address);
     }
 }
 pub(crate) struct LINK();
+
+impl Display for LINK {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LINK")
+    }
+}
 
 impl Instruction for LINK {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
@@ -281,13 +337,13 @@ impl Instruction for LINK {
         let address_register_ptr = operand_set.next();
         let displacement_ptr = operand_set.next();
 
-        let address = address_register_ptr.read(Size::Long);
-        stack_ptr.write(address, Size::Long);
+        let address = address_register_ptr.read();
+        stack_ptr.write(address);
 
         let stack_address = stack_ptr.operand_address;
-        address_register_ptr.write(stack_address, Size::Long);
+        address_register_ptr.write(stack_address);
 
-        let displacement = displacement_ptr.read(Size::Word).sign_extend(Size::Word);
+        let displacement = displacement_ptr.read().sign_extend(Size::Word);
         stack_ptr
             .address_register_ptr
             .unwrap()
@@ -296,13 +352,19 @@ impl Instruction for LINK {
 }
 pub(crate) struct UNLK();
 
+impl Display for UNLK {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UNLK")
+    }
+}
+
 impl Instruction for UNLK {
     fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
         // An → SP; (SP) → An; SP + 4 → SP
         let address_register_ptr = operand_set.next();
         let stack_ptr = operand_set.next();
 
-        let new_stack_address = address_register_ptr.read(Size::Long);
+        let new_stack_address = address_register_ptr.read();
         stack_ptr
             .address_register_ptr
             .unwrap()
@@ -314,13 +376,14 @@ impl Instruction for UNLK {
         let data = stack_ptr
             .operand_ptr
             .read_offset(Size::Long, memory_offset as isize);
-        address_register_ptr.write(data, Size::Long);
+        address_register_ptr.write(data);
     }
 }
 
 #[cfg(test)]
 mod test {
     use crate::{
+        addressing_mode_set::AddressingModeType,
         cpu_internals::{CpuInternals, RegisterType},
         instruction_set::Instruction,
         operand::{Operand, OperandSet},
@@ -353,6 +416,8 @@ mod test {
             stack_ptr,
             Some(stack_register_ptr),
             stack_address,
+            Size::Long,
+            AddressingModeType::AddressRegisterPreDecrement,
         ));
 
         // setup address register ptr which holds a value that will be pushed on to the stack
@@ -364,6 +429,8 @@ mod test {
             address_reg_ptr,
             None,
             ADDRESS_REGISTER_IDX as u32,
+            Size::Long,
+            AddressingModeType::AddressRegister,
         ));
 
         // and offset value
@@ -374,7 +441,13 @@ mod test {
         let memory_ptr = Box::new(MemoryPtr::new(
             &mut memory[OFFSET_ADDRESS] as *mut _ as *mut u8,
         ));
-        operand_set.add(Operand::new(memory_ptr, None, 0));
+        operand_set.add(Operand::new(
+            memory_ptr,
+            None,
+            0,
+            Size::Long,
+            AddressingModeType::AddressRegisterIndexed,
+        ));
 
         operand_set
     }
@@ -390,6 +463,8 @@ mod test {
             address_reg_ptr,
             None,
             ADDRESS_REGISTER_IDX as u32,
+            Size::Long,
+            AddressingModeType::AddressRegister,
         ));
 
         // setup stack ptr.
@@ -404,6 +479,8 @@ mod test {
             stack_ptr,
             Some(stack_register_ptr),
             stack_address,
+            Size::Long,
+            AddressingModeType::AddressRegisterPreDecrement,
         ));
 
         operand_set

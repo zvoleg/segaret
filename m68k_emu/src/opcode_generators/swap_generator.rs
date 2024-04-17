@@ -1,6 +1,6 @@
 use crate::{
     addressing_mode_set::DataRegister, instruction_set::shift_and_rotate::SWAP,
-    operation::Operation,
+    operation::Operation, primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;
@@ -14,7 +14,10 @@ impl OpcodeMaskGenerator for SWAP {
 pub(crate) fn generate(table: &mut [Operation]) {
     for data_reg in 0..8 {
         let instruction = Box::new(SWAP());
-        let am = Box::new(DataRegister { reg: data_reg });
+        let am = Box::new(DataRegister {
+            reg: data_reg,
+            size: Size::Long,
+        });
 
         let base_mask = instruction.generate_mask();
         let opcode = base_mask | data_reg;

@@ -63,36 +63,30 @@ trait OpcodeMaskGenerator {
 impl AddressingModeType {
     fn addressing_mode_by_type(&self, reg_idx: usize, size: Size) -> Box<dyn AddressingMode> {
         match self {
-            AddressingModeType::DataRegister => Box::new(DataRegister { reg: reg_idx }),
-            AddressingModeType::AddressRegister => Box::new(AddressRegister { reg: reg_idx }),
+            AddressingModeType::DataRegister => Box::new(DataRegister { reg: reg_idx, size }),
+            AddressingModeType::AddressRegister => Box::new(AddressRegister { reg: reg_idx, size }),
             AddressingModeType::AddressRegisterIndirect => {
-                Box::new(AddressRegisterIndirect { reg: reg_idx })
+                Box::new(AddressRegisterIndirect { reg: reg_idx, size })
             }
             AddressingModeType::AddressRegisterPostIncrement => {
-                Box::new(AddressRegisterPostIncrement {
-                    reg: reg_idx,
-                    size: size,
-                })
+                Box::new(AddressRegisterPostIncrement { reg: reg_idx, size })
             }
             AddressingModeType::AddressRegisterPreDecrement => {
-                Box::new(AddressRegisterPreDecrement {
-                    reg: reg_idx,
-                    size: size,
-                })
+                Box::new(AddressRegisterPreDecrement { reg: reg_idx, size })
             }
             AddressingModeType::AddressRegisterDisplacement => {
-                Box::new(AddressRegisterDisplacement { reg: reg_idx })
+                Box::new(AddressRegisterDisplacement { reg: reg_idx, size })
             }
             AddressingModeType::AddressRegisterIndexed => {
-                Box::new(AddressRegisterIndexed { reg: reg_idx })
+                Box::new(AddressRegisterIndexed { reg: reg_idx, size })
             }
             AddressingModeType::ProgramCounterDisplacement => {
-                Box::new(ProgramCounterDisplacement())
+                Box::new(ProgramCounterDisplacement { size })
             }
-            AddressingModeType::ProgramCounterIndexed => Box::new(ProgramCounterIndexed()),
-            AddressingModeType::AbsShort => Box::new(AbsShort()),
-            AddressingModeType::AbsLong => Box::new(AbsLong()),
-            AddressingModeType::Immediate => Box::new(Immediate { size: size }),
+            AddressingModeType::ProgramCounterIndexed => Box::new(ProgramCounterIndexed { size }),
+            AddressingModeType::AbsShort => Box::new(AbsShort { size }),
+            AddressingModeType::AbsLong => Box::new(AbsLong { size }),
+            AddressingModeType::Immediate => Box::new(Immediate { size }),
         }
     }
 

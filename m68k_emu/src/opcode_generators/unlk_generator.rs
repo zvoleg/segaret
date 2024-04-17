@@ -19,6 +19,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
         let instruction = Box::new(UNLK());
         let register_am = Box::new(AddressRegister {
             reg: address_reg_idx,
+            size: Size::Long,
         });
         let stack_am = Box::new(AddressRegisterPostIncrement {
             reg: STACK_REGISTER,

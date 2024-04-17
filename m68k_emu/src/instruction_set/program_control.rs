@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
     primitives::Size, status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero,
@@ -10,9 +12,15 @@ pub(crate) struct TST {
     pub(crate) size: Size,
 }
 
+impl Display for TST {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TST.{}", self.size)
+    }
+}
+
 impl Instruction for TST {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        let data = operand_set.next().read(self.size);
+        let data = operand_set.next().read();
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, data.is_zero(self.size));
@@ -26,10 +34,20 @@ pub(crate) struct Bcc {
     pub(crate) displacement: u32,
 }
 
+impl Display for Bcc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.displacement == 0 {
+            write!(f, "B{}", self.condition)
+        } else {
+            write!(f, "B{} #{:02X}", self.condition, self.displacement)
+        }
+    }
+}
+
 impl Instruction for Bcc {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read(Size::Word).sign_extend(Size::Word)
+            operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
@@ -47,18 +65,24 @@ pub(crate) struct DBcc {
     pub(crate) condition: Condition,
 }
 
+impl Display for DBcc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DB{}", self.condition)
+    }
+}
+
 impl Instruction for DBcc {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data_reg_operand = operand_set.next();
         let displacement_operand = operand_set.next();
         let displacement = displacement_operand
-            .read(Size::Word)
+            .read()
             .sign_extend(Size::Word);
 
         if !check_condition(self.condition, &cpu_internals.register_set.sr) {
-            let mut counter = data_reg_operand.read(Size::Word);
+            let mut counter = data_reg_operand.read();
             counter = counter.wrapping_sub(1);
-            data_reg_operand.write(counter, Size::Word);
+            data_reg_operand.write(counter);
             if counter != 0xFFFF {
                 // -1
                 let pc = &mut cpu_internals.register_set.pc;
@@ -76,12 +100,18 @@ pub(crate) struct Scc {
     pub(crate) condition: Condition,
 }
 
+impl Display for Scc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "S{}", self.condition)
+    }
+}
+
 impl Instruction for Scc {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
         let condition = check_condition(self.condition, &cpu_internals.register_set.sr);
         let result = if condition { 0xFF } else { 0x00 };
-        operand.write(result, Size::Byte);
+        operand.write(result);
     }
 }
 
@@ -89,10 +119,20 @@ pub(crate) struct BRA {
     pub(crate) displacement: u32,
 }
 
+impl Display for BRA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.displacement == 0 {
+            write!(f, "BRA")
+        } else {
+            write!(f, "BRA #{:02X}", self.displacement)
+        }
+    }
+}
+
 impl Instruction for BRA {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read(Size::Word).sign_extend(Size::Word)
+            operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
@@ -106,22 +146,38 @@ pub(crate) struct BSR {
     pub(crate) displacement: u32,
 }
 
+impl Display for BSR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.displacement == 0 {
+            write!(f, "BSR")
+        } else {
+            write!(f, "BSR #{:02X}", self.displacement)
+        }
+    }
+}
+
 impl Instruction for BSR {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read(Size::Word).sign_extend(Size::Word)
+            operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
         let stack_operand = operand_set.next();
 
         let pc = &mut cpu_internals.register_set.pc;
-        stack_operand.write(*pc, Size::Long);
+        stack_operand.write(*pc);
         *pc = pc.wrapping_add(displacement);
     }
 }
 
 pub(crate) struct JMP();
+
+impl Display for JMP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "JMP")
+    }
+}
 
 impl Instruction for JMP {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
@@ -132,18 +188,30 @@ impl Instruction for JMP {
 
 pub(crate) struct JSR();
 
+impl Display for JSR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "JSR")
+    }
+}
+
 impl Instruction for JSR {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_operand = operand_set.next();
         let operand = operand_set.next();
 
         let pc = &mut cpu_internals.register_set.pc;
-        stack_operand.write(*pc, Size::Long);
+        stack_operand.write(*pc);
         *pc = operand.operand_address;
     }
 }
 
 pub(crate) struct NOP();
+
+impl Display for NOP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NOP")
+    }
+}
 
 impl Instruction for NOP {
     fn execute(&self, _: OperandSet, _: &mut CpuInternals) {}
@@ -151,26 +219,38 @@ impl Instruction for NOP {
 
 pub(crate) struct RTR();
 
+impl Display for RTR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RTR")
+    }
+}
+
 impl Instruction for RTR {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_ccr_operand = operand_set.next();
         let stack_pc_operand = operand_set.next();
 
-        let ccr = stack_ccr_operand.read(Size::Byte);
+        let ccr = stack_ccr_operand.read();
         cpu_internals.register_set.sr.set_ccr(ccr);
 
-        let pc = stack_pc_operand.read(Size::Long);
+        let pc = stack_pc_operand.read();
         cpu_internals.register_set.pc = pc;
     }
 }
 
 pub(crate) struct RTS();
 
+impl Display for RTS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RTS")
+    }
+}
+
 impl Instruction for RTS {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let stack_pc_operand = operand_set.next();
 
-        let pc = stack_pc_operand.read(Size::Long);
+        let pc = stack_pc_operand.read();
         cpu_internals.register_set.pc = pc;
     }
 }

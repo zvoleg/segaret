@@ -39,7 +39,10 @@ fn generate_divs(table: &mut [Operation]) {
             for idx in range!(am_type) {
                 let instruction = Box::new(DIVS());
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Word);
-                let dst_am = Box::new(DataRegister { reg: data_reg_idx });
+                let dst_am = Box::new(DataRegister {
+                    reg: data_reg_idx,
+                    size: Size::Word,
+                });
 
                 let base_mask = instruction.generate_mask();
                 let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);
@@ -79,7 +82,10 @@ fn generate_divu(table: &mut [Operation]) {
             for idx in range!(am_type) {
                 let instruction = Box::new(DIVU());
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Word);
-                let dst_am = Box::new(DataRegister { reg: data_reg_idx });
+                let dst_am = Box::new(DataRegister {
+                    reg: data_reg_idx,
+                    size: Size::Word,
+                });
 
                 let base_mask = instruction.generate_mask();
                 let opcode = base_mask | (data_reg_idx << 9) | am_type.generate_mask(idx);

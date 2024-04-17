@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::SignExtending;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -5,6 +7,16 @@ pub(crate) enum Size {
     Byte = 1,
     Word = 2,
     Long = 4,
+}
+
+impl Display for Size {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Size::Byte => write!(f, "b"),
+            Size::Word => write!(f, "w"),
+            Size::Long => write!(f, "l"),
+        }
+    }
 }
 
 pub(crate) trait Pointer {
@@ -101,11 +113,11 @@ impl MemoryPtr {
                     let mut data = *(ptr as *mut u16);
                     data = data.to_be();
                     data as u32
-                },
+                }
                 Size::Long => {
                     let data = *(ptr as *mut u32);
                     data.to_be()
-                },
+                }
             }
         }
     }

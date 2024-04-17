@@ -29,7 +29,10 @@ pub(crate) fn generate(table: &mut [Operation]) {
                 src_size: src_size,
                 target_size: size,
             });
-            let am = Box::new(DataRegister { reg: data_reg_idx });
+            let am = Box::new(DataRegister {
+                reg: data_reg_idx,
+                size,
+            });
 
             let base_mask = instruction.generate_mask();
             let opcode = base_mask | data_reg_idx;

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
     primitives::Size, status_flag::StatusFlag, IsNegate, IsZero,
@@ -7,15 +9,21 @@ pub(crate) struct AND {
     pub(crate) size: Size,
 }
 
+impl Display for AND {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AND.{}", self.size)
+    }
+}
+
 impl Instruction for AND {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read(self.size);
-        let dst_data = dst_operand.read(self.size);
+        let src_data = src_operand.read();
+        let dst_data = dst_operand.read();
 
         let result = src_data & dst_data;
-        dst_operand.write(result, self.size);
+        dst_operand.write(result);
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
@@ -24,8 +32,15 @@ impl Instruction for AND {
         sr.set_flag(StatusFlag::C, false);
     }
 }
+
 pub(crate) struct ANDI {
     pub(crate) size: Size,
+}
+
+impl Display for ANDI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ANDI.{}", self.size)
+    }
 }
 
 impl Instruction for ANDI {
@@ -38,15 +53,21 @@ pub(crate) struct EOR {
     pub(crate) size: Size,
 }
 
+impl Display for EOR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EOR.{}", self.size)
+    }
+}
+
 impl Instruction for EOR {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read(self.size);
-        let dst_data = dst_operand.read(self.size);
+        let src_data = src_operand.read();
+        let dst_data = dst_operand.read();
 
         let result = src_data ^ dst_data;
-        dst_operand.write(result, self.size);
+        dst_operand.write(result);
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
@@ -55,8 +76,15 @@ impl Instruction for EOR {
         sr.set_flag(StatusFlag::C, false);
     }
 }
+
 pub(crate) struct EORI {
     pub(crate) size: Size,
+}
+
+impl Display for EORI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EORI.{}", self.size)
+    }
 }
 
 impl Instruction for EORI {
@@ -69,15 +97,21 @@ pub(crate) struct OR {
     pub(crate) size: Size,
 }
 
+impl Display for OR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OR.{}", self.size)
+    }
+}
+
 impl Instruction for OR {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read(self.size);
-        let dst_data = dst_operand.read(self.size);
+        let src_data = src_operand.read();
+        let dst_data = dst_operand.read();
 
         let result = src_data | dst_data;
-        dst_operand.write(result, self.size);
+        dst_operand.write(result);
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
@@ -86,8 +120,15 @@ impl Instruction for OR {
         sr.set_flag(StatusFlag::C, false);
     }
 }
+
 pub(crate) struct ORI {
     pub(crate) size: Size,
+}
+
+impl Display for ORI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ORI.{}", self.size)
+    }
 }
 
 impl Instruction for ORI {
@@ -100,13 +141,19 @@ pub(crate) struct NOT {
     pub(crate) size: Size,
 }
 
+impl Display for NOT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NOT.{}", self.size)
+    }
+}
+
 impl Instruction for NOT {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
-        let data = operand.read(self.size);
+        let data = operand.read();
 
         let result = !data;
-        operand.write(result, self.size);
+        operand.write(result);
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));

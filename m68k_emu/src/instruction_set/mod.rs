@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::cpu_internals::CpuInternals;
 use crate::operand::OperandSet;
 
@@ -12,7 +14,7 @@ pub(crate) mod program_control;
 pub(crate) mod system_control;
 
 ///
-pub(crate) trait Instruction {
+pub(crate) trait Instruction: Display {
     fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals);
 }
 
@@ -22,6 +24,15 @@ pub(crate) trait Instruction {
 pub(crate) enum MoveDirection {
     RegisterToMemory = 0,
     MemoryToRegister = 1,
+}
+
+impl Display for MoveDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MoveDirection::RegisterToMemory => write!(f, "->"),
+            MoveDirection::MemoryToRegister => write!(f, "<-"),
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -49,6 +60,15 @@ pub(crate) enum ShiftDirection {
     Left = 1,
 }
 
+impl Display for ShiftDirection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ShiftDirection::Right => write!(f, "R"),
+            ShiftDirection::Left => write!(f, "L"),
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) enum Condition {
     TRUE = 0b0000,
@@ -67,4 +87,27 @@ pub(crate) enum Condition {
     LT = 0b1101,
     GT = 0b1110,
     LE = 0b1111,
+}
+
+impl Display for Condition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Condition::TRUE => write!(f, "TRUE"),
+            Condition::FALSE => write!(f, "FALSE"),
+            Condition::HI => write!(f, "HI"),
+            Condition::LS => write!(f, "LS"),
+            Condition::CC => write!(f, "CC"),
+            Condition::CS => write!(f, "CS"),
+            Condition::NE => write!(f, "NE"),
+            Condition::EQ => write!(f, "EQ"),
+            Condition::VC => write!(f, "VC"),
+            Condition::VS => write!(f, "VS"),
+            Condition::PL => write!(f, "PL"),
+            Condition::MI => write!(f, "MI"),
+            Condition::GE => write!(f, "GE"),
+            Condition::LT => write!(f, "LT"),
+            Condition::GT => write!(f, "GT"),
+            Condition::LE => write!(f, "LE"),
+        }
+    }
 }

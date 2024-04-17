@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
     primitives::Size, status_flag::StatusFlag, IsNegate, IsZero,
@@ -5,10 +7,16 @@ use crate::{
 
 pub(crate) struct TAS();
 
+impl Display for TAS {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "TAS.{}", Size::Byte)
+    }
+}
+
 impl Instruction for TAS {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let operand = operand_set.next();
-        let data = operand.read(Size::Byte);
+        let data = operand.read();
 
         let sr = &mut cpu_internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Byte));
@@ -17,6 +25,6 @@ impl Instruction for TAS {
         sr.set_flag(StatusFlag::C, false);
 
         let result = data | 0x80;
-        operand.write(result, Size::Byte);
+        operand.write(result);
     }
 }

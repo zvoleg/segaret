@@ -42,6 +42,7 @@ where
     }
 
     pub fn clock(&mut self) {
+        let opcode_address = self.internals.register_set.pc;
         let opcode = self.fetch_opcode();
 
         // hack for ignoring the immutable reference to own field
@@ -55,6 +56,7 @@ where
             operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
+        println!("{:08X}: {:04X} {}", opcode_address, opcode, instruction);
         instruction.execute(operands, &mut self.internals);
         if let Some(vector) = self.internals.trap {
             if vector == RESET_SP {

@@ -32,6 +32,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Byte); // For the LEA instruction is not matter of the data size pointed by am
                 let dst_am = Box::new(AddressRegister {
                     reg: address_reg_idx,
+                    size: Size::Long,
                 });
 
                 let base_mask = instruction.generate_mask();

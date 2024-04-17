@@ -41,9 +41,11 @@ fn generate_lsd_data_reg(table: &mut [Operation]) {
                     });
                     let src_am = Box::new(DataRegister {
                         reg: data_reg_x_idx,
+                        size: Size::Long,
                     });
                     let dst_am = Box::new(DataRegister {
                         reg: data_reg_y_idx,
+                        size,
                     });
 
                     let base_mask = instruction.generate_mask();
@@ -86,7 +88,10 @@ fn generate_lsd_implied(table: &mut [Operation]) {
                         direction: direction,
                         count: count,
                     });
-                    let am = Box::new(DataRegister { reg: data_reg_idx });
+                    let am = Box::new(DataRegister {
+                        reg: data_reg_idx,
+                        size,
+                    });
 
                     let base_mask = instruction.generate_mask();
                     let opcode = base_mask | data_reg_idx;

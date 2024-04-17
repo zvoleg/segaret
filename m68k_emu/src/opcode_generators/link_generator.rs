@@ -23,6 +23,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
         });
         let register_am = Box::new(AddressRegister {
             reg: address_reg_idx,
+            size: Size::Long,
         });
         let immediate_am = Box::new(Immediate { size: Size::Word });
 

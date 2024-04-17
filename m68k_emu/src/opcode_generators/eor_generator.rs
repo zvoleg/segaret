@@ -47,7 +47,10 @@ fn generate_eor(table: &mut [Operation]) {
             for am_type in am_types {
                 for idx in range!(am_type) {
                     let instruction = Box::new(EOR { size: size });
-                    let src_am = Box::new(DataRegister { reg: data_reg_idx });
+                    let src_am = Box::new(DataRegister {
+                        reg: data_reg_idx,
+                        size,
+                    });
                     let dst_am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();

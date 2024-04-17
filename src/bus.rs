@@ -11,7 +11,7 @@ impl Bus {
     pub fn init(rom: Vec<u8>) -> Self {
         Self {
             rom: rom,
-            ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            ram: vec![0; 0x10000],     // $FF0000	$FFFFFF
             z80_ram: vec![0; 0x10000], // $A00000	$A0FFFF
             controllers: [0; 4],
         }
@@ -22,7 +22,7 @@ impl Bus {
     }
 
     pub fn z80_dump(&self) -> &[u8] {
-        &self.z80_ram   
+        &self.z80_ram
     }
 }
 
@@ -45,7 +45,7 @@ impl BusM68k for Bus {
         //     // }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            unsafe { 
+            unsafe {
                 let ram_ptr = self.ram.as_ptr().offset(address as isize);
                 ram_ptr as *const _ as *mut u8
             }

@@ -137,6 +137,7 @@ fn generate_movea(table: &mut [Operation]) {
                     let src_am = src_am_type.addressing_mode_by_type(src_idx, size);
                     let dst_am = Box::new(AddressRegister {
                         reg: address_reg_idx,
+                        size,
                     });
 
                     let base_mask = instruction.generate_mask();
@@ -167,7 +168,10 @@ fn generate_moveq(table: &mut [Operation]) {
             let instruction = Box::new(MOVEQ { data: data });
             let base_mask = instruction.generate_mask();
             let opcode = base_mask | reg << 9;
-            let dst_am = Box::new(DataRegister { reg: reg });
+            let dst_am = Box::new(DataRegister {
+                reg: reg,
+                size: Size::Long,
+            });
             let operation = Operation::new(instruction, vec![dst_am], 4);
             table[opcode] = operation;
         }
@@ -202,9 +206,12 @@ fn generate_movep(table: &mut [Operation]) {
                         size: size,
                         direction: direction,
                     });
-                    let data_register_am = Box::new(DataRegister { reg: data_reg });
+                    let data_register_am = Box::new(DataRegister {
+                        reg: data_reg,
+                        size,
+                    });
                     let address_indireact_am =
-                        Box::new(AddressRegisterDisplacement { reg: adr_reg });
+                        Box::new(AddressRegisterDisplacement { reg: adr_reg, size });
                     let am_list: Vec<Box<dyn AddressingMode>> = match direction {
                         MoveDirection::RegisterToMemory => {
                             vec![data_register_am, address_indireact_am]
@@ -370,7 +377,10 @@ fn generate_move_usp(table: &mut [Operation]) {
             let instruction = Box::new(MOVEUSP {
                 direction: direction,
             });
-            let am = Box::new(AddressRegister { reg: reg });
+            let am = Box::new(AddressRegister {
+                reg: reg,
+                size: Size::Long,
+            });
 
             let opcode = instruction.generate_mask() | reg;
 

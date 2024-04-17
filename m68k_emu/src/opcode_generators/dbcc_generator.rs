@@ -40,7 +40,10 @@ pub(crate) fn generate(table: &mut [Operation]) {
             let instruction = Box::new(DBcc {
                 condition: condition,
             });
-            let data_reg_am = Box::new(DataRegister { reg: data_reg_x });
+            let data_reg_am = Box::new(DataRegister {
+                reg: data_reg_x,
+                size: Size::Word,
+            });
             let displacement_am = Box::new(Immediate { size: Size::Word });
 
             let base_mask = instruction.generate_mask();
