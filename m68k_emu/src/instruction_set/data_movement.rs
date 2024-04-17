@@ -371,11 +371,9 @@ impl Instruction for UNLK {
             .write(new_stack_address + (Size::Long as u32), Size::Long); // update stack register value with posth incrementing
 
         // be cause an instruction doesn't have access to stack interface there is a bad decision about using writing into memory by offset
-        let memory_offset = (new_stack_address.wrapping_sub(stack_ptr.operand_address) as i32)
-            / (Size::Long as i32);
-        let data = stack_ptr
-            .operand_ptr
-            .read_offset(Size::Long, memory_offset as isize);
+        let memory_offset =
+            new_stack_address.wrapping_sub(stack_ptr.operand_address) as i32 as isize; // without casting to the i32 type an isize value is not negative
+        let data = stack_ptr.operand_ptr.read_offset(Size::Long, memory_offset);
         address_register_ptr.write(data);
     }
 }
@@ -383,11 +381,10 @@ impl Instruction for UNLK {
 #[cfg(test)]
 mod test {
     use crate::{
-        addressing_mode_set::AddressingModeType,
         cpu_internals::{CpuInternals, RegisterType},
         instruction_set::Instruction,
         operand::{Operand, OperandSet},
-        primitives::{MemoryPtr, Size},
+        primitives::{memory::MemoryPtr, Pointer, Size},
         STACK_REGISTER,
     };
 
@@ -417,7 +414,6 @@ mod test {
             Some(stack_register_ptr),
             stack_address,
             Size::Long,
-            AddressingModeType::AddressRegisterPreDecrement,
         ));
 
         // setup address register ptr which holds a value that will be pushed on to the stack
@@ -430,24 +426,13 @@ mod test {
             None,
             ADDRESS_REGISTER_IDX as u32,
             Size::Long,
-            AddressingModeType::AddressRegister,
         ));
 
         // and offset value
         // it just value in some place of memory
-        unsafe {
-            *(&mut memory[OFFSET_ADDRESS] as *mut _ as *mut u32) = OFFSET_VALUE;
-        }
-        let memory_ptr = Box::new(MemoryPtr::new(
-            &mut memory[OFFSET_ADDRESS] as *mut _ as *mut u8,
-        ));
-        operand_set.add(Operand::new(
-            memory_ptr,
-            None,
-            0,
-            Size::Long,
-            AddressingModeType::AddressRegisterIndexed,
-        ));
+        let offset_ptr = MemoryPtr::new_boxed(&mut memory[OFFSET_ADDRESS]);
+        offset_ptr.write(OFFSET_VALUE, Size::Word);
+        operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
 
         operand_set
     }
@@ -464,7 +449,6 @@ mod test {
             None,
             ADDRESS_REGISTER_IDX as u32,
             Size::Long,
-            AddressingModeType::AddressRegister,
         ));
 
         // setup stack ptr.
@@ -474,13 +458,12 @@ mod test {
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = stack_register_ptr.read(Size::Long);
-        let stack_ptr = Box::new(MemoryPtr::new(&mut memory[stack_address as usize]));
+        let stack_ptr = MemoryPtr::new_boxed(&mut memory[stack_address as usize]);
         operand_set.add(Operand::new(
             stack_ptr,
             Some(stack_register_ptr),
             stack_address,
             Size::Long,
-            AddressingModeType::AddressRegisterPreDecrement,
         ));
 
         operand_set
@@ -495,24 +478,20 @@ mod test {
         link.execute(link_operand_set, &mut cpu);
 
         let decremented_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32);
-        unsafe {
-            assert_eq!(
-                *(&memory[decremented_stack_address as usize] as *const _ as *const u32),
-                ADDRESS_REGISTER_VALUE
-            );
-            assert_eq!(
-                cpu.register_set
-                    .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
-                    .read(Size::Long),
-                decremented_stack_address
-            );
-            assert_eq!(
-                cpu.register_set
-                    .get_register_ptr(STACK_REGISTER, RegisterType::Address)
-                    .read(Size::Long),
-                decremented_stack_address + OFFSET_VALUE
-            )
-        }
+        let mem_ptr = MemoryPtr::new(&mut memory[decremented_stack_address as usize]);
+        assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
+        assert_eq!(
+            cpu.register_set
+                .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
+                .read(Size::Long),
+            decremented_stack_address
+        );
+        assert_eq!(
+            cpu.register_set
+                .get_register_ptr(STACK_REGISTER, RegisterType::Address)
+                .read(Size::Long),
+            decremented_stack_address + OFFSET_VALUE
+        )
     }
 
     #[test]

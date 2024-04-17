@@ -75,15 +75,13 @@ impl Instruction for DBcc {
     fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
         let data_reg_operand = operand_set.next();
         let displacement_operand = operand_set.next();
-        let displacement = displacement_operand
-            .read()
-            .sign_extend(Size::Word);
+        let displacement = displacement_operand.read().sign_extend(Size::Word);
 
         if !check_condition(self.condition, &cpu_internals.register_set.sr) {
             let mut counter = data_reg_operand.read();
             counter = counter.wrapping_sub(1);
             data_reg_operand.write(counter);
-            if counter != 0xFFFF {
+            if counter != 0xFFFFFFFF {
                 // -1
                 let pc = &mut cpu_internals.register_set.pc;
                 *pc = pc.wrapping_add(displacement);

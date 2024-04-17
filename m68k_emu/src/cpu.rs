@@ -6,7 +6,7 @@ use crate::{
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
-    primitives::{MemoryPtr, Pointer, Size},
+    primitives::{memory::MemoryPtr, Pointer, Size},
     vectors::{RESET_PC, RESET_SP},
     STACK_REGISTER,
 };

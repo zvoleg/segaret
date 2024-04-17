@@ -1,6 +1,6 @@
-use std::{collections::VecDeque, fmt::Display};
+use std::collections::VecDeque;
 
-use crate::{addressing_mode_set::AddressingModeType, primitives::Pointer, Size};
+use crate::{primitives::Pointer, Size};
 
 /// The Operand is representation of data which handled by an instruction
 ///
@@ -14,35 +14,6 @@ pub(crate) struct Operand {
     pub(crate) address_register_ptr: Option<Box<dyn Pointer>>,
     pub(crate) operand_address: u32,
     size: Size,
-    addressing_mode_type: AddressingModeType,
-}
-
-impl Display for Operand {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self.addressing_mode_type {
-            AddressingModeType::DataRegister => format!("D{}", self.operand_address),
-            AddressingModeType::AddressRegister => format!("A{}", self.operand_address),
-            AddressingModeType::AddressRegisterIndirect => format!("(A{})", self.operand_address),
-            AddressingModeType::AddressRegisterPostIncrement => {
-                format!("(A{})+", self.operand_address)
-            }
-            AddressingModeType::AddressRegisterPreDecrement => {
-                format!("-(A{})", self.operand_address)
-            }
-            AddressingModeType::AddressRegisterDisplacement => {
-                let address = self.address_register_ptr.as_ref().unwrap().read(Size::Long);
-                let displacement = self.operand_address.wrapping_sub(address);
-                format!("({:04X}, A)", displacement)
-            },
-            AddressingModeType::AddressRegisterIndexed => todo!(),
-            AddressingModeType::ProgramCounterDisplacement => todo!(),
-            AddressingModeType::ProgramCounterIndexed => todo!(),
-            AddressingModeType::AbsShort => format!("{:04X}", self.operand_address),
-            AddressingModeType::AbsLong => format!("{:08X}", self.operand_address),
-            AddressingModeType::Immediate => format!("{:08X}", self.operand_ptr.read(self.size)),
-        };
-        write!(f, "{}", s)
-    }
 }
 
 impl Operand {
@@ -51,14 +22,12 @@ impl Operand {
         address_register_ptr: Option<Box<dyn Pointer>>,
         operand_address: u32,
         size: Size,
-        addressing_mode_type: AddressingModeType,
     ) -> Self {
         Self {
             operand_ptr,
             address_register_ptr,
             operand_address,
             size,
-            addressing_mode_type,
         }
     }
 

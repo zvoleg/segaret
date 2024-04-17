@@ -3,7 +3,7 @@ use crate::{
     cpu_internals::{RegisterSet, RegisterType},
     extension_word::BriefExtensionWord,
     operand::Operand,
-    primitives::{MemoryPtr, Pointer},
+    primitives::{memory::MemoryPtr, Pointer},
     SignExtending, Size,
 };
 
@@ -36,13 +36,7 @@ pub(crate) struct DataRegister {
 impl AddressingMode for DataRegister {
     fn get_operand(&self, rs: &mut RegisterSet, _: &dyn BusM68k) -> Operand {
         let operand_ptr = rs.get_register_ptr(self.reg, RegisterType::Data);
-        Operand::new(
-            operand_ptr,
-            None,
-            self.reg as u32,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, None, self.reg as u32, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -58,13 +52,7 @@ pub(crate) struct AddressRegister {
 impl AddressingMode for AddressRegister {
     fn get_operand(&self, rs: &mut RegisterSet, _: &dyn BusM68k) -> Operand {
         let operand_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
-        Operand::new(
-            operand_ptr,
-            None,
-            self.reg as u32,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, None, self.reg as u32, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -82,13 +70,7 @@ impl AddressingMode for AddressRegisterIndirect {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(
-            operand_ptr,
-            Some(address_register_ptr),
-            address,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -107,13 +89,7 @@ impl AddressingMode for AddressRegisterPostIncrement {
         let address = address_register_ptr.read(Size::Long);
         address_register_ptr.write(address.wrapping_add(self.size as u32), Size::Long);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(
-            operand_ptr,
-            Some(address_register_ptr),
-            address,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -133,13 +109,7 @@ impl AddressingMode for AddressRegisterPreDecrement {
         address = address.wrapping_sub(self.size as u32);
         address_register_ptr.write(address, Size::Long);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(
-            operand_ptr,
-            Some(address_register_ptr),
-            address,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -160,13 +130,7 @@ impl AddressingMode for AddressRegisterDisplacement {
         let base_address = address_register_ptr.read(Size::Long);
         let address = base_address.wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(
-            operand_ptr,
-            Some(address_register_ptr),
-            address,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -194,13 +158,7 @@ impl AddressingMode for AddressRegisterIndexed {
         let mut address = address_register_ptr.read(Size::Long);
         address = address.wrapping_add(index_data).wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(
-            operand_ptr,
-            Some(address_register_ptr),
-            address,
-            self.size,
-            self.type_info(),
-        )
+        Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -219,7 +177,7 @@ impl AddressingMode for ProgramCounterDisplacement {
         let base_address = rs.pc;
         let address = base_address.wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(operand_ptr, None, address, self.size, self.type_info())
+        Operand::new(operand_ptr, None, address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -245,7 +203,7 @@ impl AddressingMode for ProgramCounterIndexed {
         let mut address = rs.pc;
         address = address.wrapping_add(index_data).wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(operand_ptr, None, address, self.size, self.type_info())
+        Operand::new(operand_ptr, None, address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -262,7 +220,7 @@ impl AddressingMode for AbsShort {
         let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
         let address = extension_word_ptr.read(Size::Word).sign_extend(Size::Word);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(operand_ptr, None, address, self.size, self.type_info())
+        Operand::new(operand_ptr, None, address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -282,7 +240,7 @@ impl AddressingMode for AbsLong {
         let address_low = extension_word_ptr.read(Size::Word);
         let address = (address_high << 0x10) | address_low;
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
-        Operand::new(operand_ptr, None, address, self.size, self.type_info())
+        Operand::new(operand_ptr, None, address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {
@@ -302,7 +260,7 @@ impl AddressingMode for Immediate {
             Size::Long => rs.get_and_increment_pc(),
             _ => 0,
         };
-        Operand::new(operand_ptr, None, address, self.size, self.type_info())
+        Operand::new(operand_ptr, None, address, self.size)
     }
 
     fn type_info(&self) -> AddressingModeType {

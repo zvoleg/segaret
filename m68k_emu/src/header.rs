@@ -1,4 +1,4 @@
-use crate::primitives::{MemoryPtr, Pointer, Size};
+use crate::primitives::{memory::MemoryPtr, Pointer, Size};
 
 pub(crate) struct Header {
     header_ptr: MemoryPtr,

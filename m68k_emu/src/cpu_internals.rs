@@ -1,5 +1,5 @@
 use crate::{
-    primitives::{AddressRegisterPtr, DataRegisterPtr, Pointer},
+    primitives::{address_reg::AddressRegisterPtr, data_reg::DataRegisterPtr, Pointer},
     status_register::StatusRegister,
 };
 
@@ -35,12 +35,10 @@ impl RegisterSet {
         register_type: RegisterType,
     ) -> Box<dyn Pointer> {
         match register_type {
-            RegisterType::Address => AddressRegisterPtr::new_boxed(
-                &mut self.registers[register_index + 8] as *mut _ as *mut u8,
-            ),
-            RegisterType::Data => {
-                DataRegisterPtr::new_boxed(&mut self.registers[register_index] as *mut _ as *mut u8)
+            RegisterType::Address => {
+                AddressRegisterPtr::new_boxed(&mut self.registers[register_index + 8])
             }
+            RegisterType::Data => DataRegisterPtr::new_boxed(&mut self.registers[register_index]),
         }
     }
 }
