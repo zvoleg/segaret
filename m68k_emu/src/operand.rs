@@ -29,7 +29,11 @@ impl Display for Operand {
             AddressingModeType::AddressRegisterPreDecrement => {
                 format!("-(A{})", self.operand_address)
             }
-            AddressingModeType::AddressRegisterDisplacement => todo!(),
+            AddressingModeType::AddressRegisterDisplacement => {
+                let address = self.address_register_ptr.as_ref().unwrap().read(Size::Long);
+                let displacement = self.operand_address.wrapping_sub(address);
+                format!("({:04X}, A)", displacement)
+            },
             AddressingModeType::AddressRegisterIndexed => todo!(),
             AddressingModeType::ProgramCounterDisplacement => todo!(),
             AddressingModeType::ProgramCounterIndexed => todo!(),
