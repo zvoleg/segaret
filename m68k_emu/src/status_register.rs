@@ -36,7 +36,7 @@ impl StatusRegister {
         self.reg = data as u16;
     }
 
-    pub(crate) fn get_sr(&mut self) -> u16 {
+    pub(crate) fn get_sr(&self) -> u16 {
         self.reg
     }
 

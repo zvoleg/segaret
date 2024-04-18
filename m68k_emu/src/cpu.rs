@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     bus::BusM68k,
     cpu_internals::{CpuInternals, RegisterSet, RegisterType},
@@ -53,13 +55,14 @@ where
         let operation_ptr = MemoryPtr::new(self.bus.set_address(opcode_address));
         println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.internals.cycles = operation.cycles;
-
+        
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
             operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
         instruction.execute(operands, &mut self.internals);
+        println!("{}", self);
         if let Some(vector) = self.internals.trap {
             if vector == RESET_SP {
                 M68k::<T>::reset(&self.header, &mut self.internals.register_set);
@@ -86,5 +89,11 @@ where
 
         let pc = header.get_vector(RESET_PC);
         register_set.pc = pc;
+    }
+}
+
+impl<T: BusM68k> Display for M68k<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.internals.register_set.to_string())
     }
 }

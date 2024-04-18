@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     primitives::{address_reg::AddressRegisterPtr, data_reg::DataRegisterPtr, Pointer},
     status_register::StatusRegister,
@@ -40,6 +42,21 @@ impl RegisterSet {
             }
             RegisterType::Data => DataRegisterPtr::new_boxed(&mut self.registers[register_index]),
         }
+    }
+}
+
+impl Display for RegisterSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut buffer = Vec::new();
+        for i in 0..8 {
+            let data = self.registers[i];
+            let address = self.registers[i + 8];
+            buffer.push(format!("D{}: {:08X}\tA{}: {:08X}\n", i, data, i, address))
+        }
+        buffer.push(format!("{:>34}\n", "10SM_210___XNZVC"));
+        // PC: 00000202	SR:0000000000000000
+        buffer.push(format!("PC: {:08X}\tSR:{:016b}\n", self.pc, self.sr.get_sr()));
+        write!(f, "{}", buffer.join(""))
     }
 }
 
