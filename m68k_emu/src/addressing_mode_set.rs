@@ -206,9 +206,9 @@ pub(crate) struct ProgramCounterDisplacement {
 
 impl AddressingMode for ProgramCounterDisplacement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
+        let base_address = rs.pc; // takes the address of the extension word
         let extention_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
         let displacement = extention_word_ptr.read(Size::Word).sign_extend(Size::Word);
-        let base_address = rs.pc;
         let address = base_address.wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
         Operand::new(operand_ptr, None, address, self.size)
@@ -229,6 +229,7 @@ pub(crate) struct ProgramCounterIndexed {
 
 impl AddressingMode for ProgramCounterIndexed {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
+        let mut address = rs.pc; // takes the address of the extension word
         let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
         let extension_word = extension_word_ptr.read(Size::Word);
 
@@ -240,7 +241,6 @@ impl AddressingMode for ProgramCounterIndexed {
             .wrapping_mul(brief_extension_word.scale);
         let displacement = brief_extension_word.displacement;
 
-        let mut address = rs.pc;
         address = address.wrapping_add(index_data).wrapping_add(displacement);
         let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
         Operand::new(operand_ptr, None, address, self.size)
