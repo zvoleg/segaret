@@ -123,9 +123,11 @@ impl MOVEM {
                 for reg_offset in affected_register_offsets {
                     // reads registers from A7 to A0 and then from D7 to D)
                     let data = register_ptr.read_offset(self.size, -1 * reg_offset);
-                    dst_operand
-                        .operand_ptr
-                        .write_offset(data, self.size, memory_offset * (self.size as isize));
+                    dst_operand.operand_ptr.write_offset(
+                        data,
+                        self.size,
+                        memory_offset * (self.size as isize),
+                    );
                     // convert address register into the offset value
                     if *reg_offset == (15 - (self.am_register_idx + 8)) {
                         dst_operand.operand_ptr.write_offset(
@@ -149,9 +151,11 @@ impl MOVEM {
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = register_ptr.read_offset(self.size, *reg_offset);
-                    dst_operand
-                        .operand_ptr
-                        .write_offset(data, self.size, memory_offset * (self.size as isize));
+                    dst_operand.operand_ptr.write_offset(
+                        data,
+                        self.size,
+                        memory_offset * (self.size as isize),
+                    );
                     memory_offset += 1;
                 }
             }

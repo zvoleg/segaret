@@ -55,7 +55,7 @@ where
         let operation_ptr = MemoryPtr::new(self.bus.set_address(opcode_address));
         println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.internals.cycles = operation.cycles;
-        
+
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
             operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));

@@ -55,7 +55,11 @@ impl Display for RegisterSet {
         }
         buffer.push(format!("{:>34}\n", "10SM_210___XNZVC"));
         // PC: 00000202	SR:0000000000000000
-        buffer.push(format!("PC: {:08X}\tSR:{:016b}\n", self.pc, self.sr.get_sr()));
+        buffer.push(format!(
+            "PC: {:08X}\tSR:{:016b}\n",
+            self.pc,
+            self.sr.get_sr()
+        ));
         write!(f, "{}", buffer.join(""))
     }
 }
