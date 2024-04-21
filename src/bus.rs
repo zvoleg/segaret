@@ -1,19 +1,31 @@
 use m68k_emu::bus::BusM68k;
 
+const VERSION_REGISTER: u32 = 0xA10000;
+const CONTROLLER_A_DATA: u32 = 0xA10002;
+const CONTROLLER_B_DATA: u32 = 0xA10004;
+const CONTROLLER_A_CONTROL: u32 = 0xA10008;
+const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
+const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
+const Z80_REQUEST_BUS: u32 = 0xA11100;
+const Z80_RESET: u32 = 0xA11200;
 pub struct Bus {
     rom: Vec<u8>,
-    ram: Vec<u8>,
+    m68k_ram: Vec<u8>,
     z80_ram: Vec<u8>,
-    controllers: [u8; 4],
+    io_area: [u8; 0x20],
+    null: u32,
 }
 
 impl Bus {
     pub fn init(rom: Vec<u8>) -> Self {
+        let mut io_area = [0; 0x20];
+        io_area[1] = 0x0090; // setup version register
         Self {
             rom: rom,
-            ram: vec![0; 0x10000],     // $FF0000	$FFFFFF
-            z80_ram: vec![0; 0x10000], // $A00000	$A0FFFF
-            controllers: [0; 4],
+            z80_ram: vec![0; 0x10000],  // $A00000	$A0FFFF
+            m68k_ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            io_area: [0; 0x20],
+            null: 0,
         }
     }
 
@@ -33,8 +45,9 @@ impl BusM68k for Bus {
                 let rom_ptr = self.rom.as_ptr().offset(address as isize);
                 rom_ptr as *const _ as *mut u8
             }
-        } else if address == 0xA10001 {
-            std::ptr::null_mut()
+        } else if address >= 0xA10000 && address < 0xA20000 {
+            let address = (address & 0x3f) as usize;
+            &self.io_area[address] as *const _ as *mut u8
         // } else if address == 0xC00000 || address == 0xC00002 {
         //     // unsafe {
         //     //     (*self.vdp).read_data_port() as u32
@@ -46,11 +59,11 @@ impl BusM68k for Bus {
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
             unsafe {
-                let ram_ptr = self.ram.as_ptr().offset(address as isize);
+                let ram_ptr = self.m68k_ram.as_ptr().offset(address as isize);
                 ram_ptr as *const _ as *mut u8
             }
         } else {
-            &self.controllers[0] as *const u8 as *const _ as *mut u8
+            &self.null as *const _ as *mut u8
         }
     }
 }
