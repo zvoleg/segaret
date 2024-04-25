@@ -20,7 +20,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
 
 impl OpcodeMaskGenerator for EOR {
     fn generate_mask(&self) -> usize {
-        let mut base_mask = 0b1011000000000000;
+        let mut base_mask = 0b1011000100000000;
         base_mask |= match self.size {
             Size::Byte => 0b00,
             Size::Word => 0b01,

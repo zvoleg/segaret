@@ -116,7 +116,10 @@ impl OpcodeMaskGenerator for ROXdImplied {
             Size::Long => 0b10,
         } << 6;
         base_mask |= (self.direction as usize) << 8;
-        base_mask |= (self.count as usize) << 9;
+        // for the count value eight there is using 000 mask
+        if self.count < 8 {
+            base_mask |= (self.count as usize) << 9;
+        }
         base_mask
     }
 }

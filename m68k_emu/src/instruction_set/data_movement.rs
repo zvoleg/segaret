@@ -413,7 +413,10 @@ mod test {
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // immitation of the predecrementing addressing mode
         stack_register_ptr.write(stack_address, Size::Long);
-        let stack_ptr = Box::new(MemoryPtr::new(&mut memory[stack_address as usize]));
+        let stack_ptr = MemoryPtr::new_boxed(
+            &memory[stack_address as usize],
+            &mut memory[stack_address as usize],
+        );
         operand_set.add(Operand::new(
             stack_ptr,
             Some(stack_register_ptr),
@@ -435,7 +438,7 @@ mod test {
 
         // and offset value
         // it just value in some place of memory
-        let offset_ptr = MemoryPtr::new_boxed(&mut memory[OFFSET_ADDRESS]);
+        let offset_ptr = MemoryPtr::new_boxed(&memory[OFFSET_ADDRESS], &mut memory[OFFSET_ADDRESS]);
         offset_ptr.write(OFFSET_VALUE, Size::Word);
         operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
 
@@ -463,7 +466,10 @@ mod test {
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = stack_register_ptr.read(Size::Long);
-        let stack_ptr = MemoryPtr::new_boxed(&mut memory[stack_address as usize]);
+        let stack_ptr = MemoryPtr::new_boxed(
+            &memory[stack_address as usize],
+            &mut memory[stack_address as usize],
+        );
         operand_set.add(Operand::new(
             stack_ptr,
             Some(stack_register_ptr),
@@ -483,7 +489,7 @@ mod test {
         link.execute(link_operand_set, &mut cpu);
 
         let decremented_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32);
-        let mem_ptr = MemoryPtr::new(&mut memory[decremented_stack_address as usize]);
+        let mem_ptr = MemoryPtr::new_read_only(&mut memory[decremented_stack_address as usize]);
         assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
         assert_eq!(
             cpu.register_set

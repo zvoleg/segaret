@@ -25,6 +25,7 @@ impl RegisterSet {
         }
     }
 
+    #[inline]
     pub(crate) fn get_and_increment_pc(&mut self) -> u32 {
         let v = self.pc;
         self.pc = self.pc.wrapping_add(2);
@@ -53,7 +54,7 @@ impl Display for RegisterSet {
             let address = self.registers[i + 8];
             buffer.push(format!("D{}: {:08X}\tA{}: {:08X}\n", i, data, i, address))
         }
-        buffer.push(format!("{:>34}\n", "10SM_210___XNZVC"));
+        buffer.push(format!("{:>35}\n", "10SM_210___XNZVC"));
         // PC: 00000202	SR:0000000000000000
         buffer.push(format!(
             "PC: {:08X}\tSR:{:016b}\n",

@@ -29,14 +29,11 @@ impl BriefExtensionWord {
             format!("D{}.{}*{}", index_reg_idx, size, scale)
         };
         let displacement = (word & 0xFF) as u32;
-        format!(
-            "({}, A{}, {})",
-            displacement, address_reg_str, index_reg_str
-        )
+        format!("({}, {}, {})", displacement, address_reg_str, index_reg_str)
     }
 
     pub(crate) fn new(word: u16, rs: &mut RegisterSet) -> Self {
-        let reg_idx = ((word >> 11) & 0x07) as usize;
+        let reg_idx = ((word >> 12) & 0b111) as usize;
         let index_register_ptr = if word & 0x8000 != 0 {
             rs.get_register_ptr(reg_idx, RegisterType::Address)
         } else {

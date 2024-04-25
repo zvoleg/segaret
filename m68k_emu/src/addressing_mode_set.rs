@@ -78,7 +78,10 @@ impl AddressingMode for AddressRegisterIndirect {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
@@ -101,7 +104,10 @@ impl AddressingMode for AddressRegisterPostIncrement {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long);
         address_register_ptr.write(address.wrapping_add(self.size as u32), Size::Long);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
@@ -125,7 +131,10 @@ impl AddressingMode for AddressRegisterPreDecrement {
         let mut address = address_register_ptr.read(Size::Long);
         address = address.wrapping_sub(self.size as u32);
         address_register_ptr.write(address, Size::Long);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
@@ -145,12 +154,16 @@ pub(crate) struct AddressRegisterDisplacement {
 
 impl AddressingMode for AddressRegisterDisplacement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let displacement = extension_word_ptr.read(Size::Word).sign_extend(Size::Word);
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let base_address = address_register_ptr.read(Size::Long);
         let address = base_address.wrapping_add(displacement);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
@@ -170,13 +183,15 @@ pub(crate) struct AddressRegisterIndexed {
 
 impl AddressingMode for AddressRegisterIndexed {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
-        let extension_word = extension_word_ptr.read(Size::Long);
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
+        let extension_word = extension_word_ptr.read(Size::Word);
 
         let brief_extension_word = BriefExtensionWord::new(extension_word as u16, rs);
-        let index_data = brief_extension_word
+        let index_reg_data = brief_extension_word
             .index_register_ptr
-            .read(brief_extension_word.size)
+            .read(brief_extension_word.size);
+        let index_data = index_reg_data
             .sign_extend(brief_extension_word.size)
             .wrapping_mul(brief_extension_word.scale);
         let displacement = brief_extension_word.displacement;
@@ -184,7 +199,10 @@ impl AddressingMode for AddressRegisterIndexed {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let mut address = address_register_ptr.read(Size::Long);
         address = address.wrapping_add(index_data).wrapping_add(displacement);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, Some(address_register_ptr), address, self.size)
     }
 
@@ -207,10 +225,14 @@ pub(crate) struct ProgramCounterDisplacement {
 impl AddressingMode for ProgramCounterDisplacement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
         let base_address = rs.pc; // takes the address of the extension word
-        let extention_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extention_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let displacement = extention_word_ptr.read(Size::Word).sign_extend(Size::Word);
         let address = base_address.wrapping_add(displacement);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, None, address, self.size)
     }
 
@@ -230,7 +252,8 @@ pub(crate) struct ProgramCounterIndexed {
 impl AddressingMode for ProgramCounterIndexed {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
         let mut address = rs.pc; // takes the address of the extension word
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let extension_word = extension_word_ptr.read(Size::Word);
 
         let brief_extension_word = BriefExtensionWord::new(extension_word as u16, rs);
@@ -242,7 +265,10 @@ impl AddressingMode for ProgramCounterIndexed {
         let displacement = brief_extension_word.displacement;
 
         address = address.wrapping_add(index_data).wrapping_add(displacement);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, None, address, self.size)
     }
 
@@ -261,9 +287,13 @@ pub(crate) struct AbsShort {
 
 impl AddressingMode for AbsShort {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let address = extension_word_ptr.read(Size::Word).sign_extend(Size::Word);
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, None, address, self.size)
     }
 
@@ -282,12 +312,17 @@ pub(crate) struct AbsLong {
 
 impl AddressingMode for AbsLong {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let address_high = extension_word_ptr.read(Size::Word);
-        let extension_word_ptr = MemoryPtr::new_boxed(bus.set_address(rs.get_and_increment_pc()));
+        let extension_word_ptr =
+            MemoryPtr::new_read_only(bus.set_address_read(rs.get_and_increment_pc()));
         let address_low = extension_word_ptr.read(Size::Word);
         let address = (address_high << 0x10) | address_low;
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         Operand::new(operand_ptr, None, address, self.size)
     }
 
@@ -307,12 +342,20 @@ pub(crate) struct Immediate {
 impl AddressingMode for Immediate {
     fn get_operand(&self, rs: &mut RegisterSet, bus: &dyn BusM68k) -> Operand {
         let address = rs.get_and_increment_pc();
-        let operand_ptr = MemoryPtr::new_boxed(bus.set_address(address));
+        let operand_ptr = MemoryPtr::new_boxed(
+            bus.set_address_read(address),
+            bus.set_address_write(address),
+        );
         match self.size {
             Size::Long => rs.get_and_increment_pc(),
             _ => 0,
         };
-        Operand::new(operand_ptr, None, address, self.size)
+        // an extension word can't hold only one byte, it requires at least two bytes
+        let size = match self.size {
+            Size::Byte => Size::Word,
+            _ => self.size,
+        };
+        Operand::new(operand_ptr, None, address, size)
     }
 
     fn disassembly(&self, extension_word: u32) -> String {

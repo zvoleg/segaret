@@ -202,6 +202,7 @@ impl Instruction for SUB {
         let src_data = src_operand.read();
         let dst_data = dst_operand.read();
         let result = dst_data.wrapping_sub(src_data);
+        dst_operand.write(result);
 
         let src_msb = src_data.msb_is_set(self.size);
         let dst_msb = dst_data.msb_is_set(self.size);

@@ -31,7 +31,7 @@ where
             Operation::new(Box::new(ILLEAGL()), Vec::new(), 5)
         });
         generate_opcode_list(&mut table);
-        let header_ptr = MemoryPtr::new(bus.set_address(0));
+        let header_ptr = MemoryPtr::new_read_only(bus.set_address_read(0));
         let header = Header::new(header_ptr);
         let mut internals = CpuInternals::new();
         M68k::<T>::reset(&header, &mut internals.register_set);
@@ -52,7 +52,7 @@ where
         let operation_set = self.operation_set.as_ptr();
         let operation = unsafe { &*operation_set.offset(opcode as isize) };
 
-        let operation_ptr = MemoryPtr::new(self.bus.set_address(opcode_address));
+        let operation_ptr = MemoryPtr::new_read_only(self.bus.set_address_read(opcode_address));
         println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.internals.cycles = operation.cycles;
 
@@ -75,9 +75,9 @@ where
     }
 
     fn fetch_opcode(&mut self) -> u16 {
-        let opcode_ptr = MemoryPtr::new(
+        let opcode_ptr = MemoryPtr::new_read_only(
             self.bus
-                .set_address(self.internals.register_set.get_and_increment_pc()),
+                .set_address_read(self.internals.register_set.get_and_increment_pc()),
         );
         opcode_ptr.read(Size::Word) as u16
     }

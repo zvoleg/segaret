@@ -27,7 +27,8 @@ pub(crate) fn generate(table: &mut [Operation]) {
             let instruction = Box::new(JMP());
             let am = am_type.addressing_mode_by_type(idx, Size::Long);
 
-            let opcode = instruction.generate_mask();
+            let base_mask = instruction.generate_mask();
+            let opcode = base_mask | am_type.generate_mask(idx);
 
             let mut cycles = match am_type {
                 AddressingModeType::AbsLong => 0,

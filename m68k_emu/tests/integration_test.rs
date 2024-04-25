@@ -7,8 +7,12 @@ struct Bus {
 }
 
 impl BusM68k for Bus {
-    fn set_address(&self, address: u32) -> *mut u8 {
-        &mut self.ram.borrow_mut()[address as usize] as *mut u8
+    fn set_address_read(&self, address: u32) -> *const u8 {
+        &self.ram.borrow_mut()[address as usize]
+    }
+
+    fn set_address_write(&self, address: u32) -> *mut u8 {
+        &mut self.ram.borrow_mut()[address as usize]
     }
 }
 

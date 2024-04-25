@@ -81,9 +81,10 @@ impl Instruction for DBcc {
             let mut counter = data_reg_operand.read();
             counter = counter.wrapping_sub(1);
             data_reg_operand.write(counter);
+            // compare counter with -1
             if counter != 0xFFFFFFFF {
-                // -1
                 let pc = &mut cpu_internals.register_set.pc;
+                *pc = pc.wrapping_sub(2); // the PC pointer should to point on the extension word after dbcc instruction opcode
                 *pc = pc.wrapping_add(displacement);
             } else {
                 cpu_internals.cycles += 4 // if loop counter expired
