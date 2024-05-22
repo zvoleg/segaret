@@ -1,8 +1,13 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister, Immediate}, bus::BusM68k, instruction_set::{
+    addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
+    bus::BusM68k,
+    instruction_set::{
         logical_instructions::{EOR, EORI},
         system_control::{EORItoCCR, EORItoSR},
-    }, operation::Operation, primitives::Size, range
+    },
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;

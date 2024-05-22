@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size, status_flag::StatusFlag
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    status_flag::StatusFlag,
 };
 
 pub(crate) struct BCHG {

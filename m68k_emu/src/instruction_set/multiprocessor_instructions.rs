@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet, primitives::Size, status_flag::StatusFlag, IsNegate, IsZero
+    bus::BusM68k, cpu::M68k, cpu_internals::CpuInternals, instruction_set::Instruction,
+    operand::OperandSet, primitives::Size, status_flag::StatusFlag, IsNegate, IsZero,
 };
 
 pub(crate) struct TAS();

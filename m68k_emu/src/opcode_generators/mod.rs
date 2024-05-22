@@ -4,7 +4,10 @@ use crate::{
         AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
         AddressingMode, AddressingModeType, DataRegister, Immediate, ProgramCounterDisplacement,
         ProgramCounterIndexed,
-    }, bus::BusM68k, operation::Operation, primitives::Size
+    },
+    bus::BusM68k,
+    operation::Operation,
+    primitives::Size,
 };
 
 // pub(crate) mod abcd_generator;

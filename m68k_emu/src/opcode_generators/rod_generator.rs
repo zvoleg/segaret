@@ -1,10 +1,15 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister}, bus::BusM68k, instruction_set::{
+    addressing_mode_set::{AddressingModeType, DataRegister},
+    bus::BusM68k,
+    instruction_set::{
         shift_and_rotate::{
             ROXdDataReg, ROXdImplied, ROXdMemory, ROdDataReg, ROdImplied, ROdMemory,
         },
         Instruction, ShiftDirection,
-    }, operation::Operation, primitives::Size, range
+    },
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;

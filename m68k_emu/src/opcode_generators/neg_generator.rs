@@ -1,5 +1,10 @@
 use crate::{
-    addressing_mode_set::AddressingModeType, bus::BusM68k, instruction_set::integer_arithmetic::{NEG, NEGX}, operation::Operation, primitives::Size, range
+    addressing_mode_set::AddressingModeType,
+    bus::BusM68k,
+    instruction_set::integer_arithmetic::{NEG, NEGX},
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;

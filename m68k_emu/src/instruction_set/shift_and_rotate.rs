@@ -1,7 +1,14 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::{Operand, OperandSet}, primitives::Size, status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero, MsbIsSet
+    bus::BusM68k,
+    cpu::M68k,
+    instruction_set::Instruction,
+    operand::{Operand, OperandSet},
+    primitives::Size,
+    status_flag::StatusFlag,
+    status_register::StatusRegister,
+    IsNegate, IsZero, MsbIsSet,
 };
 
 use super::ShiftDirection;

@@ -2,11 +2,15 @@ use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterDisplacement, AddressingMode, AddressingModeType,
         DataRegister,
-    }, bus::BusM68k, instruction_set::{
+    },
+    bus::BusM68k,
+    instruction_set::{
         data_movement::{MOVE, MOVEA, MOVEP, MOVEQ},
         system_control::{MOVEfromSR, MOVEtoCCR, MOVEtoSR, MOVEUSP},
         MoveDirection,
-    }, operation::Operation, range, Size, STACK_REGISTER
+    },
+    operation::Operation,
+    range, Size, STACK_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;

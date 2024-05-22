@@ -1,7 +1,15 @@
 use std::fmt::Display;
 
 use crate::{
-    addressing_mode_set::AddressingModeType, bus::BusM68k, cpu::M68k, cpu_internals::{CpuInternals, RegisterType}, instruction_set::Instruction, operand::{Operand, OperandSet}, primitives::Size, status_flag::StatusFlag, IsNegate, SignExtending
+    addressing_mode_set::AddressingModeType,
+    bus::BusM68k,
+    cpu::M68k,
+    cpu_internals::{CpuInternals, RegisterType},
+    instruction_set::Instruction,
+    operand::{Operand, OperandSet},
+    primitives::Size,
+    status_flag::StatusFlag,
+    IsNegate, SignExtending,
 };
 
 use super::{ExchangeMode, MoveDirection};
@@ -77,16 +85,12 @@ impl<T: BusM68k> Instruction<T> for MOVEM {
         // TODO additional cycles
 
         match self.direction {
-            MoveDirection::RegisterToMemory => self.write_registers_to_memory(
-                &affected_register_offsets,
-                operand_set.next(),
-                cpu,
-            ),
-            MoveDirection::MemoryToRegister => self.write_memory_to_registers(
-                &affected_register_offsets,
-                operand_set.next(),
-                cpu,
-            ),
+            MoveDirection::RegisterToMemory => {
+                self.write_registers_to_memory(&affected_register_offsets, operand_set.next(), cpu)
+            }
+            MoveDirection::MemoryToRegister => {
+                self.write_memory_to_registers(&affected_register_offsets, operand_set.next(), cpu)
+            }
         }
     }
 }
@@ -110,7 +114,8 @@ impl MOVEM {
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPreDecrement => {
-                let register_ptr = cpu.internals
+                let register_ptr = cpu
+                    .internals
                     .register_set
                     .get_register_ptr(7, RegisterType::Address);
                 let mut memory_offset = 0;
@@ -139,7 +144,8 @@ impl MOVEM {
                 );
             }
             _ => {
-                let register_ptr = cpu.internals
+                let register_ptr = cpu
+                    .internals
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -164,7 +170,8 @@ impl MOVEM {
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPostIncrement => {
-                let register_ptr = cpu.internals
+                let register_ptr = cpu
+                    .internals
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -187,7 +194,8 @@ impl MOVEM {
                 }
             }
             _ => {
-                let register_ptr = cpu.internals
+                let register_ptr = cpu
+                    .internals
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -380,7 +388,9 @@ impl<T: BusM68k> Instruction<T> for UNLK {
 #[cfg(test)]
 mod test {
     use crate::{
-        cpu_internals::{CpuInternals, RegisterType},
+        bus::BusM68k,
+        cpu::M68k,
+        cpu_internals::RegisterType,
         instruction_set::Instruction,
         operand::{Operand, OperandSet},
         primitives::{memory::MemoryPtr, Pointer, Size},
@@ -395,7 +405,21 @@ mod test {
     const OFFSET_ADDRESS: usize = 0x00;
     const OFFSET_VALUE: u32 = 0x10;
 
-    fn prepare_link_operands(cpu: &mut CpuInternals, memory: &mut [u8; 0x100]) -> OperandSet {
+    struct Bus {
+        ram: [u8; 0xFF],
+    }
+
+    impl BusM68k for Bus {
+        fn set_address_read(&self, address: u32) -> *const u8 {
+            &self.ram[address as usize]
+        }
+
+        fn set_address_write(&self, address: u32) -> *mut u8 {
+            &self.ram[address as usize] as *const _ as *mut u8
+        }
+    }
+
+    fn prepare_link_operands(cpu: &mut M68k<Bus>, memory: &mut [u8; 0x100]) -> OperandSet {
         // be cause test runs without opcode, we don't have to prepare properly placed or aranged in the memory the values
         let mut operand_set = OperandSet::new();
 
@@ -403,6 +427,7 @@ mod test {
         // There is no necessary of implementation for incrementing/decrementing of address,
         // so stack is just the propper register with address
         let stack_register_ptr = cpu
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // immitation of the predecrementing addressing mode
@@ -420,6 +445,7 @@ mod test {
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
+            .internals
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long);
@@ -439,11 +465,12 @@ mod test {
         operand_set
     }
 
-    fn prepare_unlk_operands(cpu: &mut CpuInternals, memory: &mut [u8; 0x100]) -> OperandSet {
+    fn prepare_unlk_operands(cpu: &mut M68k<Bus>, memory: &mut [u8; 0x100]) -> OperandSet {
         let mut operand_set = OperandSet::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
+            .internals
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         operand_set.add(Operand::new(
@@ -457,6 +484,7 @@ mod test {
         // There is no necessary of implementation for incrementing/decrementing of address,
         // so stack is just the propper register with address
         let stack_register_ptr = cpu
+            .internals
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = stack_register_ptr.read(Size::Long);
@@ -474,54 +502,60 @@ mod test {
         operand_set
     }
 
-    // #[test]
-    // fn test_link() {
-    //     let mut cpu = CpuInternals::new();
-    //     let mut memory = [0u8; 0x100];
-    //     let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
-    //     let link = LINK();
-    //     link.execute(link_operand_set, &mut cpu);
+    #[test]
+    fn test_link() {
+        let bus = Bus { ram: [0; 0xFF] };
+        let mut cpu = M68k::new(bus);
+        let mut memory = [0u8; 0x100];
+        let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
+        let link = LINK();
+        link.execute(link_operand_set, &mut cpu);
 
-    //     let decremented_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32);
-    //     let mem_ptr = MemoryPtr::new_read_only(&mut memory[decremented_stack_address as usize]);
-    //     assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
-    //     assert_eq!(
-    //         cpu.register_set
-    //             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
-    //             .read(Size::Long),
-    //         decremented_stack_address
-    //     );
-    //     assert_eq!(
-    //         cpu.register_set
-    //             .get_register_ptr(STACK_REGISTER, RegisterType::Address)
-    //             .read(Size::Long),
-    //         decremented_stack_address + OFFSET_VALUE
-    //     )
-    // }
+        let decremented_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32);
+        let mem_ptr = MemoryPtr::new_read_only(&mut memory[decremented_stack_address as usize]);
+        assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
+        assert_eq!(
+            cpu.internals
+                .register_set
+                .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
+                .read(Size::Long),
+            decremented_stack_address
+        );
+        assert_eq!(
+            cpu.internals
+                .register_set
+                .get_register_ptr(STACK_REGISTER, RegisterType::Address)
+                .read(Size::Long),
+            decremented_stack_address + OFFSET_VALUE
+        )
+    }
 
-    // #[test]
-    // fn test_unlk() {
-    //     let mut cpu = CpuInternals::new();
-    //     let mut memory = [0u8; 0x100];
-    //     let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
-    //     let link = LINK();
-    //     link.execute(link_operand_set, &mut cpu);
+    #[test]
+    fn test_unlk() {
+        let bus = Bus { ram: [0; 0xFF] };
+        let mut cpu = M68k::new(bus);
+        let mut memory = [0u8; 0x100];
+        let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
+        let link = LINK();
+        link.execute(link_operand_set, &mut cpu);
 
-    //     let unlk_operand_set = prepare_unlk_operands(&mut cpu, &mut memory);
-    //     let unlk = UNLK();
-    //     unlk.execute(unlk_operand_set, &mut cpu);
+        let unlk_operand_set = prepare_unlk_operands(&mut cpu, &mut memory);
+        let unlk = UNLK();
+        unlk.execute(unlk_operand_set, &mut cpu);
 
-    //     assert_eq!(
-    //         cpu.register_set
-    //             .get_register_ptr(STACK_REGISTER, RegisterType::Address)
-    //             .read(Size::Long),
-    //         STACK_INIT_ADDDRESS
-    //     );
-    //     assert_eq!(
-    //         cpu.register_set
-    //             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
-    //             .read(Size::Long),
-    //         ADDRESS_REGISTER_VALUE
-    //     );
-    // }
+        assert_eq!(
+            cpu.internals
+                .register_set
+                .get_register_ptr(STACK_REGISTER, RegisterType::Address)
+                .read(Size::Long),
+            STACK_INIT_ADDDRESS
+        );
+        assert_eq!(
+            cpu.internals
+                .register_set
+                .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
+                .read(Size::Long),
+            ADDRESS_REGISTER_VALUE
+        );
+    }
 }

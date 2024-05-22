@@ -1,5 +1,6 @@
 use crate::{
-    addressing_mode_set::DataRegister, bus::BusM68k, instruction_set::shift_and_rotate::SWAP, operation::Operation, primitives::Size
+    addressing_mode_set::DataRegister, bus::BusM68k, instruction_set::shift_and_rotate::SWAP,
+    operation::Operation, primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;

@@ -2,10 +2,15 @@ use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterPreDecrement, AddressingMode, AddressingModeType,
         DataRegister, Immediate,
-    }, bus::BusM68k, instruction_set::{
+    },
+    bus::BusM68k,
+    instruction_set::{
         integer_arithmetic::{SUB, SUBA, SUBI, SUBQ, SUBX},
         RegisterFieldMode, WriteDirection,
-    }, operation::Operation, primitives::Size, range
+    },
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;

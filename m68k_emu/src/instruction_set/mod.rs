@@ -15,7 +15,10 @@ pub(crate) mod program_control;
 pub(crate) mod system_control;
 
 ///
-pub(crate) trait Instruction<T>: Display where T: BusM68k {
+pub(crate) trait Instruction<T>: Display
+where
+    T: BusM68k,
+{
     fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>);
 }
 

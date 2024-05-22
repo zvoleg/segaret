@@ -1,5 +1,8 @@
 use crate::{
-    addressing_mode_set::AddressingMode, bus::BusM68k, instruction_set::Instruction, primitives::{memory::MemoryPtr, Pointer, Size}
+    addressing_mode_set::AddressingMode,
+    bus::BusM68k,
+    instruction_set::Instruction,
+    primitives::{memory::MemoryPtr, Pointer, Size},
 };
 
 /// Operation is composition of an instruction and the addressing modes
@@ -10,7 +13,10 @@ pub(crate) struct Operation<T: BusM68k> {
     pub(crate) cycles: i32,
 }
 
-impl<T> Operation<T> where T: BusM68k {
+impl<T> Operation<T>
+where
+    T: BusM68k,
+{
     pub(crate) fn new(
         instruction: Box<dyn Instruction<T>>,
         addressing_mode_list: Vec<Box<dyn AddressingMode>>,

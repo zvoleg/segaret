@@ -1,5 +1,7 @@
 use crate::{
-    bus::BusM68k, instruction_set::system_control::{TRAP, TRAPV}, operation::Operation
+    bus::BusM68k,
+    instruction_set::system_control::{TRAP, TRAPV},
+    operation::Operation,
 };
 
 use super::OpcodeMaskGenerator;

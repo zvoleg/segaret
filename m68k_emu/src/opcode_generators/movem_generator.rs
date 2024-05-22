@@ -1,5 +1,10 @@
 use crate::{
-    addressing_mode_set::{AddressingMode, AddressingModeType, Immediate}, bus::BusM68k, instruction_set::{data_movement::MOVEM, MoveDirection}, operation::Operation, primitives::Size, range
+    addressing_mode_set::{AddressingMode, AddressingModeType, Immediate},
+    bus::BusM68k,
+    instruction_set::{data_movement::MOVEM, MoveDirection},
+    operation::Operation,
+    primitives::Size,
+    range,
 };
 
 use super::OpcodeMaskGenerator;

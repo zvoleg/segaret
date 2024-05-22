@@ -26,7 +26,7 @@ fn main() {
 
     let mut auto = false;
     runner.run(window, move |_| {
-        if_pressed!(spriter::Key::A, {auto = !auto});
+        if_pressed!(spriter::Key::A, { auto = !auto });
         if_pressed!(spriter::Key::C, {
             m68k.clock();
             auto = false;
