@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, cpu_internals::CpuInternals, instruction_set::Instruction,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction,
     operand::OperandSet, primitives::Size, status_flag::StatusFlag, IsNegate, IsZero,
 };
 
@@ -25,7 +25,7 @@ impl<T: BusM68k> Instruction<T> for AND {
         let result = src_data & dst_data;
         dst_operand.write(result);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
@@ -69,7 +69,7 @@ impl<T: BusM68k> Instruction<T> for EOR {
         let result = src_data ^ dst_data;
         dst_operand.write(result);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
@@ -113,7 +113,7 @@ impl<T: BusM68k> Instruction<T> for OR {
         let result = src_data | dst_data;
         dst_operand.write(result);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
@@ -155,7 +155,7 @@ impl<T: BusM68k> Instruction<T> for NOT {
         let result = !data;
         operand.write(result);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);

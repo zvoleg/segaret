@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     bus::BusM68k,
-    cpu_internals::{CpuInternals, RegisterSet, RegisterType},
+    cpu_internals::{RegisterSet, RegisterType},
     header::Header,
     instruction_set::system_control::ILLEAGL,
     opcode_generators::generate_opcode_list,
@@ -14,11 +14,15 @@ use crate::{
 };
 
 pub struct M68k<T: BusM68k> {
-    pub(crate) internals: CpuInternals,
+    // pub(crate) internals: CpuInternals,
+    pub(crate) register_set: RegisterSet,
+    pub(crate) trap: Option<usize>,
+    pub(crate) cycles_counter: i32,
     header: Header,
 
     operation_set: Vec<Operation<T>>,
     bus: T,
+
 }
 
 impl<T> M68k<T>
@@ -33,18 +37,20 @@ where
         generate_opcode_list(&mut table);
         let header_ptr = MemoryPtr::new_read_only(bus.set_address_read(0));
         let header = Header::new(header_ptr);
-        let mut internals = CpuInternals::new();
-        M68k::<T>::reset(&header, &mut internals.register_set);
+        let mut register_set = RegisterSet::new();
+        M68k::<T>::reset(&header, &mut register_set);
         Self {
-            internals: internals,
+            register_set: register_set,
             header: header,
             operation_set: table,
             bus: bus,
+            trap: None,
+            cycles_counter: 0,
         }
     }
 
     pub fn clock(&mut self) {
-        let opcode_address = self.internals.register_set.pc;
+        let opcode_address = self.register_set.pc;
         let opcode = self.fetch_opcode();
 
         // hack for ignoring the immutable reference to own field
@@ -54,30 +60,30 @@ where
 
         let operation_ptr = MemoryPtr::new_read_only(self.bus.set_address_read(opcode_address));
         println!("{}", operation.disassembly(opcode_address, operation_ptr));
-        self.internals.cycles = operation.cycles;
+        self.cycles_counter = operation.cycles;
 
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
-            operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
+            operands.add(am.get_operand(&mut self.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
         instruction.execute(operands, self);
         println!("{}", self);
-        if let Some(vector) = self.internals.trap {
+        if let Some(vector) = self.trap {
             if vector == RESET_SP {
-                M68k::<T>::reset(&self.header, &mut self.internals.register_set);
+                M68k::<T>::reset(&self.header, &mut self.register_set);
             } else {
                 let vector_address = self.header.get_vector(vector);
-                self.internals.register_set.pc = vector_address;
+                self.register_set.pc = vector_address;
             }
-            self.internals.trap = None;
+            self.trap = None;
         }
     }
 
     fn fetch_opcode(&mut self) -> u16 {
         let opcode_ptr = MemoryPtr::new_read_only(
             self.bus
-                .set_address_read(self.internals.register_set.get_and_increment_pc()),
+                .set_address_read(self.register_set.get_and_increment_pc()),
         );
         opcode_ptr.read(Size::Word) as u16
     }
@@ -94,6 +100,6 @@ where
 
 impl<T: BusM68k> Display for M68k<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.internals.register_set.to_string())
+        write!(f, "{}", self.register_set.to_string())
     }
 }

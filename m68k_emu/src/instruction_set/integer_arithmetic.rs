@@ -34,7 +34,7 @@ impl<T: BusM68k> Instruction<T> for ADD {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -94,7 +94,7 @@ impl<T: BusM68k> Instruction<T> for ADDI {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -132,7 +132,7 @@ impl<T: BusM68k> Instruction<T> for ADDQ {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -159,7 +159,7 @@ impl<T: BusM68k> Instruction<T> for ADDX {
         let src_data = src_operand.read();
         let dst_data = dst_operand.read();
 
-        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.register_set.sr.get_bit(StatusFlag::X);
 
         let result = src_data.wrapping_add(dst_data).wrapping_add(x_bit);
         dst_operand.write(result);
@@ -171,7 +171,7 @@ impl<T: BusM68k> Instruction<T> for ADDX {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -210,7 +210,7 @@ impl<T: BusM68k> Instruction<T> for SUB {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -270,7 +270,7 @@ impl<T: BusM68k> Instruction<T> for SUBI {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -308,7 +308,7 @@ impl<T: BusM68k> Instruction<T> for SUBQ {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -335,7 +335,7 @@ impl<T: BusM68k> Instruction<T> for SUBX {
         let src_data = src_operand.read();
         let dst_data = dst_operand.read();
 
-        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.register_set.sr.get_bit(StatusFlag::X);
 
         let result = dst_data.wrapping_sub(src_data).wrapping_sub(x_bit);
         dst_operand.write(result);
@@ -347,7 +347,7 @@ impl<T: BusM68k> Instruction<T> for SUBX {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -375,7 +375,7 @@ impl<T: BusM68k> Instruction<T> for CLR {
         let operand = operand_set.next();
         operand.write(0);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, false);
         sr.set_flag(StatusFlag::Z, true);
         sr.set_flag(StatusFlag::V, false);
@@ -409,7 +409,7 @@ impl<T: BusM68k> Instruction<T> for CMP {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::N, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -480,7 +480,7 @@ impl<T: BusM68k> Instruction<T> for EXT {
         let result = data.sign_extend(self.src_size);
         operand.write(result);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.target_size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.target_size));
         sr.set_flag(StatusFlag::V, false);
@@ -513,7 +513,7 @@ impl<T: BusM68k> Instruction<T> for NEG {
         let res_msb = result.msb_is_set(self.size);
         let overflow = src_msb & res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
@@ -536,7 +536,7 @@ impl<T: BusM68k> Instruction<T> for NEGX {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.register_set.sr.get_bit(StatusFlag::X);
 
         let result = 0u32.wrapping_sub(data).wrapping_sub(x_bit);
         operand.write(result);
@@ -546,7 +546,7 @@ impl<T: BusM68k> Instruction<T> for NEGX {
         let overflow = dst_msb & res_msb;
         let carry = dst_msb | res_msb;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -578,7 +578,7 @@ impl<T: BusM68k> Instruction<T> for MULS {
         let result = result as u32;
         dst_operand.write_sized(result, Size::Long);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, overflow);
@@ -604,7 +604,7 @@ impl<T: BusM68k> Instruction<T> for MULU {
         let (result, overflow) = src_data.overflowing_mul(dst_data); // TODO may be there is needs use casting to u16 for correct calculation of the overflow status
         dst_operand.write_sized(result, Size::Long);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, overflow);
@@ -629,12 +629,12 @@ impl<T: BusM68k> Instruction<T> for DIVS {
         let dst_data = dst_operand.read() as i32;
 
         if src_data == 0 {
-            cpu.internals.trap = Some(DIVISION_BY_ZERO);
+            cpu.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu.internals
+            cpu
                 .register_set
                 .sr
                 .set_flag(StatusFlag::V, overflow);
@@ -649,7 +649,7 @@ impl<T: BusM68k> Instruction<T> for DIVS {
         let zero = (quotient as u32).is_zero(Size::Word);
         let carry = false;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
         sr.set_flag(StatusFlag::V, overflow);
@@ -674,12 +674,12 @@ impl<T: BusM68k> Instruction<T> for DIVU {
         let dst_data = dst_operand.read();
 
         if src_data == 0 {
-            cpu.internals.trap = Some(DIVISION_BY_ZERO);
+            cpu.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu.internals
+            cpu
                 .register_set
                 .sr
                 .set_flag(StatusFlag::V, overflow);
@@ -694,7 +694,7 @@ impl<T: BusM68k> Instruction<T> for DIVU {
         let zero = (quotient as u32).is_zero(Size::Word);
         let carry = false;
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
         sr.set_flag(StatusFlag::V, overflow);

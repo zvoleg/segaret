@@ -64,19 +64,3 @@ impl Display for RegisterSet {
         write!(f, "{}", buffer.join(""))
     }
 }
-
-pub(crate) struct CpuInternals {
-    pub(crate) register_set: RegisterSet,
-    pub(crate) cycles: i32,
-    pub(crate) trap: Option<usize>,
-}
-
-impl CpuInternals {
-    pub(crate) fn new() -> Self {
-        Self {
-            register_set: RegisterSet::new(),
-            cycles: 0,
-            trap: None,
-        }
-    }
-}

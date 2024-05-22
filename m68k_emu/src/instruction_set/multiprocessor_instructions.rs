@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, cpu_internals::CpuInternals, instruction_set::Instruction,
-    operand::OperandSet, primitives::Size, status_flag::StatusFlag, IsNegate, IsZero,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    status_flag::StatusFlag, IsNegate, IsZero,
 };
 
 pub(crate) struct TAS();
@@ -18,7 +18,7 @@ impl<T: BusM68k> Instruction<T> for TAS {
         let operand = operand_set.next();
         let data = operand.read();
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Byte));
         sr.set_flag(StatusFlag::Z, data.is_zero(Size::Byte));
         sr.set_flag(StatusFlag::V, false);

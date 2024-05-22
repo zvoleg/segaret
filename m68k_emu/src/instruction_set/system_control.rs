@@ -25,7 +25,7 @@ impl<T: BusM68k> Instruction<T> for MOVEtoSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        cpu.internals.register_set.sr.set_sr(data);
+        cpu.register_set.sr.set_sr(data);
     }
 }
 
@@ -40,7 +40,7 @@ impl Display for MOVEfromSR {
 impl<T: BusM68k> Instruction<T> for MOVEfromSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
-        operand.write(cpu.internals.register_set.sr.get_sr() as u32);
+        operand.write(cpu.register_set.sr.get_sr() as u32);
     }
 }
 
@@ -75,7 +75,7 @@ impl<T: BusM68k> Instruction<T> for MOVEtoCCR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read() & 0xFF; // operand size is word but used only low order byte
-        cpu.internals.register_set.sr.set_ccr(data);
+        cpu.register_set.sr.set_ccr(data);
     }
 }
 
@@ -92,9 +92,9 @@ impl<T: BusM68k> Instruction<T> for RTE {
         let sr_operand = operand_set.next();
         let pc_operand = operand_set.next();
         let sr = sr_operand.read();
-        cpu.internals.register_set.sr.set_sr(sr);
+        cpu.register_set.sr.set_sr(sr);
         let pc = pc_operand.read();
-        cpu.internals.register_set.pc = pc;
+        cpu.register_set.pc = pc;
     }
 }
 
@@ -110,9 +110,9 @@ impl<T: BusM68k> Instruction<T> for ANDItoCCR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut ccr = cpu.internals.register_set.sr.get_ccr();
+        let mut ccr = cpu.register_set.sr.get_ccr();
         ccr &= data as u16;
-        cpu.internals.register_set.sr.set_ccr(ccr as u32);
+        cpu.register_set.sr.set_ccr(ccr as u32);
     }
 }
 
@@ -128,9 +128,9 @@ impl<T: BusM68k> Instruction<T> for ANDItoSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut sr = cpu.internals.register_set.sr.get_sr();
+        let mut sr = cpu.register_set.sr.get_sr();
         sr &= data as u16;
-        cpu.internals.register_set.sr.set_sr(sr as u32);
+        cpu.register_set.sr.set_sr(sr as u32);
     }
 }
 
@@ -146,9 +146,9 @@ impl<T: BusM68k> Instruction<T> for EORItoCCR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut ccr = cpu.internals.register_set.sr.get_ccr();
+        let mut ccr = cpu.register_set.sr.get_ccr();
         ccr ^= data as u16;
-        cpu.internals.register_set.sr.set_ccr(ccr as u32);
+        cpu.register_set.sr.set_ccr(ccr as u32);
     }
 }
 
@@ -164,9 +164,9 @@ impl<T: BusM68k> Instruction<T> for EORItoSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut sr = cpu.internals.register_set.sr.get_sr();
+        let mut sr = cpu.register_set.sr.get_sr();
         sr ^= data as u16;
-        cpu.internals.register_set.sr.set_sr(sr as u32);
+        cpu.register_set.sr.set_sr(sr as u32);
     }
 }
 
@@ -182,9 +182,9 @@ impl<T: BusM68k> Instruction<T> for ORItoCCR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut ccr = cpu.internals.register_set.sr.get_ccr();
+        let mut ccr = cpu.register_set.sr.get_ccr();
         ccr |= data as u16;
-        cpu.internals.register_set.sr.set_ccr(ccr as u32);
+        cpu.register_set.sr.set_ccr(ccr as u32);
     }
 }
 
@@ -200,9 +200,9 @@ impl<T: BusM68k> Instruction<T> for ORItoSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let mut sr = cpu.internals.register_set.sr.get_sr();
+        let mut sr = cpu.register_set.sr.get_sr();
         sr |= data as u16;
-        cpu.internals.register_set.sr.set_sr(sr as u32);
+        cpu.register_set.sr.set_sr(sr as u32);
     }
 }
 
@@ -225,11 +225,11 @@ impl<T: BusM68k> Instruction<T> for CHK {
         let greater_upper_bound = (chk_data as i16) > (upper_bound as i16);
 
         if less_zerro || greater_upper_bound {
-            cpu.internals
+            cpu
                 .register_set
                 .sr
                 .set_flag(StatusFlag::N, less_zerro);
-            cpu.internals.trap = Some(CHK_INSTRUCTION);
+            cpu.trap = Some(CHK_INSTRUCTION);
         }
     }
 }
@@ -247,10 +247,10 @@ impl<T: BusM68k> Instruction<T> for ILLEAGL {
         let pc_stack_operand = operand_set.next();
         let sr_stack_operand = operand_set.next();
 
-        pc_stack_operand.write(cpu.internals.register_set.pc);
-        sr_stack_operand.write(cpu.internals.register_set.sr.get_sr() as u32);
+        pc_stack_operand.write(cpu.register_set.pc);
+        sr_stack_operand.write(cpu.register_set.sr.get_sr() as u32);
 
-        cpu.internals.trap = Some(ILLEGAL_INSTRUCTION);
+        cpu.trap = Some(ILLEGAL_INSTRUCTION);
     }
 }
 
@@ -294,6 +294,6 @@ impl Display for RESET {
 
 impl<T: BusM68k> Instruction<T> for RESET {
     fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
-        cpu.internals.trap = Some(RESET_SP)
+        cpu.trap = Some(RESET_SP)
     }
 }

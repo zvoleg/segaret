@@ -4,7 +4,7 @@ use crate::{
     addressing_mode_set::AddressingModeType,
     bus::BusM68k,
     cpu::M68k,
-    cpu_internals::{CpuInternals, RegisterType},
+    cpu_internals::RegisterType,
     instruction_set::Instruction,
     operand::{Operand, OperandSet},
     primitives::Size,
@@ -31,7 +31,7 @@ impl<T: BusM68k> Instruction<T> for MOVE {
         let dst_operand = operand_set.next();
         dst_operand.write(src_data);
 
-        let sr = &mut cpu.internals.register_set.sr;
+        let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, src_data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, src_data == 0);
         sr.set_flag(StatusFlag::V, false);
@@ -115,7 +115,7 @@ impl MOVEM {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPreDecrement => {
                 let register_ptr = cpu
-                    .internals
+                    
                     .register_set
                     .get_register_ptr(7, RegisterType::Address);
                 let mut memory_offset = 0;
@@ -145,7 +145,7 @@ impl MOVEM {
             }
             _ => {
                 let register_ptr = cpu
-                    .internals
+                    
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -171,7 +171,7 @@ impl MOVEM {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPostIncrement => {
                 let register_ptr = cpu
-                    .internals
+                    
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -195,7 +195,7 @@ impl MOVEM {
             }
             _ => {
                 let register_ptr = cpu
-                    .internals
+                    
                     .register_set
                     .get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
@@ -265,16 +265,16 @@ impl<T: BusM68k> Instruction<T> for MOVEQ {
         let data = self.data.sign_extend(Size::Byte);
         operand_set.next().operand_ptr.write(data, Size::Long);
 
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::N, data.is_negate(Size::Long));
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::Z, data == 0);
-        cpu.internals.register_set.sr.set_flag(StatusFlag::V, false);
-        cpu.internals.register_set.sr.set_flag(StatusFlag::C, false);
+        cpu.register_set.sr.set_flag(StatusFlag::V, false);
+        cpu.register_set.sr.set_flag(StatusFlag::C, false);
     }
 }
 
@@ -427,7 +427,7 @@ mod test {
         // There is no necessary of implementation for incrementing/decrementing of address,
         // so stack is just the propper register with address
         let stack_register_ptr = cpu
-            .internals
+            
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // immitation of the predecrementing addressing mode
@@ -445,7 +445,7 @@ mod test {
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
-            .internals
+            
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long);
@@ -470,7 +470,7 @@ mod test {
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
-            .internals
+            
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         operand_set.add(Operand::new(
@@ -484,7 +484,7 @@ mod test {
         // There is no necessary of implementation for incrementing/decrementing of address,
         // so stack is just the propper register with address
         let stack_register_ptr = cpu
-            .internals
+            
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let stack_address = stack_register_ptr.read(Size::Long);
@@ -515,14 +515,14 @@ mod test {
         let mem_ptr = MemoryPtr::new_read_only(&mut memory[decremented_stack_address as usize]);
         assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
         assert_eq!(
-            cpu.internals
+            cpu
                 .register_set
                 .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
                 .read(Size::Long),
             decremented_stack_address
         );
         assert_eq!(
-            cpu.internals
+            cpu
                 .register_set
                 .get_register_ptr(STACK_REGISTER, RegisterType::Address)
                 .read(Size::Long),
@@ -544,14 +544,14 @@ mod test {
         unlk.execute(unlk_operand_set, &mut cpu);
 
         assert_eq!(
-            cpu.internals
+            cpu
                 .register_set
                 .get_register_ptr(STACK_REGISTER, RegisterType::Address)
                 .read(Size::Long),
             STACK_INIT_ADDDRESS
         );
         assert_eq!(
-            cpu.internals
+            cpu
                 .register_set
                 .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
                 .read(Size::Long),

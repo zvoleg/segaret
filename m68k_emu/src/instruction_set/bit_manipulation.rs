@@ -30,7 +30,7 @@ impl<T: BusM68k> Instruction<T> for BCHG {
         let result = data ^ (1 << bit_number);
         operand.write(result);
 
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -62,7 +62,7 @@ impl<T: BusM68k> Instruction<T> for BCLR {
         let result = data & !(1 << bit_number);
         operand.write(result);
 
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -94,7 +94,7 @@ impl<T: BusM68k> Instruction<T> for BSET {
         let result = data | (1 << bit_number);
         operand.write(result);
 
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
@@ -124,7 +124,7 @@ impl<T: BusM68k> Instruction<T> for BTST {
         let data = operand.read();
         let bit = (data >> bit_number) & 1;
 
-        cpu.internals
+        cpu
             .register_set
             .sr
             .set_flag(StatusFlag::Z, bit == 0);
