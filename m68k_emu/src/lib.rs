@@ -2,7 +2,7 @@ pub mod bus;
 pub mod cpu;
 
 mod addressing_mode_set;
-mod cpu_internals;
+mod register_set;
 mod extension_word;
 mod header;
 mod instruction_set;

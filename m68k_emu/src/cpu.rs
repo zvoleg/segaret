@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     bus::BusM68k,
-    cpu_internals::{RegisterSet, RegisterType},
+    register_set::{RegisterSet, RegisterType},
     header::Header,
     instruction_set::system_control::ILLEAGL,
     opcode_generators::generate_opcode_list,

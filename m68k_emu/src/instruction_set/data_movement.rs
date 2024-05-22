@@ -4,7 +4,7 @@ use crate::{
     addressing_mode_set::AddressingModeType,
     bus::BusM68k,
     cpu::M68k,
-    cpu_internals::RegisterType,
+    register_set::RegisterType,
     instruction_set::Instruction,
     operand::{Operand, OperandSet},
     primitives::Size,
@@ -390,7 +390,7 @@ mod test {
     use crate::{
         bus::BusM68k,
         cpu::M68k,
-        cpu_internals::RegisterType,
+        register_set::RegisterType,
         instruction_set::Instruction,
         operand::{Operand, OperandSet},
         primitives::{memory::MemoryPtr, Pointer, Size},

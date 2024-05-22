@@ -1,6 +1,6 @@
 use crate::{
     bus::BusM68k,
-    cpu_internals::{RegisterSet, RegisterType},
+    register_set::{RegisterSet, RegisterType},
     extension_word::BriefExtensionWord,
     operand::Operand,
     primitives::{memory::MemoryPtr, Pointer},

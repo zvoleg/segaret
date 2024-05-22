@@ -1,5 +1,5 @@
 use crate::{
-    cpu_internals::{RegisterSet, RegisterType},
+    register_set::{RegisterSet, RegisterType},
     primitives::Pointer,
     SignExtending, Size,
 };
