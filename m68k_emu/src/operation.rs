@@ -1,20 +1,18 @@
 use crate::{
-    addressing_mode_set::AddressingMode,
-    instruction_set::Instruction,
-    primitives::{memory::MemoryPtr, Pointer, Size},
+    addressing_mode_set::AddressingMode, bus::BusM68k, instruction_set::Instruction, primitives::{memory::MemoryPtr, Pointer, Size}
 };
 
 /// Operation is composition of an instruction and the addressing modes
 /// Also an Operation contains information about cycles amount
-pub(crate) struct Operation {
-    pub(crate) instruction: Box<dyn Instruction>,
+pub(crate) struct Operation<T: BusM68k> {
+    pub(crate) instruction: Box<dyn Instruction<T>>,
     pub(crate) addressing_mode_list: Vec<Box<dyn AddressingMode>>,
     pub(crate) cycles: i32,
 }
 
-impl Operation {
+impl<T> Operation<T> where T: BusM68k {
     pub(crate) fn new(
-        instruction: Box<dyn Instruction>,
+        instruction: Box<dyn Instruction<T>>,
         addressing_mode_list: Vec<Box<dyn AddressingMode>>,
         cycles: i32,
     ) -> Self {

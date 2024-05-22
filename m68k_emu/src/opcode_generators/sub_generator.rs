@@ -2,19 +2,15 @@ use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterPreDecrement, AddressingMode, AddressingModeType,
         DataRegister, Immediate,
-    },
-    instruction_set::{
+    }, bus::BusM68k, instruction_set::{
         integer_arithmetic::{SUB, SUBA, SUBI, SUBQ, SUBX},
         RegisterFieldMode, WriteDirection,
-    },
-    operation::Operation,
-    primitives::Size,
-    range,
+    }, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_sub_mem_to_reg(table);
     generate_sub_reg_to_mem(table);
     generate_suba(table);
@@ -35,7 +31,7 @@ impl OpcodeMaskGenerator for SUB {
     }
 }
 
-fn generate_sub_mem_to_reg(table: &mut [Operation]) {
+fn generate_sub_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister, // Word and Long only
@@ -97,7 +93,7 @@ fn generate_sub_mem_to_reg(table: &mut [Operation]) {
     }
 }
 
-fn generate_sub_reg_to_mem(table: &mut [Operation]) {
+fn generate_sub_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -151,7 +147,7 @@ impl OpcodeMaskGenerator for SUBA {
     }
 }
 
-fn generate_suba(table: &mut [Operation]) {
+fn generate_suba<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -210,7 +206,7 @@ impl OpcodeMaskGenerator for SUBI {
     }
 }
 
-fn generate_subi(table: &mut [Operation]) {
+fn generate_subi<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -265,7 +261,7 @@ impl OpcodeMaskGenerator for SUBQ {
     }
 }
 
-fn generate_subq(table: &mut [Operation]) {
+fn generate_subq<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -328,7 +324,7 @@ impl OpcodeMaskGenerator for SUBX {
     }
 }
 
-fn generate_subx(table: &mut [Operation]) {
+fn generate_subx<T: BusM68k>(table: &mut [Operation<T>]) {
     for reg_x in 0..8 {
         for size in [Size::Byte, Size::Word, Size::Long] {
             for mode in [

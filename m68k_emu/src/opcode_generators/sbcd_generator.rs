@@ -1,6 +1,6 @@
 use crate::{decoder::{Operation, InstructionData, InstructionType}, addressing_mode::AdrMode, Size};
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let base_mask: usize = 0b1000000100000000;
     for mode in 0..=1 {
         for reg_y in 0..8 {

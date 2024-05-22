@@ -1,18 +1,14 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
-    instruction_set::{
+    addressing_mode_set::{AddressingModeType, DataRegister, Immediate}, bus::BusM68k, instruction_set::{
         logical_instructions::{OR, ORI},
         system_control::{ORItoCCR, ORItoSR},
         WriteDirection,
-    },
-    operation::Operation,
-    primitives::Size,
-    range,
+    }, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_or_mem_to_reg(table);
     generate_or_reg_to_mem(table);
     generate_ori(table);
@@ -32,7 +28,7 @@ impl OpcodeMaskGenerator for OR {
     }
 }
 
-fn generate_or_mem_to_reg(table: &mut [Operation]) {
+fn generate_or_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -81,7 +77,7 @@ fn generate_or_mem_to_reg(table: &mut [Operation]) {
     }
 }
 
-fn generate_or_reg_to_mem(table: &mut [Operation]) {
+fn generate_or_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -138,7 +134,7 @@ impl OpcodeMaskGenerator for ORI {
     }
 }
 
-fn generate_ori(table: &mut [Operation]) {
+fn generate_ori<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -185,7 +181,7 @@ impl OpcodeMaskGenerator for ORItoCCR {
     }
 }
 
-fn generate_ori_to_ccr(table: &mut [Operation]) {
+fn generate_ori_to_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(ORItoCCR());
     let src_am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
@@ -199,7 +195,7 @@ impl OpcodeMaskGenerator for ORItoSR {
     }
 }
 
-fn generate_ori_to_sr(table: &mut [Operation]) {
+fn generate_ori_to_sr<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(ORItoSR());
     let src_am = Box::new(Immediate { size: Size::Word });
     let opcode = instruction.generate_mask();

@@ -1,16 +1,12 @@
 use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterPostIncrement, AddressingModeType, DataRegister, Immediate,
-    },
-    instruction_set::integer_arithmetic::{CMP, CMPA, CMPI, CMPM},
-    operation::Operation,
-    primitives::Size,
-    range,
+    }, bus::BusM68k, instruction_set::integer_arithmetic::{CMP, CMPA, CMPI, CMPM}, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_cmp(table);
     generate_cmpa(table);
     generate_cmpi(table);
@@ -29,7 +25,7 @@ impl OpcodeMaskGenerator for CMP {
     }
 }
 
-fn generate_cmp(table: &mut [Operation]) {
+fn generate_cmp<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister, // Word and Long only
@@ -94,7 +90,7 @@ impl OpcodeMaskGenerator for CMPA {
     }
 }
 
-fn generate_cmpa(table: &mut [Operation]) {
+fn generate_cmpa<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegister,
@@ -146,7 +142,7 @@ impl OpcodeMaskGenerator for CMPI {
     }
 }
 
-fn generate_cmpi(table: &mut [Operation]) {
+fn generate_cmpi<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -197,7 +193,7 @@ impl OpcodeMaskGenerator for CMPM {
     }
 }
 
-fn generate_cmpm(table: &mut [Operation]) {
+fn generate_cmpm<T: BusM68k>(table: &mut [Operation<T>]) {
     for reg_y in 0..8 {
         for reg_x in 0..8 {
             for size in [Size::Byte, Size::Word, Size::Long] {

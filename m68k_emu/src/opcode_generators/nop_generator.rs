@@ -1,4 +1,4 @@
-use crate::{instruction_set::program_control::NOP, operation::Operation};
+use crate::{bus::BusM68k, instruction_set::program_control::NOP, operation::Operation};
 
 use super::OpcodeMaskGenerator;
 
@@ -8,7 +8,7 @@ impl OpcodeMaskGenerator for NOP {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(NOP());
     let opcode = instruction.generate_mask();
     let operation = Operation::new(instruction, vec![], 4);

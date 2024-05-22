@@ -1,8 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressingMode, Immediate},
-    instruction_set::program_control::BRA,
-    operation::Operation,
-    primitives::Size,
+    addressing_mode_set::{AddressingMode, Immediate}, bus::BusM68k, instruction_set::program_control::BRA, operation::Operation, primitives::Size
 };
 
 use super::OpcodeMaskGenerator;
@@ -15,7 +12,7 @@ impl OpcodeMaskGenerator for BRA {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     for displacement in 0..0x100 {
         let instruction = Box::new(BRA {
             displacement: displacement,

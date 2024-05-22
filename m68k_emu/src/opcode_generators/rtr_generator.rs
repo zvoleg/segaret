@@ -1,6 +1,5 @@
 use crate::{
-    addressing_mode_set::AddressRegisterPostIncrement, instruction_set::program_control::RTR,
-    operation::Operation, primitives::Size, STACK_REGISTER,
+    addressing_mode_set::AddressRegisterPostIncrement, bus::BusM68k, instruction_set::program_control::RTR, operation::Operation, primitives::Size, STACK_REGISTER
 };
 
 use super::OpcodeMaskGenerator;
@@ -11,7 +10,7 @@ impl OpcodeMaskGenerator for RTR {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(RTR());
     let stack_ccr_operand = Box::new(AddressRegisterPostIncrement {
         reg: STACK_REGISTER,

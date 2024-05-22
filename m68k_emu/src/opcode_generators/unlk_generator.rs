@@ -1,9 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressRegister, AddressRegisterPostIncrement},
-    instruction_set::data_movement::UNLK,
-    operation::Operation,
-    primitives::Size,
-    STACK_REGISTER,
+    addressing_mode_set::{AddressRegister, AddressRegisterPostIncrement}, bus::BusM68k, instruction_set::data_movement::UNLK, operation::Operation, primitives::Size, STACK_REGISTER
 };
 
 use super::OpcodeMaskGenerator;
@@ -14,7 +10,7 @@ impl OpcodeMaskGenerator for UNLK {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     for address_reg_idx in 0..8 {
         let instruction = Box::new(UNLK());
         let register_am = Box::new(AddressRegister {

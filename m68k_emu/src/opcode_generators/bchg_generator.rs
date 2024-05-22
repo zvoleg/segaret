@@ -1,5 +1,6 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
+    bus::BusM68k,
     instruction_set::bit_manipulation::BCHG,
     operation::Operation,
     primitives::Size,
@@ -8,7 +9,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_bchg_reg(table);
     generate_bchg_immediate(table);
 }
@@ -19,7 +20,7 @@ impl OpcodeMaskGenerator for BCHG {
     }
 }
 
-fn generate_bchg_reg(table: &mut [Operation]) {
+fn generate_bchg_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -59,7 +60,7 @@ fn generate_bchg_reg(table: &mut [Operation]) {
     }
 }
 
-fn generate_bchg_immediate(table: &mut [Operation]) {
+fn generate_bchg_immediate<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

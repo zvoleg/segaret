@@ -1,6 +1,6 @@
 use crate::{decoder::{Operation, InstructionData, InstructionType}, adr_mode, addressing_mode::AdrMode, Size};
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let base_mask = 0b0100100000000000;
 
     let am_types = [
@@ -12,6 +12,7 @@ pub(crate) fn generate(table: &mut [Operation]) {
     AddressingModeType::AddressRegisterIndexed,
     AddressingModeType::AbsShort,
     AddressingModeType::AbsLong,
+    ];
 
     for am_type in am_types {
         let mask = usize::from(am);

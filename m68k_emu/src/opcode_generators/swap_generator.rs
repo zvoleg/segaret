@@ -1,6 +1,5 @@
 use crate::{
-    addressing_mode_set::DataRegister, instruction_set::shift_and_rotate::SWAP,
-    operation::Operation, primitives::Size,
+    addressing_mode_set::DataRegister, bus::BusM68k, instruction_set::shift_and_rotate::SWAP, operation::Operation, primitives::Size
 };
 
 use super::OpcodeMaskGenerator;
@@ -11,7 +10,7 @@ impl OpcodeMaskGenerator for SWAP {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     for data_reg in 0..8 {
         let instruction = Box::new(SWAP());
         let am = Box::new(DataRegister {

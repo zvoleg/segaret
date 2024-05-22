@@ -1,5 +1,6 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister},
+    bus::BusM68k,
     instruction_set::{
         shift_and_rotate::{ASdDataReg, ASdImplied, ASdMemory},
         ShiftDirection,
@@ -11,7 +12,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_asd_data_reg(table);
     generate_asd_implied(table);
     generate_asd_mem(table);
@@ -30,7 +31,7 @@ impl OpcodeMaskGenerator for ASdDataReg {
     }
 }
 
-fn generate_asd_data_reg(table: &mut [Operation]) {
+fn generate_asd_data_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     for data_reg_x_idx in 0..8 {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
@@ -81,7 +82,7 @@ impl OpcodeMaskGenerator for ASdImplied {
     }
 }
 
-fn generate_asd_implied(table: &mut [Operation]) {
+fn generate_asd_implied<T: BusM68k>(table: &mut [Operation<T>]) {
     for count in 0..8 {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
@@ -121,7 +122,7 @@ impl OpcodeMaskGenerator for ASdMemory {
     }
 }
 
-fn generate_asd_mem(table: &mut [Operation]) {
+fn generate_asd_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,

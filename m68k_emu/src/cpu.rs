@@ -17,7 +17,7 @@ pub struct M68k<T: BusM68k> {
     pub(crate) internals: CpuInternals,
     header: Header,
 
-    operation_set: Vec<Operation>,
+    operation_set: Vec<Operation<T>>,
     bus: T,
 }
 
@@ -26,7 +26,7 @@ where
     T: BusM68k,
 {
     pub fn new(bus: T) -> Self {
-        let mut table: Vec<Operation> = Vec::with_capacity(0x10000);
+        let mut table: Vec<Operation<T>> = Vec::with_capacity(0x10000);
         table.resize_with(0x10000, || {
             Operation::new(Box::new(ILLEAGL()), Vec::new(), 5)
         });
@@ -61,7 +61,7 @@ where
             operands.add(am.get_operand(&mut self.internals.register_set, &self.bus));
         }
         let instruction = &operation.instruction;
-        instruction.execute(operands, &mut self.internals);
+        instruction.execute(operands, self);
         println!("{}", self);
         if let Some(vector) = self.internals.trap {
             if vector == RESET_SP {

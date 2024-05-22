@@ -1,9 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressRegisterPreDecrement, AddressingModeType},
-    instruction_set::data_movement::PEA,
-    operation::Operation,
-    primitives::Size,
-    range, STACK_REGISTER,
+    addressing_mode_set::{AddressRegisterPreDecrement, AddressingModeType}, bus::BusM68k, instruction_set::data_movement::PEA, operation::Operation, primitives::Size, range, STACK_REGISTER
 };
 
 use super::OpcodeMaskGenerator;
@@ -14,7 +10,7 @@ impl OpcodeMaskGenerator for PEA {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterDisplacement,

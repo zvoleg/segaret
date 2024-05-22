@@ -1,6 +1,5 @@
 use crate::{
-    addressing_mode_set::AddressingModeType, instruction_set::program_control::JMP,
-    operation::Operation, primitives::Size, range,
+    addressing_mode_set::AddressingModeType, bus::BusM68k, instruction_set::program_control::JMP, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
@@ -11,7 +10,7 @@ impl OpcodeMaskGenerator for JMP {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterDisplacement,

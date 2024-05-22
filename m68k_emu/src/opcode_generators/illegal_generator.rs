@@ -1,6 +1,5 @@
 use crate::{
-    addressing_mode_set::AddressRegisterPreDecrement, instruction_set::system_control::ILLEAGL,
-    operation::Operation, primitives::Size, STACK_REGISTER,
+    addressing_mode_set::AddressRegisterPreDecrement, bus::BusM68k, instruction_set::system_control::ILLEAGL, operation::Operation, primitives::Size, STACK_REGISTER
 };
 
 use super::OpcodeMaskGenerator;
@@ -11,7 +10,7 @@ impl OpcodeMaskGenerator for ILLEAGL {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(ILLEAGL());
     let pc_stack_am = Box::new(AddressRegisterPreDecrement {
         reg: STACK_REGISTER,

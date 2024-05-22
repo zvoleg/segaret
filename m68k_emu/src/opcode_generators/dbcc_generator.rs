@@ -1,8 +1,5 @@
 use crate::{
-    addressing_mode_set::{DataRegister, Immediate},
-    instruction_set::{program_control::DBcc, Condition},
-    operation::Operation,
-    primitives::Size,
+    addressing_mode_set::{DataRegister, Immediate}, bus::BusM68k, instruction_set::{program_control::DBcc, Condition}, operation::Operation, primitives::Size
 };
 
 use super::OpcodeMaskGenerator;
@@ -15,7 +12,7 @@ impl OpcodeMaskGenerator for DBcc {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let condition_set = vec![
         Condition::TRUE,
         Condition::FALSE,

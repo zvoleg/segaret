@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
-use crate::cpu_internals::CpuInternals;
+use crate::bus::BusM68k;
+use crate::cpu::M68k;
 use crate::operand::OperandSet;
 
 pub(crate) mod bit_manipulation;
@@ -14,8 +15,8 @@ pub(crate) mod program_control;
 pub(crate) mod system_control;
 
 ///
-pub(crate) trait Instruction: Display {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals);
+pub(crate) trait Instruction<T>: Display where T: BusM68k {
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>);
 }
 
 /// It is used for MOVEM, MOVE_USP and MOVEP instructions

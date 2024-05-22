@@ -1,6 +1,5 @@
 use crate::{
-    addressing_mode_set::DataRegister, instruction_set::integer_arithmetic::EXT,
-    operation::Operation, primitives::Size,
+    addressing_mode_set::DataRegister, bus::BusM68k, instruction_set::integer_arithmetic::EXT, operation::Operation, primitives::Size
 };
 
 use super::OpcodeMaskGenerator;
@@ -17,7 +16,7 @@ impl OpcodeMaskGenerator for EXT {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     for size in [Size::Word, Size::Long] {
         for data_reg_idx in 0..8 {
             let src_size = match size {

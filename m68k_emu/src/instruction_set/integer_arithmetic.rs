@@ -1,9 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
-    primitives::Size, status_flag::StatusFlag, vectors::DIVISION_BY_ZERO, IsNegate, IsZero,
-    MsbIsSet, SignExtending,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size, status_flag::StatusFlag, vectors::DIVISION_BY_ZERO, IsNegate, IsZero, MsbIsSet, SignExtending
 };
 
 use super::RegisterFieldMode;
@@ -18,8 +16,8 @@ impl Display for ADD {
     }
 }
 
-impl Instruction for ADD {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ADD {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -35,7 +33,7 @@ impl Instruction for ADD {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -54,8 +52,8 @@ impl Display for ADDA {
     }
 }
 
-impl Instruction for ADDA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ADDA {
+    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -77,8 +75,8 @@ impl Display for ADDI {
     }
 }
 
-impl Instruction for ADDI {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ADDI {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -95,7 +93,7 @@ impl Instruction for ADDI {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -116,8 +114,8 @@ impl Display for ADDQ {
     }
 }
 
-impl Instruction for ADDQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ADDQ {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let dst_operand = operand_set.next();
         let dst_data = dst_operand.read();
         let result = self.data.wrapping_add(dst_data);
@@ -133,7 +131,7 @@ impl Instruction for ADDQ {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -153,14 +151,14 @@ impl Display for ADDX {
     }
 }
 
-impl Instruction for ADDX {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ADDX {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
         let src_data = src_operand.read();
         let dst_data = dst_operand.read();
 
-        let x_bit = cpu_internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
 
         let result = src_data.wrapping_add(dst_data).wrapping_add(x_bit);
         dst_operand.write(result);
@@ -172,7 +170,7 @@ impl Instruction for ADDX {
         let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -195,8 +193,8 @@ impl Display for SUB {
     }
 }
 
-impl Instruction for SUB {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SUB {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
         let src_data = src_operand.read();
@@ -211,7 +209,7 @@ impl Instruction for SUB {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -230,8 +228,8 @@ impl Display for SUBA {
     }
 }
 
-impl Instruction for SUBA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SUBA {
+    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -253,8 +251,8 @@ impl Display for SUBI {
     }
 }
 
-impl Instruction for SUBI {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SUBI {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -271,7 +269,7 @@ impl Instruction for SUBI {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -292,8 +290,8 @@ impl Display for SUBQ {
     }
 }
 
-impl Instruction for SUBQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SUBQ {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let dst_operand = operand_set.next();
         let dst_data = dst_operand.read();
         let result = dst_data.wrapping_sub(self.data);
@@ -309,7 +307,7 @@ impl Instruction for SUBQ {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
@@ -329,14 +327,14 @@ impl Display for SUBX {
     }
 }
 
-impl Instruction for SUBX {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SUBX {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
         let src_data = src_operand.read();
         let dst_data = dst_operand.read();
 
-        let x_bit = cpu_internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
 
         let result = dst_data.wrapping_sub(src_data).wrapping_sub(x_bit);
         dst_operand.write(result);
@@ -348,7 +346,7 @@ impl Instruction for SUBX {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -371,12 +369,12 @@ impl Display for CLR {
     }
 }
 
-impl Instruction for CLR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for CLR {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         operand.write(0);
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, false);
         sr.set_flag(StatusFlag::Z, true);
         sr.set_flag(StatusFlag::V, false);
@@ -394,8 +392,8 @@ impl Display for CMP {
     }
 }
 
-impl Instruction for CMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for CMP {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -410,7 +408,7 @@ impl Instruction for CMP {
         let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
         let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::N, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -428,9 +426,9 @@ impl Display for CMPA {
     }
 }
 
-impl Instruction for CMPA {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        CMP { size: self.size }.execute(operand_set, cpu_internals);
+impl<T: BusM68k> Instruction<T> for CMPA {
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
+        CMP { size: self.size }.execute(operand_set, cpu);
     }
 }
 pub(crate) struct CMPI {
@@ -443,9 +441,9 @@ impl Display for CMPI {
     }
 }
 
-impl Instruction for CMPI {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        CMP { size: self.size }.execute(operand_set, cpu_internals);
+impl<T: BusM68k> Instruction<T> for CMPI {
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
+        CMP { size: self.size }.execute(operand_set, cpu);
     }
 }
 pub(crate) struct CMPM {
@@ -458,9 +456,9 @@ impl Display for CMPM {
     }
 }
 
-impl Instruction for CMPM {
-    fn execute(&self, operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
-        CMP { size: self.size }.execute(operand_set, cpu_internals);
+impl<T: BusM68k> Instruction<T> for CMPM {
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
+        CMP { size: self.size }.execute(operand_set, cpu);
     }
 }
 pub(crate) struct EXT {
@@ -474,14 +472,14 @@ impl Display for EXT {
     }
 }
 
-impl Instruction for EXT {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for EXT {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read_sized(self.src_size);
         let result = data.sign_extend(self.src_size);
         operand.write(result);
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.target_size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.target_size));
         sr.set_flag(StatusFlag::V, false);
@@ -499,8 +497,8 @@ impl Display for NEG {
     }
 }
 
-impl Instruction for NEG {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for NEG {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
         let result = 0u32.wrapping_sub(data);
@@ -514,7 +512,7 @@ impl Instruction for NEG {
         let res_msb = result.msb_is_set(self.size);
         let overflow = src_msb & res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
@@ -533,11 +531,11 @@ impl Display for NEGX {
     }
 }
 
-impl Instruction for NEGX {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for NEGX {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let data = operand.read();
-        let x_bit = cpu_internals.register_set.sr.get_bit(StatusFlag::X);
+        let x_bit = cpu.internals.register_set.sr.get_bit(StatusFlag::X);
 
         let result = 0u32.wrapping_sub(data).wrapping_sub(x_bit);
         operand.write(result);
@@ -547,7 +545,7 @@ impl Instruction for NEGX {
         let overflow = dst_msb & res_msb;
         let carry = dst_msb | res_msb;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
@@ -568,8 +566,8 @@ impl Display for MULS {
     }
 }
 
-impl Instruction for MULS {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for MULS {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
         let src_data = src_operand.read();
@@ -579,7 +577,7 @@ impl Instruction for MULS {
         let result = result as u32;
         dst_operand.write_sized(result, Size::Long);
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, overflow);
@@ -595,8 +593,8 @@ impl Display for MULU {
     }
 }
 
-impl Instruction for MULU {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for MULU {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -605,7 +603,7 @@ impl Instruction for MULU {
         let (result, overflow) = src_data.overflowing_mul(dst_data); // TODO may be there is needs use casting to u16 for correct calculation of the overflow status
         dst_operand.write_sized(result, Size::Long);
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, overflow);
@@ -621,8 +619,8 @@ impl Display for DIVS {
     }
 }
 
-impl Instruction for DIVS {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for DIVS {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -630,12 +628,12 @@ impl Instruction for DIVS {
         let dst_data = dst_operand.read() as i32;
 
         if src_data == 0 {
-            cpu_internals.trap = Some(DIVISION_BY_ZERO);
+            cpu.internals.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu_internals
+            cpu.internals
                 .register_set
                 .sr
                 .set_flag(StatusFlag::V, overflow);
@@ -650,7 +648,7 @@ impl Instruction for DIVS {
         let zero = (quotient as u32).is_zero(Size::Word);
         let carry = false;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
         sr.set_flag(StatusFlag::V, overflow);
@@ -666,8 +664,8 @@ impl Display for DIVU {
     }
 }
 
-impl Instruction for DIVU {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for DIVU {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
@@ -675,12 +673,12 @@ impl Instruction for DIVU {
         let dst_data = dst_operand.read();
 
         if src_data == 0 {
-            cpu_internals.trap = Some(DIVISION_BY_ZERO);
+            cpu.internals.trap = Some(DIVISION_BY_ZERO);
             return;
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu_internals
+            cpu.internals
                 .register_set
                 .sr
                 .set_flag(StatusFlag::V, overflow);
@@ -695,7 +693,7 @@ impl Instruction for DIVU {
         let zero = (quotient as u32).is_zero(Size::Word);
         let carry = false;
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, negate);
         sr.set_flag(StatusFlag::Z, zero);
         sr.set_flag(StatusFlag::V, overflow);

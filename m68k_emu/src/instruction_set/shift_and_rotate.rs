@@ -1,13 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    cpu_internals::CpuInternals,
-    instruction_set::Instruction,
-    operand::{Operand, OperandSet},
-    primitives::Size,
-    status_flag::StatusFlag,
-    status_register::StatusRegister,
-    IsNegate, IsZero, MsbIsSet,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::{Operand, OperandSet}, primitives::Size, status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero, MsbIsSet
 };
 
 use super::ShiftDirection;
@@ -23,8 +17,8 @@ impl Display for ASdDataReg {
     }
 }
 
-impl Instruction for ASdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ASdDataReg {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
@@ -33,13 +27,13 @@ impl Instruction for ASdDataReg {
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => asl(
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -57,21 +51,21 @@ impl Display for ASdImplied {
     }
 }
 
-impl Instruction for ASdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ASdImplied {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => asr(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => asl(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -87,14 +81,14 @@ impl Display for ASdMemory {
     }
 }
 
-impl Instruction for ASdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ASdMemory {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => {
-                asr(1, operand, Size::Word, &mut cpu_internals.register_set.sr)
+                asr(1, operand, Size::Word, &mut cpu.internals.register_set.sr)
             }
-            ShiftDirection::Left => asl(1, operand, Size::Word, &mut cpu_internals.register_set.sr),
+            ShiftDirection::Left => asl(1, operand, Size::Word, &mut cpu.internals.register_set.sr),
         }
     }
 }
@@ -153,8 +147,8 @@ impl Display for LSdDataReg {
     }
 }
 
-impl Instruction for LSdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for LSdDataReg {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
@@ -163,13 +157,13 @@ impl Instruction for LSdDataReg {
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => lsl(
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -187,21 +181,21 @@ impl Display for LSdImplied {
     }
 }
 
-impl Instruction for LSdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for LSdImplied {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => lsr(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => lsl(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -217,14 +211,14 @@ impl Display for LSdMemory {
     }
 }
 
-impl Instruction for LSdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for LSdMemory {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => {
-                lsr(1, operand, Size::Word, &mut cpu_internals.register_set.sr)
+                lsr(1, operand, Size::Word, &mut cpu.internals.register_set.sr)
             }
-            ShiftDirection::Left => lsl(1, operand, Size::Word, &mut cpu_internals.register_set.sr),
+            ShiftDirection::Left => lsl(1, operand, Size::Word, &mut cpu.internals.register_set.sr),
         }
     }
 }
@@ -274,8 +268,8 @@ impl Display for ROdDataReg {
     }
 }
 
-impl Instruction for ROdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROdDataReg {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
@@ -284,13 +278,13 @@ impl Instruction for ROdDataReg {
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => rol(
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -308,21 +302,21 @@ impl Display for ROdImplied {
     }
 }
 
-impl Instruction for ROdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROdImplied {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => ror(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => rol(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -338,14 +332,14 @@ impl Display for ROdMemory {
     }
 }
 
-impl Instruction for ROdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROdMemory {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => {
-                ror(1, operand, Size::Word, &mut cpu_internals.register_set.sr)
+                ror(1, operand, Size::Word, &mut cpu.internals.register_set.sr)
             }
-            ShiftDirection::Left => rol(1, operand, Size::Word, &mut cpu_internals.register_set.sr),
+            ShiftDirection::Left => rol(1, operand, Size::Word, &mut cpu.internals.register_set.sr),
         }
     }
 }
@@ -396,8 +390,8 @@ impl Display for ROXdDataReg {
     }
 }
 
-impl Instruction for ROXdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROXdDataReg {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
@@ -406,13 +400,13 @@ impl Instruction for ROXdDataReg {
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => roxl(
                 count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -430,21 +424,21 @@ impl Display for ROXdImplied {
     }
 }
 
-impl Instruction for ROXdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROXdImplied {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => roxr(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
             ShiftDirection::Left => roxl(
                 self.count,
                 operand,
                 self.size,
-                &mut cpu_internals.register_set.sr,
+                &mut cpu.internals.register_set.sr,
             ),
         }
     }
@@ -460,15 +454,15 @@ impl Display for ROXdMemory {
     }
 }
 
-impl Instruction for ROXdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for ROXdMemory {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => {
-                roxr(1, operand, Size::Word, &mut cpu_internals.register_set.sr)
+                roxr(1, operand, Size::Word, &mut cpu.internals.register_set.sr)
             }
             ShiftDirection::Left => {
-                roxl(1, operand, Size::Word, &mut cpu_internals.register_set.sr)
+                roxl(1, operand, Size::Word, &mut cpu.internals.register_set.sr)
             }
         }
     }
@@ -519,8 +513,8 @@ impl Display for SWAP {
     }
 }
 
-impl Instruction for SWAP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for SWAP {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         let mut data = operand.read();
 
@@ -530,7 +524,7 @@ impl Instruction for SWAP {
 
         operand.write(data);
 
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, data.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, false);

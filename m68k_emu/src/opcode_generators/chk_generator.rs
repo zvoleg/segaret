@@ -1,9 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister},
-    instruction_set::system_control::CHK,
-    operation::Operation,
-    primitives::Size,
-    range,
+    addressing_mode_set::{AddressingModeType, DataRegister}, bus::BusM68k, instruction_set::system_control::CHK, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
@@ -14,7 +10,7 @@ impl OpcodeMaskGenerator for CHK {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

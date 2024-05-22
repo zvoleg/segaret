@@ -1,17 +1,13 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister},
-    instruction_set::{
+    addressing_mode_set::{AddressingModeType, DataRegister}, bus::BusM68k, instruction_set::{
         shift_and_rotate::{LSdDataReg, LSdImplied, LSdMemory},
         ShiftDirection,
-    },
-    operation::Operation,
-    primitives::Size,
-    range,
+    }, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_lsd_data_reg(table);
     generate_lsd_implied(table);
     generate_lsd_mem(table);
@@ -30,7 +26,7 @@ impl OpcodeMaskGenerator for LSdDataReg {
     }
 }
 
-fn generate_lsd_data_reg(table: &mut [Operation]) {
+fn generate_lsd_data_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     for data_reg_x_idx in 0..8 {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
@@ -81,7 +77,7 @@ impl OpcodeMaskGenerator for LSdImplied {
     }
 }
 
-fn generate_lsd_implied(table: &mut [Operation]) {
+fn generate_lsd_implied<T: BusM68k>(table: &mut [Operation<T>]) {
     for count in 0..8 {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
@@ -120,7 +116,7 @@ impl OpcodeMaskGenerator for LSdMemory {
     }
 }
 
-fn generate_lsd_mem(table: &mut [Operation]) {
+fn generate_lsd_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,

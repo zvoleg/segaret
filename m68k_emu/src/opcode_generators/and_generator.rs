@@ -1,5 +1,6 @@
 use crate::{
     addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
+    bus::BusM68k,
     instruction_set::{
         logical_instructions::{AND, ANDI},
         system_control::{ANDItoCCR, ANDItoSR},
@@ -12,7 +13,7 @@ use crate::{
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_and_mem_to_reg(table);
     generate_and_reg_to_mem(table);
     generate_andi(table);
@@ -32,7 +33,7 @@ impl OpcodeMaskGenerator for AND {
     }
 }
 
-fn generate_and_mem_to_reg(table: &mut [Operation]) {
+fn generate_and_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -84,7 +85,7 @@ fn generate_and_mem_to_reg(table: &mut [Operation]) {
     }
 }
 
-fn generate_and_reg_to_mem(table: &mut [Operation]) {
+fn generate_and_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -139,7 +140,7 @@ impl OpcodeMaskGenerator for ANDI {
     }
 }
 
-fn generate_andi(table: &mut [Operation]) {
+fn generate_andi<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -187,7 +188,7 @@ impl OpcodeMaskGenerator for ANDItoCCR {
     }
 }
 
-fn generate_andi_ccr(table: &mut [Operation]) {
+fn generate_andi_ccr<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(ANDItoCCR());
     let am = Box::new(Immediate { size: Size::Byte });
     let opcode = instruction.generate_mask();
@@ -201,7 +202,7 @@ impl OpcodeMaskGenerator for ANDItoSR {
     }
 }
 
-fn generate_andi_sr(table: &mut [Operation]) {
+fn generate_andi_sr<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(ANDItoSR());
     let am = Box::new(Immediate { size: Size::Word });
     let opcode = instruction.generate_mask();

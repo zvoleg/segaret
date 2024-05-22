@@ -1,14 +1,10 @@
 use crate::{
-    addressing_mode_set::AddressingModeType,
-    instruction_set::integer_arithmetic::{NEG, NEGX},
-    operation::Operation,
-    primitives::Size,
-    range,
+    addressing_mode_set::AddressingModeType, bus::BusM68k, instruction_set::integer_arithmetic::{NEG, NEGX}, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_neg(table);
     generate_negx(table);
 }
@@ -25,7 +21,7 @@ impl OpcodeMaskGenerator for NEG {
     }
 }
 
-fn generate_neg(table: &mut [Operation]) {
+fn generate_neg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -76,7 +72,7 @@ impl OpcodeMaskGenerator for NEGX {
     }
 }
 
-fn generate_negx(table: &mut [Operation]) {
+fn generate_negx<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

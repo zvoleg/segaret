@@ -1,14 +1,10 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister, Immediate},
-    instruction_set::bit_manipulation::BSET,
-    operation::Operation,
-    primitives::Size,
-    range,
+    addressing_mode_set::{AddressingModeType, DataRegister, Immediate}, bus::BusM68k, instruction_set::bit_manipulation::BSET, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_bset_reg(table);
     generate_bset_i(table);
 }
@@ -19,7 +15,7 @@ impl OpcodeMaskGenerator for BSET {
     }
 }
 
-fn generate_bset_reg(table: &mut [Operation]) {
+fn generate_bset_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -59,7 +55,7 @@ fn generate_bset_reg(table: &mut [Operation]) {
     }
 }
 
-fn generate_bset_i(table: &mut [Operation]) {
+fn generate_bset_i<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

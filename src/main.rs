@@ -5,7 +5,7 @@ use std::{fs::File, io::Read};
 use m68k_emu::cpu::M68k;
 
 use bus::Bus;
-use spriter::Color;
+use spriter::{if_pressed, Color};
 
 pub mod bus;
 // pub mod cartridge;
@@ -24,8 +24,16 @@ fn main() {
     // let mut disassembler = Disassembler::new("pop_disassm");
     let mut m68k = M68k::new(bus);
 
+    let mut auto = false;
     runner.run(window, move |_| {
-        m68k.clock();
+        if_pressed!(spriter::Key::A, {auto = !auto});
+        if_pressed!(spriter::Key::C, {
+            m68k.clock();
+            auto = false;
+        });
+        if auto {
+            m68k.clock();
+        }
         true
     });
 }

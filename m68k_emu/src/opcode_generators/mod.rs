@@ -4,9 +4,7 @@ use crate::{
         AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
         AddressingMode, AddressingModeType, DataRegister, Immediate, ProgramCounterDisplacement,
         ProgramCounterIndexed,
-    },
-    operation::Operation,
-    primitives::Size,
+    }, bus::BusM68k, operation::Operation, primitives::Size
 };
 
 // pub(crate) mod abcd_generator;
@@ -131,7 +129,7 @@ impl AddressingModeType {
     }
 }
 
-pub(crate) fn generate_opcode_list(table: &mut [Operation]) {
+pub(crate) fn generate_opcode_list<T: BusM68k>(table: &mut [Operation<T>]) {
     // abcd_generator::generate(table);
     add_generator::generate(table);
     and_generator::generate(table);

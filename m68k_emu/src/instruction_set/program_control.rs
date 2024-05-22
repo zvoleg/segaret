@@ -1,9 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    cpu_internals::CpuInternals, instruction_set::Instruction, operand::OperandSet,
-    primitives::Size, status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero,
-    SignExtending,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size, status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero, SignExtending
 };
 
 use super::Condition;
@@ -18,10 +16,10 @@ impl Display for TST {
     }
 }
 
-impl Instruction for TST {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for TST {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data = operand_set.next().read();
-        let sr = &mut cpu_internals.register_set.sr;
+        let sr = &mut cpu.internals.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, data.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
@@ -44,19 +42,19 @@ impl Display for Bcc {
     }
 }
 
-impl Instruction for Bcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for Bcc {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
-        if check_condition(self.condition, &cpu_internals.register_set.sr) {
-            let pc = &mut cpu_internals.register_set.pc;
+        if check_condition(self.condition, &cpu.internals.register_set.sr) {
+            let pc = &mut cpu.internals.register_set.pc;
             *pc = pc.wrapping_add(displacement);
         } else {
             let clock_corection = if self.displacement == 0 { 2 } else { -2i32 };
-            cpu_internals.cycles = cpu_internals.cycles.wrapping_add(clock_corection);
+            cpu.internals.cycles = cpu.internals.cycles.wrapping_add(clock_corection);
         }
     }
 }
@@ -71,26 +69,26 @@ impl Display for DBcc {
     }
 }
 
-impl Instruction for DBcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for DBcc {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let data_reg_operand = operand_set.next();
         let displacement_operand = operand_set.next();
         let displacement = displacement_operand.read().sign_extend(Size::Word);
 
-        if !check_condition(self.condition, &cpu_internals.register_set.sr) {
+        if !check_condition(self.condition, &cpu.internals.register_set.sr) {
             let mut counter = data_reg_operand.read();
             counter = counter.wrapping_sub(1);
             data_reg_operand.write(counter);
             // compare counter with -1
             if counter != 0xFFFFFFFF {
-                let pc = &mut cpu_internals.register_set.pc;
+                let pc = &mut cpu.internals.register_set.pc;
                 *pc = pc.wrapping_sub(2); // the PC pointer should to point on the extension word after dbcc instruction opcode
                 *pc = pc.wrapping_add(displacement);
             } else {
-                cpu_internals.cycles += 4 // if loop counter expired
+                cpu.internals.cycles += 4 // if loop counter expired
             }
         } else {
-            cpu_internals.cycles += 2 // if condition true
+            cpu.internals.cycles += 2 // if condition true
         }
     }
 }
@@ -105,10 +103,10 @@ impl Display for Scc {
     }
 }
 
-impl Instruction for Scc {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for Scc {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
-        let condition = check_condition(self.condition, &cpu_internals.register_set.sr);
+        let condition = check_condition(self.condition, &cpu.internals.register_set.sr);
         let result = if condition { 0xFF } else { 0x00 };
         operand.write(result);
     }
@@ -128,15 +126,15 @@ impl Display for BRA {
     }
 }
 
-impl Instruction for BRA {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for BRA {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
 
-        let pc = &mut cpu_internals.register_set.pc;
+        let pc = &mut cpu.internals.register_set.pc;
         *pc = pc.wrapping_add(displacement);
     }
 }
@@ -155,8 +153,8 @@ impl Display for BSR {
     }
 }
 
-impl Instruction for BSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for BSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let displacement = if self.displacement == 0 {
             operand_set.next().read().sign_extend(Size::Word)
         } else {
@@ -164,7 +162,7 @@ impl Instruction for BSR {
         };
         let stack_operand = operand_set.next();
 
-        let pc = &mut cpu_internals.register_set.pc;
+        let pc = &mut cpu.internals.register_set.pc;
         stack_operand.write(*pc);
         *pc = pc.wrapping_add(displacement);
     }
@@ -178,10 +176,10 @@ impl Display for JMP {
     }
 }
 
-impl Instruction for JMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for JMP {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
-        cpu_internals.register_set.pc = operand.operand_address;
+        cpu.internals.register_set.pc = operand.operand_address;
     }
 }
 
@@ -193,12 +191,12 @@ impl Display for JSR {
     }
 }
 
-impl Instruction for JSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for JSR {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let stack_operand = operand_set.next();
         let operand = operand_set.next();
 
-        let pc = &mut cpu_internals.register_set.pc;
+        let pc = &mut cpu.internals.register_set.pc;
         stack_operand.write(*pc);
         *pc = operand.operand_address;
     }
@@ -212,8 +210,8 @@ impl Display for NOP {
     }
 }
 
-impl Instruction for NOP {
-    fn execute(&self, _: OperandSet, _: &mut CpuInternals) {}
+impl<T: BusM68k> Instruction<T> for NOP {
+    fn execute(&self, _: OperandSet, _: &mut M68k<T>) {}
 }
 
 pub(crate) struct RTR();
@@ -224,16 +222,16 @@ impl Display for RTR {
     }
 }
 
-impl Instruction for RTR {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for RTR {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let stack_ccr_operand = operand_set.next();
         let stack_pc_operand = operand_set.next();
 
         let ccr = stack_ccr_operand.read();
-        cpu_internals.register_set.sr.set_ccr(ccr);
+        cpu.internals.register_set.sr.set_ccr(ccr);
 
         let pc = stack_pc_operand.read();
-        cpu_internals.register_set.pc = pc;
+        cpu.internals.register_set.pc = pc;
     }
 }
 
@@ -245,12 +243,12 @@ impl Display for RTS {
     }
 }
 
-impl Instruction for RTS {
-    fn execute(&self, mut operand_set: OperandSet, cpu_internals: &mut CpuInternals) {
+impl<T: BusM68k> Instruction<T> for RTS {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let stack_pc_operand = operand_set.next();
 
         let pc = stack_pc_operand.read();
-        cpu_internals.register_set.pc = pc;
+        cpu.internals.register_set.pc = pc;
     }
 }
 

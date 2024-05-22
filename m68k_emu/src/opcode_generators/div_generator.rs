@@ -1,14 +1,10 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister},
-    instruction_set::integer_arithmetic::{DIVS, DIVU},
-    operation::Operation,
-    primitives::Size,
-    range,
+    addressing_mode_set::{AddressingModeType, DataRegister}, bus::BusM68k, instruction_set::integer_arithmetic::{DIVS, DIVU}, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_divs(table);
     generate_divu(table);
 }
@@ -19,7 +15,7 @@ impl OpcodeMaskGenerator for DIVS {
     }
 }
 
-fn generate_divs(table: &mut [Operation]) {
+fn generate_divs<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,
@@ -62,7 +58,7 @@ impl OpcodeMaskGenerator for DIVU {
     }
 }
 
-fn generate_divu(table: &mut [Operation]) {
+fn generate_divu<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::DataRegister,
         AddressingModeType::AddressRegisterIndirect,

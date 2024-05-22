@@ -1,9 +1,5 @@
 use crate::{
-    addressing_mode_set::{AddressingMode, AddressingModeType, Immediate},
-    instruction_set::{data_movement::MOVEM, MoveDirection},
-    operation::Operation,
-    primitives::Size,
-    range,
+    addressing_mode_set::{AddressingMode, AddressingModeType, Immediate}, bus::BusM68k, instruction_set::{data_movement::MOVEM, MoveDirection}, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
@@ -21,12 +17,12 @@ impl OpcodeMaskGenerator for MOVEM {
     }
 }
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_movem_reg_to_mem(table);
     generate_movem_mem_to_reg(table);
 }
 
-fn generate_movem_reg_to_mem(table: &mut [Operation]) {
+fn generate_movem_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     for size in [Size::Word, Size::Long] {
         for am_type in [
             AddressingModeType::AddressRegisterIndirect,
@@ -62,7 +58,7 @@ fn generate_movem_reg_to_mem(table: &mut [Operation]) {
     }
 }
 
-fn generate_movem_mem_to_reg(table: &mut [Operation]) {
+fn generate_movem_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     for size in [Size::Word, Size::Long] {
         for am_type in [
             AddressingModeType::AddressRegisterIndirect,

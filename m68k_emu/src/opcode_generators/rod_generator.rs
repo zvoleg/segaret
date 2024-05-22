@@ -1,19 +1,15 @@
 use crate::{
-    addressing_mode_set::{AddressingModeType, DataRegister},
-    instruction_set::{
+    addressing_mode_set::{AddressingModeType, DataRegister}, bus::BusM68k, instruction_set::{
         shift_and_rotate::{
             ROXdDataReg, ROXdImplied, ROXdMemory, ROdDataReg, ROdImplied, ROdMemory,
         },
         Instruction, ShiftDirection,
-    },
-    operation::Operation,
-    primitives::Size,
-    range,
+    }, operation::Operation, primitives::Size, range
 };
 
 use super::OpcodeMaskGenerator;
 
-pub(crate) fn generate(table: &mut [Operation]) {
+pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     generate_rod_data_reg(table);
     generate_rod_implied(table);
     generate_rod_mem(table);
@@ -45,13 +41,13 @@ impl OpcodeMaskGenerator for ROXdDataReg {
     }
 }
 
-fn generate_rod_data_reg(table: &mut [Operation]) {
+fn generate_rod_data_reg<T: BusM68k>(table: &mut [Operation<T>]) {
     for extended in [true, false] {
         for data_reg_x_idx in 0..8 {
             for direction in [ShiftDirection::Right, ShiftDirection::Left] {
                 for size in [Size::Byte, Size::Word, Size::Long] {
                     for data_reg_y_idx in 0..8 {
-                        let instruction: Box<dyn Instruction>;
+                        let instruction: Box<dyn Instruction<T>>;
                         let base_mask: usize;
                         if extended {
                             let roxd = Box::new(ROXdDataReg {
@@ -124,13 +120,13 @@ impl OpcodeMaskGenerator for ROXdImplied {
     }
 }
 
-fn generate_rod_implied(table: &mut [Operation]) {
+fn generate_rod_implied<T: BusM68k>(table: &mut [Operation<T>]) {
     for extended in [true, false] {
         for count in 0..8 {
             for direction in [ShiftDirection::Right, ShiftDirection::Left] {
                 for size in [Size::Byte, Size::Word, Size::Long] {
                     for data_reg_idx in 0..8 {
-                        let instruction: Box<dyn Instruction>;
+                        let instruction: Box<dyn Instruction<T>>;
                         let base_mask: usize;
                         if extended {
                             let roxd = Box::new(ROXdImplied {
@@ -186,7 +182,7 @@ impl OpcodeMaskGenerator for ROXdMemory {
     }
 }
 
-fn generate_rod_mem(table: &mut [Operation]) {
+fn generate_rod_mem<T: BusM68k>(table: &mut [Operation<T>]) {
     let am_types = [
         AddressingModeType::AddressRegisterIndirect,
         AddressingModeType::AddressRegisterPostIncrement,
@@ -201,7 +197,7 @@ fn generate_rod_mem(table: &mut [Operation]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for am_type in am_types {
                 for idx in range!(am_type) {
-                    let instruction: Box<dyn Instruction>;
+                    let instruction: Box<dyn Instruction<T>>;
                     let base_mask: usize;
                     if extened {
                         let roxd = Box::new(ROXdMemory {
