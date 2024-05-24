@@ -88,13 +88,10 @@ impl Display for RTE {
 }
 
 impl<T: BusM68k> Instruction<T> for RTE {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let sr_operand = operand_set.next();
-        let pc_operand = operand_set.next();
-        let sr = sr_operand.read();
-        cpu.register_set.sr.set_sr(sr);
-        let pc = pc_operand.read();
-        cpu.register_set.pc = pc;
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+        let sr_data = cpu.stack_pop(Size::Word);
+        cpu.register_set.sr.set_sr(sr_data);
+        cpu.register_set.pc = cpu.stack_pop(Size::Long);
     }
 }
 
@@ -225,10 +222,7 @@ impl<T: BusM68k> Instruction<T> for CHK {
         let greater_upper_bound = (chk_data as i16) > (upper_bound as i16);
 
         if less_zerro || greater_upper_bound {
-            cpu
-                .register_set
-                .sr
-                .set_flag(StatusFlag::N, less_zerro);
+            cpu.register_set.sr.set_flag(StatusFlag::N, less_zerro);
             cpu.trap = Some(CHK_INSTRUCTION);
         }
     }
@@ -243,12 +237,9 @@ impl Display for ILLEAGL {
 }
 
 impl<T: BusM68k> Instruction<T> for ILLEAGL {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let pc_stack_operand = operand_set.next();
-        let sr_stack_operand = operand_set.next();
-
-        pc_stack_operand.write(cpu.register_set.pc);
-        sr_stack_operand.write(cpu.register_set.sr.get_sr() as u32);
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+        cpu.stack_push(cpu.register_set.pc, Size::Long);
+        cpu.stack_push(cpu.register_set.sr.get_sr() as u32, Size::Word);
 
         cpu.trap = Some(ILLEGAL_INSTRUCTION);
     }

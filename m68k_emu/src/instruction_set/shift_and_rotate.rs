@@ -30,18 +30,8 @@ impl<T: BusM68k> Instruction<T> for ASdDataReg {
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
         match self.direction {
-            ShiftDirection::Right => asr(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => asl(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => asr(count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => asl(count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -62,18 +52,8 @@ impl<T: BusM68k> Instruction<T> for ASdImplied {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => asr(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => asl(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => asr(self.count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => asl(self.count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -92,9 +72,7 @@ impl<T: BusM68k> Instruction<T> for ASdMemory {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => {
-                asr(1, operand, Size::Word, &mut cpu.register_set.sr)
-            }
+            ShiftDirection::Right => asr(1, operand, Size::Word, &mut cpu.register_set.sr),
             ShiftDirection::Left => asl(1, operand, Size::Word, &mut cpu.register_set.sr),
         }
     }
@@ -160,18 +138,8 @@ impl<T: BusM68k> Instruction<T> for LSdDataReg {
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
         match self.direction {
-            ShiftDirection::Right => lsr(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => lsl(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => lsr(count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => lsl(count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -192,18 +160,8 @@ impl<T: BusM68k> Instruction<T> for LSdImplied {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => lsr(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => lsl(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => lsr(self.count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => lsl(self.count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -222,9 +180,7 @@ impl<T: BusM68k> Instruction<T> for LSdMemory {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => {
-                lsr(1, operand, Size::Word, &mut cpu.register_set.sr)
-            }
+            ShiftDirection::Right => lsr(1, operand, Size::Word, &mut cpu.register_set.sr),
             ShiftDirection::Left => lsl(1, operand, Size::Word, &mut cpu.register_set.sr),
         }
     }
@@ -281,18 +237,8 @@ impl<T: BusM68k> Instruction<T> for ROdDataReg {
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
         match self.direction {
-            ShiftDirection::Right => ror(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => rol(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => ror(count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => rol(count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -313,18 +259,8 @@ impl<T: BusM68k> Instruction<T> for ROdImplied {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => ror(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => rol(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => ror(self.count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => rol(self.count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -343,9 +279,7 @@ impl<T: BusM68k> Instruction<T> for ROdMemory {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => {
-                ror(1, operand, Size::Word, &mut cpu.register_set.sr)
-            }
+            ShiftDirection::Right => ror(1, operand, Size::Word, &mut cpu.register_set.sr),
             ShiftDirection::Left => rol(1, operand, Size::Word, &mut cpu.register_set.sr),
         }
     }
@@ -403,18 +337,8 @@ impl<T: BusM68k> Instruction<T> for ROXdDataReg {
         let operand = operand_set.next();
         let count = data_reg_operand.read() % 64;
         match self.direction {
-            ShiftDirection::Right => roxr(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => roxl(
-                count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => roxr(count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => roxl(count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -435,18 +359,8 @@ impl<T: BusM68k> Instruction<T> for ROXdImplied {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => roxr(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
-            ShiftDirection::Left => roxl(
-                self.count,
-                operand,
-                self.size,
-                &mut cpu.register_set.sr,
-            ),
+            ShiftDirection::Right => roxr(self.count, operand, self.size, &mut cpu.register_set.sr),
+            ShiftDirection::Left => roxl(self.count, operand, self.size, &mut cpu.register_set.sr),
         }
     }
 }
@@ -465,12 +379,8 @@ impl<T: BusM68k> Instruction<T> for ROXdMemory {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let operand = operand_set.next();
         match self.direction {
-            ShiftDirection::Right => {
-                roxr(1, operand, Size::Word, &mut cpu.register_set.sr)
-            }
-            ShiftDirection::Left => {
-                roxl(1, operand, Size::Word, &mut cpu.register_set.sr)
-            }
+            ShiftDirection::Right => roxr(1, operand, Size::Word, &mut cpu.register_set.sr),
+            ShiftDirection::Left => roxl(1, operand, Size::Word, &mut cpu.register_set.sr),
         }
     }
 }

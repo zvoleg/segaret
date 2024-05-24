@@ -1,9 +1,9 @@
 use crate::{
     bus::BusM68k,
-    register_set::{RegisterSet, RegisterType},
     extension_word::BriefExtensionWord,
     operand::Operand,
     primitives::{memory::MemoryPtr, Pointer},
+    register_set::{RegisterSet, RegisterType},
     SignExtending, Size,
 };
 

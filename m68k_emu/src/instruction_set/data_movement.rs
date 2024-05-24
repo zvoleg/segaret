@@ -4,10 +4,10 @@ use crate::{
     addressing_mode_set::AddressingModeType,
     bus::BusM68k,
     cpu::M68k,
-    register_set::RegisterType,
     instruction_set::Instruction,
     operand::{Operand, OperandSet},
     primitives::Size,
+    register_set::RegisterType,
     status_flag::StatusFlag,
     IsNegate, SignExtending,
 };
@@ -114,10 +114,7 @@ impl MOVEM {
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPreDecrement => {
-                let register_ptr = cpu
-                    
-                    .register_set
-                    .get_register_ptr(7, RegisterType::Address);
+                let register_ptr = cpu.register_set.get_register_ptr(7, RegisterType::Address);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     // reads registers from A7 to A0 and then from D7 to D)
@@ -144,10 +141,7 @@ impl MOVEM {
                 );
             }
             _ => {
-                let register_ptr = cpu
-                    
-                    .register_set
-                    .get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = register_ptr.read_offset(self.size, *reg_offset);
@@ -170,10 +164,7 @@ impl MOVEM {
     ) {
         match self.addressing_mode_type {
             AddressingModeType::AddressRegisterPostIncrement => {
-                let register_ptr = cpu
-                    
-                    .register_set
-                    .get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 let mut am_register_writed = false;
                 for reg_offset in affected_register_offsets {
@@ -194,10 +185,7 @@ impl MOVEM {
                 }
             }
             _ => {
-                let register_ptr = cpu
-                    
-                    .register_set
-                    .get_register_ptr(0, RegisterType::Data);
+                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
                 let mut memory_offset = 0;
                 for reg_offset in affected_register_offsets {
                     let data = src_operand
@@ -265,14 +253,10 @@ impl<T: BusM68k> Instruction<T> for MOVEQ {
         let data = self.data.sign_extend(Size::Byte);
         operand_set.next().operand_ptr.write(data, Size::Long);
 
-        cpu
-            .register_set
+        cpu.register_set
             .sr
             .set_flag(StatusFlag::N, data.is_negate(Size::Long));
-        cpu
-            .register_set
-            .sr
-            .set_flag(StatusFlag::Z, data == 0);
+        cpu.register_set.sr.set_flag(StatusFlag::Z, data == 0);
         cpu.register_set.sr.set_flag(StatusFlag::V, false);
         cpu.register_set.sr.set_flag(StatusFlag::C, false);
     }
@@ -338,23 +322,21 @@ impl Display for LINK {
 }
 
 impl<T: BusM68k> Instruction<T> for LINK {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         // SP - 4 → SP; An → (SP); SP → An; SP + dn → SP
-        let stack_ptr = operand_set.next();
+        // let stack_ptr = operand_set.next();
         let address_register_ptr = operand_set.next();
         let displacement_ptr = operand_set.next();
 
         let address = address_register_ptr.read();
-        stack_ptr.write(address);
+        cpu.stack_push(address, Size::Long);
 
-        let stack_address = stack_ptr.operand_address;
+        let stack_address = cpu.get_stack_address();
         address_register_ptr.write(stack_address);
 
         let displacement = displacement_ptr.read().sign_extend(Size::Word);
-        stack_ptr
-            .address_register_ptr
-            .unwrap()
-            .write(stack_address.wrapping_add(displacement), Size::Long);
+        let new_stack_address = stack_address.wrapping_add(displacement);
+        cpu.set_stack_address(new_stack_address);
     }
 }
 pub(crate) struct UNLK();
@@ -366,34 +348,28 @@ impl Display for UNLK {
 }
 
 impl<T: BusM68k> Instruction<T> for UNLK {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         // An → SP; (SP) → An; SP + 4 → SP
         let address_register_ptr = operand_set.next();
-        let stack_ptr = operand_set.next();
 
         let new_stack_address = address_register_ptr.read();
-        stack_ptr
-            .address_register_ptr
-            .unwrap()
-            .write(new_stack_address + (Size::Long as u32), Size::Long); // update stack register value with posth incrementing
-
-        // be cause an instruction doesn't have access to stack interface there is a bad decision about using writing into memory by offset
-        let memory_offset =
-            new_stack_address.wrapping_sub(stack_ptr.operand_address) as i32 as isize; // without casting to the i32 type an isize value is not negative
-        let data = stack_ptr.operand_ptr.read_offset(Size::Long, memory_offset);
+        cpu.set_stack_address(new_stack_address);
+        let data = cpu.stack_pop(Size::Long);
         address_register_ptr.write(data);
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::{cell::RefCell, rc::Rc};
+
     use crate::{
         bus::BusM68k,
         cpu::M68k,
-        register_set::RegisterType,
         instruction_set::Instruction,
         operand::{Operand, OperandSet},
         primitives::{memory::MemoryPtr, Pointer, Size},
+        register_set::RegisterType,
         STACK_REGISTER,
     };
 
@@ -406,46 +382,25 @@ mod test {
     const OFFSET_VALUE: u32 = 0x10;
 
     struct Bus {
-        ram: [u8; 0xFF],
+        ram: Rc<RefCell<[u8; 0xFF]>>,
     }
 
     impl BusM68k for Bus {
         fn set_address_read(&self, address: u32) -> *const u8 {
-            &self.ram[address as usize]
+            &self.ram.as_ref().borrow()[address as usize]
         }
 
         fn set_address_write(&self, address: u32) -> *mut u8 {
-            &self.ram[address as usize] as *const _ as *mut u8
+            &self.ram.as_ref().borrow()[address as usize] as *const _ as *mut u8
         }
     }
 
-    fn prepare_link_operands(cpu: &mut M68k<Bus>, memory: &mut [u8; 0x100]) -> OperandSet {
+    fn prepare_link_operands(cpu: &mut M68k<Bus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
         // be cause test runs without opcode, we don't have to prepare properly placed or aranged in the memory the values
         let mut operand_set = OperandSet::new();
 
-        // setup stack ptr.
-        // There is no necessary of implementation for incrementing/decrementing of address,
-        // so stack is just the propper register with address
-        let stack_register_ptr = cpu
-            
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // immitation of the predecrementing addressing mode
-        stack_register_ptr.write(stack_address, Size::Long);
-        let stack_ptr = MemoryPtr::new_boxed(
-            &memory[stack_address as usize],
-            &mut memory[stack_address as usize],
-        );
-        operand_set.add(Operand::new(
-            stack_ptr,
-            Some(stack_register_ptr),
-            stack_address,
-            Size::Long,
-        ));
-
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
-            
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long);
@@ -458,19 +413,21 @@ mod test {
 
         // and offset value
         // it just value in some place of memory
-        let offset_ptr = MemoryPtr::new_boxed(&memory[OFFSET_ADDRESS], &mut memory[OFFSET_ADDRESS]);
+        let offset_ptr = MemoryPtr::new_boxed(
+            &ram.as_ref().borrow()[OFFSET_ADDRESS],
+            &ram.as_ref().borrow()[OFFSET_ADDRESS] as *const _ as *mut u8,
+        );
         offset_ptr.write(OFFSET_VALUE, Size::Word);
         operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
 
         operand_set
     }
 
-    fn prepare_unlk_operands(cpu: &mut M68k<Bus>, memory: &mut [u8; 0x100]) -> OperandSet {
+    fn prepare_unlk_operands(cpu: &mut M68k<Bus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
         let mut operand_set = OperandSet::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
-            
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
         operand_set.add(Operand::new(
@@ -480,79 +437,58 @@ mod test {
             Size::Long,
         ));
 
-        // setup stack ptr.
-        // There is no necessary of implementation for incrementing/decrementing of address,
-        // so stack is just the propper register with address
-        let stack_register_ptr = cpu
-            
-            .register_set
-            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let stack_address = stack_register_ptr.read(Size::Long);
-        let stack_ptr = MemoryPtr::new_boxed(
-            &memory[stack_address as usize],
-            &mut memory[stack_address as usize],
-        );
-        operand_set.add(Operand::new(
-            stack_ptr,
-            Some(stack_register_ptr),
-            stack_address,
-            Size::Long,
-        ));
-
         operand_set
     }
 
     #[test]
     fn test_link() {
-        let bus = Bus { ram: [0; 0xFF] };
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
         let mut cpu = M68k::new(bus);
-        let mut memory = [0u8; 0x100];
-        let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
+        cpu.set_stack_address(STACK_INIT_ADDDRESS);
+        let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
         link.execute(link_operand_set, &mut cpu);
 
-        let decremented_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32);
-        let mem_ptr = MemoryPtr::new_read_only(&mut memory[decremented_stack_address as usize]);
+        let old_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // stack address should be decremented after pushing data to it
+        let mem_ptr = MemoryPtr::new_read_only(&ram.as_ref().borrow()[old_stack_address as usize]); // pointer to memory where data had been to push on the stack
         assert_eq!(mem_ptr.read(Size::Long), ADDRESS_REGISTER_VALUE);
         assert_eq!(
-            cpu
-                .register_set
+            cpu.register_set
                 .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
                 .read(Size::Long),
-            decremented_stack_address
+            old_stack_address
         );
         assert_eq!(
-            cpu
-                .register_set
+            cpu.register_set
                 .get_register_ptr(STACK_REGISTER, RegisterType::Address)
                 .read(Size::Long),
-            decremented_stack_address + OFFSET_VALUE
+            old_stack_address + OFFSET_VALUE
         )
     }
 
     #[test]
     fn test_unlk() {
-        let bus = Bus { ram: [0; 0xFF] };
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
         let mut cpu = M68k::new(bus);
-        let mut memory = [0u8; 0x100];
-        let link_operand_set = prepare_link_operands(&mut cpu, &mut memory);
+        cpu.set_stack_address(STACK_INIT_ADDDRESS);
+        let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
         link.execute(link_operand_set, &mut cpu);
 
-        let unlk_operand_set = prepare_unlk_operands(&mut cpu, &mut memory);
+        let unlk_operand_set = prepare_unlk_operands(&mut cpu, ram.clone());
         let unlk = UNLK();
         unlk.execute(unlk_operand_set, &mut cpu);
 
         assert_eq!(
-            cpu
-                .register_set
+            cpu.register_set
                 .get_register_ptr(STACK_REGISTER, RegisterType::Address)
                 .read(Size::Long),
             STACK_INIT_ADDDRESS
         );
         assert_eq!(
-            cpu
-                .register_set
+            cpu.register_set
                 .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address)
                 .read(Size::Long),
             ADDRESS_REGISTER_VALUE

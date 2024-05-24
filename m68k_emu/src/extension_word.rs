@@ -1,6 +1,6 @@
 use crate::{
-    register_set::{RegisterSet, RegisterType},
     primitives::Pointer,
+    register_set::{RegisterSet, RegisterType},
     SignExtending, Size,
 };
 

@@ -1,10 +1,9 @@
 use crate::{
-    addressing_mode_set::{AddressRegisterPreDecrement, AddressingMode, Immediate},
+    addressing_mode_set::{AddressingMode, Immediate},
     bus::BusM68k,
     instruction_set::program_control::BSR,
     operation::Operation,
     primitives::Size,
-    STACK_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;
@@ -26,10 +25,6 @@ pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
         if displacement == 0 {
             am_list.push(Box::new(Immediate { size: Size::Word }));
         }
-        am_list.push(Box::new(AddressRegisterPreDecrement {
-            reg: STACK_REGISTER,
-            size: Size::Long,
-        }));
 
         let opcode = instruction.generate_mask();
 

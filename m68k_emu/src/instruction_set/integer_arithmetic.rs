@@ -634,10 +634,7 @@ impl<T: BusM68k> Instruction<T> for DIVS {
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu
-                .register_set
-                .sr
-                .set_flag(StatusFlag::V, overflow);
+            cpu.register_set.sr.set_flag(StatusFlag::V, overflow);
             return;
         }
         let remainder = dst_data % src_data;
@@ -679,10 +676,7 @@ impl<T: BusM68k> Instruction<T> for DIVU {
         }
         let (quotient, overflow) = dst_data.overflowing_div(src_data);
         if overflow {
-            cpu
-                .register_set
-                .sr
-                .set_flag(StatusFlag::V, overflow);
+            cpu.register_set.sr.set_flag(StatusFlag::V, overflow);
             return;
         }
         let remainder = dst_data % src_data;

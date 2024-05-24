@@ -2,19 +2,18 @@ use std::fmt::Display;
 
 use crate::{
     bus::BusM68k,
-    register_set::{RegisterSet, RegisterType},
     header::Header,
     instruction_set::system_control::ILLEAGL,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
     primitives::{memory::MemoryPtr, Pointer, Size},
+    register_set::{RegisterSet, RegisterType},
     vectors::{RESET_PC, RESET_SP},
     STACK_REGISTER,
 };
 
 pub struct M68k<T: BusM68k> {
-    // pub(crate) internals: CpuInternals,
     pub(crate) register_set: RegisterSet,
     pub(crate) trap: Option<usize>,
     pub(crate) cycles_counter: i32,
@@ -22,7 +21,6 @@ pub struct M68k<T: BusM68k> {
 
     operation_set: Vec<Operation<T>>,
     bus: T,
-
 }
 
 impl<T> M68k<T>
@@ -78,6 +76,45 @@ where
             }
             self.trap = None;
         }
+    }
+
+    pub(crate) fn stack_push(&mut self, data: u32, size: Size) {
+        let stack_register_ptr = self
+            .register_set
+            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        let mut address = stack_register_ptr.read(Size::Long);
+        address = address.wrapping_sub(size as u32); // predecrementing
+        stack_register_ptr.write(address, Size::Long);
+
+        let write_ptr = MemoryPtr::new_write_only(self.bus.set_address_write(address));
+        write_ptr.write(data, size);
+    }
+
+    pub(crate) fn stack_pop(&mut self, size: Size) -> u32 {
+        let stack_register_ptr = self
+            .register_set
+            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        let address = stack_register_ptr.read(Size::Long);
+
+        let read_ptr = MemoryPtr::new_read_only(self.bus.set_address_read(address));
+        let data = read_ptr.read(size);
+
+        stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long); // postincrement
+        data
+    }
+
+    pub(crate) fn get_stack_address(&mut self) -> u32 {
+        let stack_register_ptr = self
+            .register_set
+            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        stack_register_ptr.read(Size::Long)
+    }
+
+    pub(crate) fn set_stack_address(&mut self, new_stack_address: u32) {
+        let stack_register_ptr = self
+            .register_set
+            .get_register_ptr(STACK_REGISTER, RegisterType::Address);
+        stack_register_ptr.write(new_stack_address, Size::Long);
     }
 
     fn fetch_opcode(&mut self) -> u16 {

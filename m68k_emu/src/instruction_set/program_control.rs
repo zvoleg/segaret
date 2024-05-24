@@ -161,11 +161,10 @@ impl<T: BusM68k> Instruction<T> for BSR {
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
-        let stack_operand = operand_set.next();
 
-        let pc = &mut cpu.register_set.pc;
-        stack_operand.write(*pc);
-        *pc = pc.wrapping_add(displacement);
+        let pc = cpu.register_set.pc;
+        cpu.stack_push(pc, Size::Long);
+        cpu.register_set.pc = pc.wrapping_add(displacement);
     }
 }
 
@@ -194,12 +193,10 @@ impl Display for JSR {
 
 impl<T: BusM68k> Instruction<T> for JSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let stack_operand = operand_set.next();
         let operand = operand_set.next();
 
-        let pc = &mut cpu.register_set.pc;
-        stack_operand.write(*pc);
-        *pc = operand.operand_address;
+        cpu.stack_push(cpu.register_set.pc, Size::Long);
+        cpu.register_set.pc = operand.operand_address;
     }
 }
 
@@ -224,14 +221,11 @@ impl Display for RTR {
 }
 
 impl<T: BusM68k> Instruction<T> for RTR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let stack_ccr_operand = operand_set.next();
-        let stack_pc_operand = operand_set.next();
-
-        let ccr = stack_ccr_operand.read();
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+        let ccr = cpu.stack_pop(Size::Word);
         cpu.register_set.sr.set_ccr(ccr);
 
-        let pc = stack_pc_operand.read();
+        let pc = cpu.stack_pop(Size::Long);
         cpu.register_set.pc = pc;
     }
 }
@@ -245,10 +239,8 @@ impl Display for RTS {
 }
 
 impl<T: BusM68k> Instruction<T> for RTS {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let stack_pc_operand = operand_set.next();
-
-        let pc = stack_pc_operand.read();
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+        let pc = cpu.stack_pop(Size::Long);
         cpu.register_set.pc = pc;
     }
 }

@@ -13,6 +13,20 @@ impl MemoryPtr {
         }
     }
 
+    pub(crate) fn new_read_only(read_ptr: *const u8) -> Self {
+        Self {
+            read_ptr,
+            write_ptr: std::ptr::null_mut(),
+        }
+    }
+
+    pub(crate) fn new_write_only(write_ptr: *mut u8) -> Self {
+        Self {
+            read_ptr: std::ptr::null(),
+            write_ptr,
+        }
+    }
+
     pub(crate) fn new_boxed(read_ptr: *const u8, write_ptr: *mut u8) -> Box<Self> {
         Box::new(Self::new(read_ptr, write_ptr))
     }
@@ -31,13 +45,6 @@ impl MemoryPtr {
                     data.to_be()
                 }
             }
-        }
-    }
-
-    pub(crate) fn new_read_only(read_ptr: *const u8) -> Self {
-        Self {
-            read_ptr,
-            write_ptr: std::ptr::null_mut(),
         }
     }
 

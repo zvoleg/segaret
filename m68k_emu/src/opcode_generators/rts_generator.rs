@@ -1,7 +1,4 @@
-use crate::{
-    addressing_mode_set::AddressRegisterPostIncrement, bus::BusM68k,
-    instruction_set::program_control::RTS, operation::Operation, primitives::Size, STACK_REGISTER,
-};
+use crate::{bus::BusM68k, instruction_set::program_control::RTS, operation::Operation};
 
 use super::OpcodeMaskGenerator;
 
@@ -13,11 +10,7 @@ impl OpcodeMaskGenerator for RTS {
 
 pub(crate) fn generate<T: BusM68k>(table: &mut [Operation<T>]) {
     let instruction = Box::new(RTS());
-    let stack_pc_am = Box::new(AddressRegisterPostIncrement {
-        reg: STACK_REGISTER,
-        size: Size::Long,
-    });
     let opcode = instruction.generate_mask();
-    let operation = Operation::new(instruction, vec![stack_pc_am], 16);
+    let operation = Operation::new(instruction, vec![], 16);
     table[opcode] = operation;
 }

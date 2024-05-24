@@ -2,7 +2,6 @@ pub mod bus;
 pub mod cpu;
 
 mod addressing_mode_set;
-mod register_set;
 mod extension_word;
 mod header;
 mod instruction_set;
@@ -10,6 +9,7 @@ mod opcode_generators;
 mod operand;
 mod operation;
 mod primitives;
+mod register_set;
 mod status_flag;
 mod status_register;
 mod vectors;
