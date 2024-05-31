@@ -1,9 +1,6 @@
 use crate::{
-    addressing_mode_set::AddressRegister,
-    bus::BusM68k,
-    instruction_set::data_movement::UNLK,
-    operation::Operation,
-    primitives::Size,
+    addressing_mode_set::AddressRegister, bus::BusM68k, instruction_set::data_movement::UNLK,
+    operation::Operation, primitives::Size,
 };
 
 use super::OpcodeMaskGenerator;

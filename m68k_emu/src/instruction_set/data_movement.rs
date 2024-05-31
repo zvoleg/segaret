@@ -5,8 +5,8 @@ use crate::{
     bus::BusM68k,
     cpu::M68k,
     instruction_set::Instruction,
-    operand::{Operand, OperandSet},
-    primitives::Size,
+    operand::OperandSet,
+    primitives::{Pointer, Size},
     register_set::RegisterType,
     status_flag::StatusFlag,
     IsNegate, SignExtending,
@@ -79,124 +79,94 @@ impl Display for MOVEM {
 impl<T: BusM68k> Instruction<T> for MOVEM {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
         let extension_word = operand_set.next().read();
-        let affected_register_offsets =
-            self.collect_affected_register_offsets(extension_word as u16);
+        let register_offsets = self.collect_affected_register_offsets(extension_word as u16);
 
         // TODO additional cycles
 
+        let operand = operand_set.next();
+        let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
+
+        let mut memory_offsets = Vec::new();
+        let mut memory_offset = 0;
+        for _ in 0..register_offsets.len() {
+            match self.addressing_mode_type {
+                AddressingModeType::AddressRegisterPreDecrement => {
+                    memory_offsets.push(memory_offset);
+                    memory_offset -= self.size as isize;
+                }
+                _ => {
+                    memory_offsets.push(memory_offset);
+                    memory_offset += self.size as isize;
+                }
+            }
+        }
+
+        let src_ptr: Box<dyn Pointer>;
+        let src_offsets: Vec<isize>;
+        let dst_ptr: Box<dyn Pointer>;
+        let dst_offsets: Vec<isize>;
         match self.direction {
             MoveDirection::RegisterToMemory => {
-                self.write_registers_to_memory(&affected_register_offsets, operand_set.next(), cpu)
+                src_ptr = register_ptr;
+                src_offsets = register_offsets;
+                dst_ptr = operand.operand_ptr;
+                dst_offsets = memory_offsets;
             }
             MoveDirection::MemoryToRegister => {
-                self.write_memory_to_registers(&affected_register_offsets, operand_set.next(), cpu)
+                src_ptr = operand.operand_ptr;
+                src_offsets = memory_offsets;
+                dst_ptr = register_ptr;
+                dst_offsets = register_offsets;
             }
+        }
+
+        for i in 0..src_offsets.len() {
+            let data = src_ptr.read_offset(self.size, src_offsets[i]);
+            match self.direction {
+                MoveDirection::RegisterToMemory => {
+                    dst_ptr.write_offset(data, self.size, dst_offsets[i]);
+                }
+                MoveDirection::MemoryToRegister => {
+                    let data = data.sign_extend(self.size);
+                    dst_ptr.write_offset(data, Size::Long, dst_offsets[i]);
+                }
+            }
+        }
+
+        let address_reg_ptr = operand.address_register_ptr.unwrap();
+        let base_address = operand.operand_address;
+        match self.addressing_mode_type {
+            AddressingModeType::AddressRegisterPostIncrement => {
+                address_reg_ptr.write(
+                    base_address + src_offsets.len() as u32 * self.size as u32,
+                    Size::Long,
+                );
+            }
+            AddressingModeType::AddressRegisterPreDecrement => {
+                address_reg_ptr.write(
+                    base_address - (src_offsets.len() - 1) as u32 * self.size as u32,
+                    Size::Long,
+                );
+            }
+            _ => (),
         }
     }
 }
 
 impl MOVEM {
-    fn collect_affected_register_offsets(&self, extension_word: u16) -> Vec<isize> {
+    fn collect_affected_register_offsets(&self, bit_mask: u16) -> Vec<isize> {
         let mut affected_register_offsets = Vec::new();
+        let mut reg_index_list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+        if self.addressing_mode_type == AddressingModeType::AddressRegisterPreDecrement {
+            reg_index_list.reverse();
+        }
         for i in 0..16 {
-            if (extension_word >> i) & 0x1 == 1 {
-                affected_register_offsets.push(i);
+            if (bit_mask >> i) & 0x1 == 1 {
+                let reg_index = reg_index_list[i];
+                affected_register_offsets.push(reg_index);
             }
         }
         affected_register_offsets
-    }
-
-    fn write_registers_to_memory<T: BusM68k>(
-        &self,
-        affected_register_offsets: &[isize],
-        dst_operand: Operand,
-        cpu: &mut M68k<T>,
-    ) {
-        match self.addressing_mode_type {
-            AddressingModeType::AddressRegisterPreDecrement => {
-                let register_ptr = cpu.register_set.get_register_ptr(7, RegisterType::Address);
-                let mut memory_offset = 0;
-                for reg_offset in affected_register_offsets {
-                    // reads registers from A7 to A0 and then from D7 to D)
-                    let data = register_ptr.read_offset(self.size, -1 * reg_offset);
-                    dst_operand.operand_ptr.write_offset(
-                        data,
-                        self.size,
-                        memory_offset * (self.size as isize),
-                    );
-                    // convert address register into the offset value
-                    if *reg_offset == (15 - (self.am_register_idx + 8)) {
-                        dst_operand.operand_ptr.write_offset(
-                            data + self.size as u32,
-                            self.size,
-                            memory_offset * (self.size as isize),
-                        );
-                    }
-                    memory_offset += 1;
-                }
-                let src_am_address = dst_operand.operand_address;
-                dst_operand.address_register_ptr.as_ref().unwrap().write(
-                    src_am_address + (memory_offset - 1) as u32 * self.size as u32,
-                    Size::Long,
-                );
-            }
-            _ => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
-                let mut memory_offset = 0;
-                for reg_offset in affected_register_offsets {
-                    let data = register_ptr.read_offset(self.size, *reg_offset);
-                    dst_operand.operand_ptr.write_offset(
-                        data,
-                        self.size,
-                        memory_offset * (self.size as isize),
-                    );
-                    memory_offset += 1;
-                }
-            }
-        }
-    }
-
-    fn write_memory_to_registers<T: BusM68k>(
-        &self,
-        affected_register_offsets: &[isize],
-        src_operand: Operand,
-        cpu: &mut M68k<T>,
-    ) {
-        match self.addressing_mode_type {
-            AddressingModeType::AddressRegisterPostIncrement => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
-                let mut memory_offset = 0;
-                let mut am_register_writed = false;
-                for reg_offset in affected_register_offsets {
-                    let data = src_operand
-                        .operand_ptr
-                        .read_offset(self.size, memory_offset * (self.size as isize))
-                        .sign_extend(self.size);
-                    register_ptr.write_offset(data, Size::Long, *reg_offset);
-                    am_register_writed = *reg_offset == (self.am_register_idx + 8); // convert address register into the offset value
-                    memory_offset += 1;
-                }
-                if !am_register_writed {
-                    let src_am_address = src_operand.operand_address;
-                    src_operand.address_register_ptr.as_ref().unwrap().write(
-                        src_am_address + memory_offset as u32 * self.size as u32,
-                        Size::Long,
-                    );
-                }
-            }
-            _ => {
-                let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
-                let mut memory_offset = 0;
-                for reg_offset in affected_register_offsets {
-                    let data = src_operand
-                        .operand_ptr
-                        .read_offset(self.size, memory_offset * (self.size as isize))
-                        .sign_extend(self.size);
-                    register_ptr.write_offset(data, Size::Long, *reg_offset);
-                    memory_offset += 1;
-                }
-            }
-        }
     }
 }
 
@@ -364,16 +334,19 @@ mod test {
     use std::{cell::RefCell, rc::Rc};
 
     use crate::{
+        addressing_mode_set::{
+            AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement, AddressingMode, AddressingModeType
+        },
         bus::BusM68k,
         cpu::M68k,
-        instruction_set::Instruction,
+        instruction_set::{Instruction, MoveDirection},
         operand::{Operand, OperandSet},
         primitives::{memory::MemoryPtr, Pointer, Size},
         register_set::RegisterType,
         STACK_REGISTER,
     };
 
-    use super::{LINK, UNLK};
+    use super::{LINK, MOVEM, UNLK};
 
     const ADDRESS_REGISTER_IDX: usize = 0;
     const ADDRESS_REGISTER_VALUE: u32 = 0x00FF8855;
@@ -423,7 +396,7 @@ mod test {
         operand_set
     }
 
-    fn prepare_unlk_operands(cpu: &mut M68k<Bus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
+    fn prepare_unlk_operands(cpu: &mut M68k<Bus>) -> OperandSet {
         let mut operand_set = OperandSet::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
@@ -477,7 +450,7 @@ mod test {
         let link = LINK();
         link.execute(link_operand_set, &mut cpu);
 
-        let unlk_operand_set = prepare_unlk_operands(&mut cpu, ram.clone());
+        let unlk_operand_set = prepare_unlk_operands(&mut cpu);
         let unlk = UNLK();
         unlk.execute(unlk_operand_set, &mut cpu);
 
@@ -493,5 +466,183 @@ mod test {
                 .read(Size::Long),
             ADDRESS_REGISTER_VALUE
         );
+    }
+
+    #[test]
+    fn test_movem_predecremented() {
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
+        let am_bus = Bus { ram: ram.clone() };
+        let mut cpu = M68k::new(bus);
+
+        let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
+        d2.write(0xDDDD2222, Size::Long);
+        let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
+        a3.write(0xAAAA3333, Size::Long);
+        let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
+        a5_am.write(0x0000000A, Size::Long);
+
+        let mut operand_set = OperandSet::new();
+        let mask = [0x20u8, 0x10];
+        let mem_ptr = MemoryPtr::new_boxed(
+            &mask[0] as *const _ as *const u8,
+            &mask[0] as *const _ as *mut u8,
+        );
+        let operand = Operand::new(mem_ptr, None, 0, Size::Word);
+        operand_set.add(operand);
+
+        let am = AddressRegisterPreDecrement {
+            reg: 5,
+            size: Size::Word,
+        };
+        let operand = am.get_operand(&mut cpu.register_set, &am_bus);
+        operand_set.add(operand);
+
+        let movem = MOVEM {
+            size: Size::Word,
+            direction: MoveDirection::RegisterToMemory,
+            addressing_mode_type: AddressingModeType::AddressRegisterPreDecrement,
+            am_register_idx: 5,
+        };
+        movem.execute(operand_set, &mut cpu);
+
+        assert_eq!(a5_am.read(Size::Long), 0x0000000A - 2 * Size::Word as u32);
+        unsafe {
+            assert_eq!(
+                *(&ram.borrow()[0xA - 2] as *const _ as *const u16),
+                0x3333u16
+            );
+            assert_eq!(
+                *(&ram.borrow()[0xA - 4] as *const _ as *const u16),
+                0x2222u16
+            );
+        }
+    }
+
+    #[test]
+    fn test_movem_postincremented_word() {
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
+        let am_bus = Bus { ram: ram.clone() };
+        let mut cpu = M68k::new(bus);
+
+        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x2222u16 };
+        unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x3333u16 };
+        let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
+        let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
+        let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
+        a5_am.write(0x0000000A, Size::Long);
+
+        let mut operand_set = OperandSet::new();
+        let mask = [0x08u8, 0x04];
+        let mem_ptr = MemoryPtr::new_boxed(
+            &mask[0] as *const _ as *const u8,
+            &mask[0] as *const _ as *mut u8,
+        );
+        let operand = Operand::new(mem_ptr, None, 0, Size::Word);
+        operand_set.add(operand);
+
+        let am = AddressRegisterPostIncrement {
+            reg: 5,
+            size: Size::Word,
+        };
+        let operand = am.get_operand(&mut cpu.register_set, &am_bus);
+        operand_set.add(operand);
+
+        let movem = MOVEM {
+            size: Size::Word,
+            direction: MoveDirection::MemoryToRegister,
+            addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
+            am_register_idx: 5,
+        };
+        movem.execute(operand_set, &mut cpu);
+        assert_eq!(a5_am.read(Size::Long), 0x0000000A + 2 * Size::Word as u32);
+        assert_eq!(d2.read(Size::Long), 0x2222u32);
+        assert_eq!(a3.read(Size::Long), 0x3333u32);
+    }
+
+    #[test]
+    fn test_movem_postincremented_long() {
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
+        let am_bus = Bus { ram: ram.clone() };
+        let mut cpu = M68k::new(bus);
+
+        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u32) = 0x11112222u32.to_be() };
+        unsafe { *(&mut ram.borrow_mut()[0xA + 4] as *mut _ as *mut u32) = 0x33334444u32.to_be() };
+        let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
+        let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
+        let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
+        a5_am.write(0x0000000A, Size::Long);
+
+        let mut operand_set = OperandSet::new();
+        let mask = [0x08u8, 0x04];
+        let mem_ptr = MemoryPtr::new_boxed(
+            &mask[0] as *const _ as *const u8,
+            &mask[0] as *const _ as *mut u8,
+        );
+        let operand = Operand::new(mem_ptr, None, 0, Size::Word);
+        operand_set.add(operand);
+
+        let am = AddressRegisterPostIncrement {
+            reg: 5,
+            size: Size::Word,
+        };
+        let operand = am.get_operand(&mut cpu.register_set, &am_bus);
+        operand_set.add(operand);
+
+        let movem = MOVEM {
+            size: Size::Long,
+            direction: MoveDirection::MemoryToRegister,
+            addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
+            am_register_idx: 5,
+        };
+        movem.execute(operand_set, &mut cpu);
+        assert_eq!(a5_am.read(Size::Long), 0x0000000A + 2 * Size::Long as u32);
+        assert_eq!(d2.read(Size::Long), 0x11112222u32);
+        assert_eq!(a3.read(Size::Long), 0x33334444u32);
+    }
+
+    #[test]
+    fn test_movem_memory_to_register() {
+        let ram = Rc::new(RefCell::new([0; 0xFF]));
+        let bus = Bus { ram: ram.clone() };
+        let am_bus = Bus { ram: ram.clone() };
+        let mut cpu = M68k::new(bus);
+
+        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x00007055u16.to_be() };
+        unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x00008099u16.to_be() };
+        let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
+        let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
+        let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
+        a5_am.write(0x0000000A, Size::Long);
+
+        let mut operand_set = OperandSet::new();
+        let mask = [0x08u8, 0x04];
+        let mem_ptr = MemoryPtr::new_boxed(
+            &mask[0] as *const _ as *const u8,
+            &mask[0] as *const _ as *mut u8,
+        );
+        let operand = Operand::new(mem_ptr, None, 0, Size::Word);
+        operand_set.add(operand);
+
+        let am = AddressRegisterIndirect {
+            reg: 5,
+            size: Size::Word,
+        };
+        let operand = am.get_operand(&mut cpu.register_set, &am_bus);
+        operand_set.add(operand);
+
+        let movem = MOVEM {
+            size: Size::Word,
+            direction: MoveDirection::MemoryToRegister,
+            addressing_mode_type: AddressingModeType::AddressRegisterIndirect,
+            am_register_idx: 5,
+        };
+        movem.execute(operand_set, &mut cpu);
+
+        assert_eq!(a5_am.read(Size::Long), 0xA);
+        assert_eq!(d2.read(Size::Long), 0x00007055);
+        assert_eq!(a3.read(Size::Long), 0xFFFF8099);
     }
 }
