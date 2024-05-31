@@ -47,6 +47,7 @@ impl Bus {
 
 impl BusM68k for Bus {
     fn set_address_read(&self, address: u32) -> *const u8 {
+        let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
             unsafe {
                 let rom_ptr = self.rom.as_ptr().offset(address as isize);
@@ -89,6 +90,7 @@ impl BusM68k for Bus {
     }
 
     fn set_address_write(&self, address: u32) -> *mut u8 {
+        let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
             unsafe {
                 let rom_ptr = self.rom.as_ptr().offset(address as isize);
