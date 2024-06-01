@@ -17,6 +17,8 @@ pub struct Bus {
     z80_ram: Vec<u8>,
 
     // TODO rewrite after implementation of the peripheral devices
+    z80_bus_request_reg_r: u16,
+    z80_bus_request_reg_w: u16,
     io_area_read: [u8; 0x20],
     io_area_m68k: [u8; 0x20],
     null: u32,
@@ -30,6 +32,8 @@ impl Bus {
             rom: rom,
             z80_ram: vec![0; 0x10000],  // $A00000	$A0FFFF
             m68k_ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            z80_bus_request_reg_r: 0,
+            z80_bus_request_reg_w: 0,
             io_area_read: io_area_read,
             io_area_m68k: [0; 0x20],
             null: 0,
@@ -53,20 +57,21 @@ impl BusM68k for Bus {
                 let rom_ptr = self.rom.as_ptr().offset(address as isize);
                 rom_ptr as *const u8
             }
+        } else if address >= 0xA00000 && address <= 0xA0FFFF {
+            let address = address & 0xFFFF;
+            &self.z80_ram[address as usize]
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
-                let address = (address & 0x3f) as usize;
                 unsafe {
-                    let command =
-                        (*(&self.io_area_m68k[address] as *const _ as *const u16)).to_be();
-                    let ptr = &self.io_area_read[address] as *const u8 as *const _ as *mut u8;
-                    let up = UnsafeCell::new(ptr);
-                    if command == 0x100 {
-                        **up.get() = 0; // Z80 stoped
+                    let ptr = &self.z80_bus_request_reg_r as *const _ as *mut u16;
+                    let unsafe_cell = UnsafeCell::new(ptr);
+                    if self.z80_bus_request_reg_w != 0 {
+                        **unsafe_cell.get() = 0; // Z80 stoped
                     } else {
-                        **up.get() = 1; // Z80 run
+                        **unsafe_cell.get() = 1; // Z80 run
                     }
                 }
+                return &self.z80_bus_request_reg_r as *const _ as *const u8;
             }
             let address = (address & 0x3f) as usize;
             &self.io_area_read[address] as *const u8
@@ -96,7 +101,13 @@ impl BusM68k for Bus {
                 let rom_ptr = self.rom.as_ptr().offset(address as isize);
                 rom_ptr as *const _ as *mut u8
             }
+        } else if address >= 0xA00000 && address <= 0xA0FFFF {
+            let address = address & 0xFFFF;
+            &self.z80_ram[address as usize] as *const _ as *mut u8
         } else if address >= 0xA10000 && address < 0xA20000 {
+            if address == Z80_REQUEST_BUS {
+                return &self.z80_bus_request_reg_w as *const _ as *mut u8;
+            }
             let address = (address & 0x3f) as usize;
             &self.io_area_m68k[address] as *const _ as *mut u8
         // } else if address == 0xC00000 || address == 0xC00002 {

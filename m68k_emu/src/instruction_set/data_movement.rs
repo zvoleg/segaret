@@ -335,7 +335,8 @@ mod test {
 
     use crate::{
         addressing_mode_set::{
-            AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement, AddressingMode, AddressingModeType
+            AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
+            AddressingMode, AddressingModeType,
         },
         bus::BusM68k,
         cpu::M68k,
