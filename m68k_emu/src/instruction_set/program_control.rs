@@ -45,13 +45,14 @@ impl Display for Bcc {
 
 impl<T: BusM68k> Instruction<T> for Bcc {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+        let pc = &mut cpu.register_set.pc;
         let displacement = if self.displacement == 0 {
+            *pc -= 2; // for the calculation of the branch address it uses address just after instruction word without extension word
             operand_set.next().read().sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
         if check_condition(self.condition, &cpu.register_set.sr) {
-            let pc = &mut cpu.register_set.pc;
             *pc = pc.wrapping_add(displacement);
         } else {
             let clock_corection = if self.displacement == 0 { 2 } else { -2i32 };
