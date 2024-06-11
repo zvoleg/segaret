@@ -34,7 +34,7 @@ where
         });
         generate_opcode_list(&mut table);
         let bus = Rc::new(bus);
-        let header_ptr = MemoryPtr::new_read_only(0, bus.clone());
+        let header_ptr = MemoryPtr::new(0, bus.clone());
         let header = Header::new(header_ptr);
         let mut register_set = RegisterSet::new();
         M68k::<T>::reset(&header, &mut register_set);
@@ -57,7 +57,7 @@ where
         let operation_set = self.operation_set.as_ptr();
         let operation = unsafe { &*operation_set.offset(opcode as isize) };
 
-        let operation_ptr = MemoryPtr::new_read_only(opcode_address, self.bus.clone());
+        let operation_ptr = MemoryPtr::new(opcode_address, self.bus.clone());
         println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.cycles_counter = operation.cycles;
 
@@ -88,7 +88,7 @@ where
         address = address.wrapping_sub(size as u32); // predecrementing
         stack_register_ptr.write(address, Size::Long);
 
-        let write_ptr = MemoryPtr::new_write_only(address, self.bus.clone());
+        let write_ptr = MemoryPtr::new(address, self.bus.clone());
         write_ptr.write(data, size);
     }
 
@@ -98,7 +98,7 @@ where
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let address = stack_register_ptr.read(Size::Long);
 
-        let read_ptr = MemoryPtr::new_read_only(address, self.bus.clone());
+        let read_ptr = MemoryPtr::new(address, self.bus.clone());
         let data = read_ptr.read(size);
 
         stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long); // postincrement
@@ -120,8 +120,7 @@ where
     }
 
     fn fetch_opcode(&mut self) -> u16 {
-        let opcode_ptr =
-            MemoryPtr::new_read_only(self.register_set.get_and_increment_pc(), self.bus.clone());
+        let opcode_ptr = MemoryPtr::new(self.register_set.get_and_increment_pc(), self.bus.clone());
         opcode_ptr.read(Size::Word) as u16
     }
 

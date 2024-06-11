@@ -75,9 +75,9 @@ impl BusM68k for Bus {
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 if *self.z80_bus_request_reg.borrow() == 0x0100 {
-                    return 0
+                    return 0;
                 } else {
-                    return 1
+                    return 1;
                 }
             }
             let address = (address & 0x3f) as usize;
@@ -112,7 +112,11 @@ impl BusM68k for Bus {
                 *self.z80_bus_request_reg.borrow_mut() = data;
             } else {
                 let address = (address & 0x3f) as usize;
-                self.write_ptr(data, amount, &self.io_area_m68k[address] as *const _ as *mut u8)
+                self.write_ptr(
+                    data,
+                    amount,
+                    &self.io_area_m68k[address] as *const _ as *mut u8,
+                )
             }
         // // } else if address == 0xC00000 || address == 0xC00002 {
         // //     // unsafe {
