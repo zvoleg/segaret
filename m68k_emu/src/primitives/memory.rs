@@ -58,59 +58,21 @@ impl MemoryPtr {
 
 impl Pointer for MemoryPtr {
     fn read(&self, size: Size) -> u32 {
-        let buffer = self.bus.read(self.address, size as u32);
-        let data = unsafe {
-            match size {
-                Size::Byte => (*(buffer as *const _ as *const u8)).to_be() as u32,
-                Size::Word => (*(buffer as *const _ as *const u16)).to_be() as u32,
-                Size::Long => (*(buffer as *const _ as *const u32)).to_be() as u32,
-            }
-        };
-        data
+        self.bus.read(self.address, size as u32)
     }
 
     fn write(&self, data: u32, size: Size) {
-        let buffer = self
-            .bus
-            .write(self.address, size as u32);
-        let ptr = buffer as *const _ as *mut u8;
-        let uc = UnsafeCell::new(ptr);
-        unsafe {
-            match size {
-                Size::Byte => *(*uc.get() as *mut _ as *mut u8) = (data as u8).to_be(),
-                Size::Word => *(*uc.get() as *mut _ as *mut u16) = (data as u16).to_be(),
-                Size::Long => *(*uc.get() as *mut _ as *mut u32) = (data as u32).to_be(),
-            }
-        };
+        self.bus.write(data, self.address, size as u32);
     }
 
     fn read_offset(&self, size: Size, offset: isize) -> u32 {
-        let buffer = self
-            .bus
-            .read(self.address.wrapping_add(offset as u32), size as u32);
-        let data = unsafe {
-            match size {
-                Size::Byte => (*(buffer as *const _ as *const u8)).to_be() as u32,
-                Size::Word => (*(buffer as *const _ as *const u16)).to_be() as u32,
-                Size::Long => (*(buffer as *const _ as *const u32)).to_be() as u32,
-            }
-        };
-        data
+        self.bus
+            .read(self.address.wrapping_add(offset as u32), size as u32)
     }
 
     fn write_offset(&self, data: u32, size: Size, offset: isize) {
-        let buffer = self
-            .bus
-            .write(self.address.wrapping_add(offset as u32), size as u32);
-        let ptr = buffer as *const _ as *mut u8;
-        let uc = UnsafeCell::new(ptr);
-        unsafe {
-            match size {
-                Size::Byte => *(*uc.get() as *mut _ as *mut u8) = (data as u8).to_be(),
-                Size::Word => *(*uc.get() as *mut _ as *mut u16) = (data as u16).to_be(),
-                Size::Long => *(*uc.get() as *mut _ as *mut u32) = (data as u32).to_be(),
-            }
-        };
+        self.bus
+            .write(data, self.address.wrapping_add(offset as u32), size as u32);
     }
 }
 

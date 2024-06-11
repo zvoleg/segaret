@@ -72,6 +72,7 @@ where
             if vector == RESET_SP {
                 M68k::<T>::reset(&self.header, &mut self.register_set);
             } else {
+                // TODO push registers to stack
                 let vector_address = self.header.get_vector(vector);
                 self.register_set.pc = vector_address;
             }

@@ -1,6 +1,7 @@
-use std::cell::UnsafeCell;
+use std::cell::RefCell;
 
 use m68k_emu::bus::BusM68k;
+use sg_vdp_emu::BusVdp;
 
 const VERSION_REGISTER: u32 = 0xA10000;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -17,11 +18,9 @@ pub struct Bus {
     z80_ram: Vec<u8>,
 
     // TODO rewrite after implementation of the peripheral devices
-    z80_bus_request_reg_r: [u8; 2],
-    z80_bus_request_reg_w: [u8; 2],
+    z80_bus_request_reg: RefCell<u32>,
     io_area_read: [u8; 0x20],
     io_area_m68k: [u8; 0x20],
-    null: u32,
 }
 
 impl Bus {
@@ -32,76 +31,57 @@ impl Bus {
             rom: rom,
             z80_ram: vec![0; 0x10000],  // $A00000	$A0FFFF
             m68k_ram: vec![0; 0x10000], // $FF0000	$FFFFFF
-            z80_bus_request_reg_r: [0; 2],
-            z80_bus_request_reg_w: [0; 2],
+            z80_bus_request_reg: RefCell::new(0),
             io_area_read: io_area_read,
             io_area_m68k: [0; 0x20],
-            null: 0,
         }
-    }
-
-    pub(crate) fn get_rom_ptr(&self) -> *const u8 {
-        self.rom.as_ptr()
     }
 
     pub fn z80_dump(&self) -> &[u8] {
         &self.z80_ram
     }
-}
 
-impl BusM68k for Bus {
-    fn read(&self, address: u32, amount: u32) -> &[u8] {
-        let address = address & 0x00FFFFFF;
-        if address <= 0x3FFFFF {
-            &self.rom[(address as usize)..(address + amount) as usize]
-        } else if address >= 0xA00000 && address <= 0xA0FFFF {
-            let address = address & 0xFFFF;
-            &self.z80_ram[(address as usize)..(address + amount) as usize]
-        } else if address >= 0xA10000 && address < 0xA20000 {
-            if address == Z80_REQUEST_BUS {
-                unsafe {
-                    let ptr = &self.z80_bus_request_reg_r as *const _ as *mut u16;
-                    let unsafe_cell = UnsafeCell::new(ptr);
-                    if self.z80_bus_request_reg_w[0] != 0 || self.z80_bus_request_reg_w[1] != 0 {
-                        **unsafe_cell.get() = 0; // Z80 stoped
-                    } else {
-                        **unsafe_cell.get() = 1; // Z80 run
-                    }
-                }
-                return &self.z80_bus_request_reg_r[0..2];
+    fn read_ptr(&self, amount: u32, ptr: *const u8) -> u32 {
+        unsafe {
+            match amount {
+                1 => *ptr as u32,
+                2 => (*(ptr as *const u16)).to_be() as u32,
+                4 => (*(ptr as *const u32)).to_be() as u32,
+                _ => panic!("Bus: read: wrong size"),
             }
-            let address = (address & 0x3f) as usize;
-            &self.io_area_read[address..address + 1]
-        // } else if address == 0xC00000 || address == 0xC00002 {
-        //     // unsafe {
-        //     //     (*self.vdp).read_data_port() as u32
-        //     // }
-        // } else if address == 0xC00004 || address == 0xC00006 {
-        //     // unsafe {
-        //     //     (*self.vdp).read_control_port() as u32
-        //     // }
-        } else if address >= 0xFF0000 && address <= 0xFFFFFF {
-            let address = address & 0xFFFF;
-            &self.m68k_ram[address as usize..(address + amount) as usize]
-        } else {
-            let address = address & 0x1f;
-            &self.io_area_read[address as usize..(address + amount) as usize]
         }
     }
 
-    fn write(&self, address: u32, amount: u32) -> &[u8] {
+    fn write_ptr(&self, data: u32, amount: u32, ptr: *mut u8) {
+        unsafe {
+            match amount {
+                1 => *ptr = data as u8,
+                2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
+                4 => *(ptr as *mut _ as *mut u32) = data.to_be(),
+                _ => panic!("Bus: write: wrong size"),
+            }
+        }
+    }
+}
+
+impl BusM68k for Bus {
+    fn read(&self, address: u32, amount: u32) -> u32 {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
-            &self.rom[(address as usize)..(address + amount) as usize]
+            self.read_ptr(amount, &self.rom[address as usize])
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            &self.z80_ram[address as usize..(address + amount) as usize]
+            self.read_ptr(amount, &self.z80_ram[address as usize])
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
-                return &self.z80_bus_request_reg_w[0..2];
+                if *self.z80_bus_request_reg.borrow() == 0x0100 {
+                    return 0
+                } else {
+                    return 1
+                }
             }
             let address = (address & 0x3f) as usize;
-            &self.io_area_m68k[address..address + amount as usize]
+            self.read_ptr(amount, &self.io_area_read[address])
         // } else if address == 0xC00000 || address == 0xC00002 {
         //     // unsafe {
         //     //     (*self.vdp).read_data_port() as u32
@@ -112,11 +92,67 @@ impl BusM68k for Bus {
         //     // }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            &self.m68k_ram[address as usize .. (address + amount) as usize]
+            self.read_ptr(amount, &self.m68k_ram[address as usize])
         } else {
             let address = address & 0x1f;
-            &self.io_area_m68k[address as usize .. (address + amount) as usize]
+            self.read_ptr(amount, &self.io_area_read[address as usize])
         }
+    }
+
+    fn write(&self, data: u32, address: u32, amount: u32) {
+        let address = address & 0x00FFFFFF;
+        if address <= 0x3FFFFF {
+            let ptr = &self.rom[address as usize] as *const _ as *mut u8;
+            self.write_ptr(data, amount, ptr);
+        // } else if address >= 0xA00000 && address <= 0xA0FFFF {
+        //     let address = address & 0xFFFF;
+        //     &self.z80_ram[address as usize..(address + amount) as usize]
+        } else if address >= 0xA10000 && address < 0xA20000 {
+            if address == Z80_REQUEST_BUS {
+                *self.z80_bus_request_reg.borrow_mut() = data;
+            } else {
+                let address = (address & 0x3f) as usize;
+                self.write_ptr(data, amount, &self.io_area_m68k[address] as *const _ as *mut u8)
+            }
+        // // } else if address == 0xC00000 || address == 0xC00002 {
+        // //     // unsafe {
+        // //     //     (*self.vdp).read_data_port() as u32
+        // //     // }
+        // // } else if address == 0xC00004 || address == 0xC00006 {
+        // //     // unsafe {
+        // //     //     (*self.vdp).read_control_port() as u32
+        // //     // }
+        } else if address >= 0xFF0000 && address <= 0xFFFFFF {
+            let address = address & 0xFFFF;
+            let ptr = &self.m68k_ram[address as usize] as *const _ as *mut u8;
+            self.write_ptr(data, amount, ptr);
+        } else {
+            let address = address & 0x1f;
+            let ptr = &self.io_area_m68k[address as usize] as *const _ as *mut u8;
+            self.write_ptr(data, amount, ptr);
+        };
+    }
+}
+
+impl BusVdp for Bus {
+    fn read_data_port(&self) -> u16 {
+        todo!()
+    }
+
+    fn write_data_port(&self, data: u16) {
+        todo!()
+    }
+
+    fn read_control_port(&self) -> u16 {
+        todo!()
+    }
+
+    fn write_control_port(&self, data: u16) {
+        todo!()
+    }
+
+    fn send_interrupt(&self, level: i32) {
+        todo!()
     }
 }
 
