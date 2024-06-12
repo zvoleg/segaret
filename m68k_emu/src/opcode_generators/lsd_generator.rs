@@ -87,6 +87,7 @@ fn generate_lsd_implied<T: BusM68k>(table: &mut [Operation<T>]) {
         for direction in [ShiftDirection::Right, ShiftDirection::Left] {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 for data_reg_idx in 0..8 {
+                    let count = if count == 0 { 8 } else { count };
                     let instruction = Box::new(LSdImplied {
                         size: size,
                         direction: direction,

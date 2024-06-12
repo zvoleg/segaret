@@ -133,6 +133,7 @@ fn generate_rod_implied<T: BusM68k>(table: &mut [Operation<T>]) {
                     for data_reg_idx in 0..8 {
                         let instruction: Box<dyn Instruction<T>>;
                         let base_mask: usize;
+                        let count = if count == 0 { 8 } else { count };
                         if extended {
                             let roxd = Box::new(ROXdImplied {
                                 size: size,
