@@ -1,5 +1,6 @@
 pub mod bus;
 pub mod cpu;
+pub mod interrupt_line;
 
 mod addressing_mode_set;
 mod extension_word;

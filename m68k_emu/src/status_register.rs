@@ -43,4 +43,8 @@ impl StatusRegister {
     pub(crate) fn get_ccr(&self) -> u16 {
         self.reg & 0xFF
     }
+
+    pub(crate) fn ipl(&self) -> u32 {
+        ((self.reg >> 8) & 7) as u32
+    }
 }

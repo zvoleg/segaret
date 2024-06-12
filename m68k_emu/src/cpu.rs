@@ -1,15 +1,16 @@
-use std::{fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use crate::{
     bus::BusM68k,
     header::Header,
     instruction_set::system_control::ILLEAGL,
+    interrupt_line::InterruptLine,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
     primitives::{memory::MemoryPtr, Pointer, Size},
     register_set::{RegisterSet, RegisterType},
-    vectors::{RESET_PC, RESET_SP},
+    vectors::{LEVEL_1, LEVEL_2, LEVEL_3, LEVEL_4, LEVEL_5, LEVEL_6, LEVEL_7, RESET_PC, RESET_SP},
     STACK_REGISTER,
 };
 
@@ -21,6 +22,7 @@ pub struct M68k<T: 'static + BusM68k> {
 
     operation_set: Vec<Operation<T>>,
     bus: Rc<T>,
+    interrupt_line: Rc<RefCell<InterruptLine>>,
 }
 
 impl<T> M68k<T>
@@ -40,15 +42,38 @@ where
         M68k::<T>::reset(&header, &mut register_set);
         Self {
             register_set: register_set,
-            header: header,
-            operation_set: table,
-            bus: bus,
             trap: None,
             cycles_counter: 0,
+            header: header,
+
+            operation_set: table,
+            bus: bus,
+            interrupt_line: Rc::new(RefCell::new(InterruptLine::new())),
         }
     }
 
+    pub fn get_interrupt_lint(&self) -> Rc<RefCell<InterruptLine>> {
+        self.interrupt_line.clone()
+    }
+
     pub fn clock(&mut self) {
+        let interrupt_level = self.interrupt_line.borrow_mut().receive();
+        let ipl = self.register_set.sr.ipl() as usize;
+        if interrupt_level >= ipl && interrupt_level != 0 {
+            let vector = match interrupt_level {
+                1 => LEVEL_1,
+                2 => LEVEL_2,
+                3 => LEVEL_3,
+                4 => LEVEL_4,
+                5 => LEVEL_5,
+                6 => LEVEL_6,
+                7 => LEVEL_7,
+                _ => panic!("M68k: clock: wrong interrupt level: {}", interrupt_level),
+            };
+            self.stack_push(self.register_set.pc, Size::Long);
+            self.stack_push(self.register_set.sr.get_sr() as u32, Size::Word);
+            self.register_set.pc = self.header.get_vector(vector);
+        }
         let opcode_address = self.register_set.pc;
         let opcode = self.fetch_opcode();
 
@@ -72,7 +97,8 @@ where
             if vector == RESET_SP {
                 M68k::<T>::reset(&self.header, &mut self.register_set);
             } else {
-                // TODO push registers to stack
+                self.stack_push(self.register_set.pc, Size::Long);
+                self.stack_push(self.register_set.sr.get_sr() as u32, Size::Word);
                 let vector_address = self.header.get_vector(vector);
                 self.register_set.pc = vector_address;
             }
