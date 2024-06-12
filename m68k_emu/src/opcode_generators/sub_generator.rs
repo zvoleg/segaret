@@ -288,6 +288,11 @@ fn generate_subq<T: BusM68k>(table: &mut [Operation<T>]) {
                         data: data,
                         to_address_reg: am_type == AddressingModeType::AddressRegister,
                     });
+                    let size = if instruction.to_address_reg {
+                        Size::Long // the entire destination address register is used regardless of the operation size
+                    } else {
+                        size
+                    };
                     let am = am_type.addressing_mode_by_type(idx, size);
 
                     let base_mask = instruction.generate_mask();
