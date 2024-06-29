@@ -432,7 +432,8 @@ mod test {
     fn test_link() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
         let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
@@ -460,7 +461,8 @@ mod test {
     fn test_unlk() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
         let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
@@ -489,7 +491,8 @@ mod test {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
         let bus_stub = Rc::new(Bus { ram: ram.clone() });
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
 
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         d2.write(0xDDDD2222, Size::Long);
@@ -537,7 +540,8 @@ mod test {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
         let bus_stub = Rc::new(Bus { ram: ram.clone() });
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
 
         unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x2222u16 };
         unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x3333u16 };
@@ -576,7 +580,8 @@ mod test {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
         let bus_stub = Rc::new(Bus { ram: ram.clone() });
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
 
         unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u32) = 0x11112222u32.to_be() };
         unsafe { *(&mut ram.borrow_mut()[0xA + 4] as *mut _ as *mut u32) = 0x33334444u32.to_be() };
@@ -615,7 +620,8 @@ mod test {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
         let bus = Bus { ram: ram.clone() };
         let bus_stub = Rc::new(Bus { ram: ram.clone() });
-        let mut cpu = M68k::new(bus);
+        let mut cpu = M68k::new();
+        cpu.set_bus(bus);
 
         unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x00007055u16.to_be() };
         unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x00008099u16.to_be() };

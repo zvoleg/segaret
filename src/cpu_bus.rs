@@ -1,7 +1,8 @@
-use std::cell::RefCell;
+use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
 
 use m68k_emu::bus::BusM68k;
-use sg_vdp_emu::BusVdp;
+
+use crate::memory_space::MemorySpace;
 
 const VERSION_REGISTER: u32 = 0xA10000;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -12,33 +13,18 @@ const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
 const Z80_RESET: u32 = 0xA11200;
 
-pub struct Bus {
-    rom: Vec<u8>,
-    m68k_ram: Vec<u8>,
-    z80_ram: Vec<u8>,
-
+pub struct CpuBus {
+    memory_space: Rc<RefCell<MemorySpace>>,
     // TODO rewrite after implementation of the peripheral devices
     z80_bus_request_reg: RefCell<u32>,
-    io_area_read: [u8; 0x20],
-    io_area_m68k: [u8; 0x20],
 }
 
-impl Bus {
-    pub fn init(rom: Vec<u8>) -> Self {
-        let mut io_area_read = [0; 0x20];
-        io_area_read[1] = 0x0090; // `setup version regi`ster
+impl CpuBus {
+    pub fn init(memory_space: Rc<RefCell<MemorySpace>>) -> Self {
         Self {
-            rom: rom,
-            z80_ram: vec![0; 0x10000],  // $A00000	$A0FFFF
-            m68k_ram: vec![0; 0x10000], // $FF0000	$FFFFFF
+            memory_space: memory_space,
             z80_bus_request_reg: RefCell::new(0),
-            io_area_read: io_area_read,
-            io_area_m68k: [0; 0x20],
         }
-    }
-
-    pub fn z80_dump(&self) -> &[u8] {
-        &self.z80_ram
     }
 
     fn read_ptr(&self, amount: u32, ptr: *const u8) -> u32 {
@@ -64,14 +50,17 @@ impl Bus {
     }
 }
 
-impl BusM68k for Bus {
+impl BusM68k for CpuBus {
     fn read(&self, address: u32, amount: u32) -> u32 {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
-            self.read_ptr(amount, &self.rom[address as usize])
+            self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize])
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            self.read_ptr(amount, &self.z80_ram[address as usize])
+            self.read_ptr(
+                amount,
+                &self.memory_space.borrow().z80_ram[address as usize],
+            )
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 if *self.z80_bus_request_reg.borrow() == 0x0100 {
@@ -81,28 +70,33 @@ impl BusM68k for Bus {
                 }
             }
             let address = (address & 0x3f) as usize;
-            self.read_ptr(amount, &self.io_area_read[address])
-        // } else if address == 0xC00000 || address == 0xC00002 {
-        //     // unsafe {
-        //     //     (*self.vdp).read_data_port() as u32
-        //     // }
-        // } else if address == 0xC00004 || address == 0xC00006 {
-        //     // unsafe {
-        //     //     (*self.vdp).read_control_port() as u32
-        //     // }
+            self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address])
+        } else if address == 0xC00000 || address == 0xC00002 {
+            // self.vdp.as_ref().unwrap().borrow_mut().read_data_port() as u32
+            0
+        } else if address == 0xC00004 || address == 0xC00006 {
+            // self.vdp.as_ref().unwrap().borrow_mut().read_control_port() as u32
+            0
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            self.read_ptr(amount, &self.m68k_ram[address as usize])
+            self.read_ptr(
+                amount,
+                &self.memory_space.borrow().m68k_ram[address as usize],
+            )
         } else {
             let address = address & 0x1f;
-            self.read_ptr(amount, &self.io_area_read[address as usize])
+            self.read_ptr(
+                amount,
+                &self.memory_space.borrow().io_area_read[address as usize],
+            )
         }
     }
 
     fn write(&self, data: u32, address: u32, amount: u32) {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
-            let ptr = &self.rom[address as usize] as *const _ as *mut u8;
+            let ptr = &self.memory_space.as_ref().borrow_mut().rom[address as usize] as *const _
+                as *mut u8;
             self.write_ptr(data, amount, ptr);
         // } else if address >= 0xA00000 && address <= 0xA0FFFF {
         //     let address = address & 0xFFFF;
@@ -115,48 +109,25 @@ impl BusM68k for Bus {
                 self.write_ptr(
                     data,
                     amount,
-                    &self.io_area_m68k[address] as *const _ as *mut u8,
+                    &self.memory_space.as_ref().borrow_mut().io_area_m68k[address] as *const _
+                        as *mut u8,
                 )
             }
-        // // } else if address == 0xC00000 || address == 0xC00002 {
-        // //     // unsafe {
-        // //     //     (*self.vdp).read_data_port() as u32
-        // //     // }
-        // // } else if address == 0xC00004 || address == 0xC00006 {
-        // //     // unsafe {
-        // //     //     (*self.vdp).read_control_port() as u32
-        // //     // }
+        } else if address == 0xC00000 || address == 0xC00002 {
+            // self.vdp.as_ref().unwrap().borrow_mut().write_data_port(data as u16);
+        } else if address == 0xC00004 || address == 0xC00006 {
+            // self.vdp.as_ref().unwrap().borrow_mut().write_control_port(data as u16);
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            let ptr = &self.m68k_ram[address as usize] as *const _ as *mut u8;
+            let ptr = &self.memory_space.as_ref().borrow_mut().m68k_ram[address as usize]
+                as *const _ as *mut u8;
             self.write_ptr(data, amount, ptr);
         } else {
             let address = address & 0x1f;
-            let ptr = &self.io_area_m68k[address as usize] as *const _ as *mut u8;
+            let ptr = &self.memory_space.as_ref().borrow_mut().io_area_m68k[address as usize]
+                as *const _ as *mut u8;
             self.write_ptr(data, amount, ptr);
         };
-    }
-}
-
-impl BusVdp for Bus {
-    fn read_data_port(&self) -> u16 {
-        todo!()
-    }
-
-    fn write_data_port(&self, data: u16) {
-        todo!()
-    }
-
-    fn read_control_port(&self) -> u16 {
-        todo!()
-    }
-
-    fn write_control_port(&self, data: u16) {
-        todo!()
-    }
-
-    fn send_interrupt(&self, level: i32) {
-        todo!()
     }
 }
 

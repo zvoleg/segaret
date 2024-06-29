@@ -4,7 +4,6 @@ pub mod interrupt_line;
 
 mod addressing_mode_set;
 mod extension_word;
-mod header;
 mod instruction_set;
 mod opcode_generators;
 mod operand;
