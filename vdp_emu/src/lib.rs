@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use m68k_emu::interrupt_line::InterruptLine;
+use m68k_emu::interrupt_line::{self, InterruptLine};
 use spriter::Canvas;
 
 pub mod vdp_port;
@@ -91,11 +91,11 @@ pub struct Vdp {
 
     registers: [u8; 24],
 
-    interrupt_line: Rc<RefCell<InterruptLine>>,
+    interrupt_line: Option<Rc<RefCell<InterruptLine>>>,
 }
 
 impl Vdp {
-    pub fn new(canvas: Canvas, interrupt_line: Rc<RefCell<InterruptLine>>) -> Self {
+    pub fn new(canvas: Canvas) -> Self {
         Self {
             screen: canvas,
 
@@ -120,9 +120,14 @@ impl Vdp {
 
             registers: [0; 24],
 
-            interrupt_line: interrupt_line,
+            interrupt_line: None,
         }
     }
+
+    pub fn set_interrupt_line(&mut self, interrupt_line: Rc<RefCell<InterruptLine>>) {
+        self.interrupt_line = Some(interrupt_line);
+    }
+
 
     pub fn clock(&mut self) {
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {

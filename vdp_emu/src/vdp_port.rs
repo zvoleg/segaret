@@ -1,16 +1,26 @@
 use crate::Vdp;
 
 pub trait VdpPorts {
-    fn read(port_id: u32) -> u32;
-    fn write(data: u32, port_id: u32);
+    fn read_data_port(&self) -> u32;
+    fn write_data_port(&mut self, data: u16);
+    fn read_control_port(&self) -> u32;
+    fn write_control_port(&mut self, data: u16);
 }
 
 impl VdpPorts for Vdp {
-    fn read(port_id: u32) -> u32 {
-        0
+    fn read_data_port(&self) -> u32 {
+        todo!()
     }
 
-    fn write(data: u32, port_id: u32) {
+    fn write_data_port(&mut self, data: u16) {
+        todo!()
+    }
+
+    fn read_control_port(&self) -> u32 {
+        todo!()
+    }
+
+    fn write_control_port(&mut self, data: u16) {
         todo!()
     }
 }

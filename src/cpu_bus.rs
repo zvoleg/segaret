@@ -1,21 +1,23 @@
-use std::{borrow::BorrowMut, cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc};
 
 use m68k_emu::bus::BusM68k;
+use vdp_emu::vdp_port::VdpPorts;
 
 use crate::memory_space::MemorySpace;
 
-const VERSION_REGISTER: u32 = 0xA10000;
-const CONTROLLER_A_DATA: u32 = 0xA10002;
-const CONTROLLER_B_DATA: u32 = 0xA10004;
-const CONTROLLER_A_CONTROL: u32 = 0xA10008;
-const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
-const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
+// const VERSION_REGISTER: u32 = 0xA10000;
+// const CONTROLLER_A_DATA: u32 = 0xA10002;
+// const CONTROLLER_B_DATA: u32 = 0xA10004;
+// const CONTROLLER_A_CONTROL: u32 = 0xA10008;
+// const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
+// const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
-const Z80_RESET: u32 = 0xA11200;
+// const Z80_RESET: u32 = 0xA11200;
 
 pub struct CpuBus {
     memory_space: Rc<RefCell<MemorySpace>>,
     // TODO rewrite after implementation of the peripheral devices
+    vdp_ports: Option<Rc<RefCell<dyn VdpPorts>>>,
     z80_bus_request_reg: RefCell<u32>,
 }
 
@@ -23,8 +25,13 @@ impl CpuBus {
     pub fn init(memory_space: Rc<RefCell<MemorySpace>>) -> Self {
         Self {
             memory_space: memory_space,
+            vdp_ports: None,
             z80_bus_request_reg: RefCell::new(0),
         }
+    }
+
+    pub fn set_vdp_ports(&mut self, vdp_port: Rc<RefCell<dyn VdpPorts>>) {
+        self.vdp_ports = Some(vdp_port);
     }
 
     fn read_ptr(&self, amount: u32, ptr: *const u8) -> u32 {

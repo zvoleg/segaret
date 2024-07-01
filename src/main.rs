@@ -2,7 +2,7 @@ extern crate spriter;
 
 use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
 
-use m68k_emu::{bus::BusM68k, cpu::M68k};
+use m68k_emu::cpu::M68k;
 
 use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
@@ -24,14 +24,17 @@ fn main() {
     let _ = file.read_to_end(&mut rom);
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
-    let cpu_bus = CpuBus::init(memory_space.clone());
-    let mut m68k = M68k::<CpuBus>::new();
+    let mut m68k = M68k::new();
+    let vdp = Rc::new(RefCell::new(Vdp::new(canvas)));
+    
+    let mut cpu_bus = CpuBus::init(memory_space.clone());
+    cpu_bus.set_vdp_ports(vdp.clone());
+    
     m68k.set_bus(cpu_bus);
     m68k.reset();
-
+    
     let interrupt_line = m68k.get_interrupt_lint();
-    let vdp = Rc::new(RefCell::new(Vdp::new(canvas, interrupt_line)));
-    // bus.borrow_mut().set_vdp(Some(vdp.clone()));
+    vdp.borrow_mut().set_interrupt_line(interrupt_line.clone());
 
     let mut auto = false;
     runner.run(window, move |_| {
