@@ -79,11 +79,13 @@ impl BusM68k for CpuBus {
             let address = (address & 0x3f) as usize;
             self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address])
         } else if address == 0xC00000 || address == 0xC00002 {
-            // self.vdp.as_ref().unwrap().borrow_mut().read_data_port() as u32
-            0
+            self.vdp_ports.as_ref().unwrap().borrow().read_data_port()
         } else if address == 0xC00004 || address == 0xC00006 {
-            // self.vdp.as_ref().unwrap().borrow_mut().read_control_port() as u32
-            0
+            self.vdp_ports
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .read_control_port()
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
             self.read_ptr(
@@ -121,9 +123,21 @@ impl BusM68k for CpuBus {
                 )
             }
         } else if address == 0xC00000 || address == 0xC00002 {
-            // self.vdp.as_ref().unwrap().borrow_mut().write_data_port(data as u16);
+            let mut vdp_port_ref = self.vdp_ports.as_ref().unwrap().borrow_mut();
+            if amount == 4 {
+                vdp_port_ref.write_data_port((data >> 16) as u16);
+                vdp_port_ref.write_data_port(data as u16);
+            } else {
+                vdp_port_ref.write_data_port(data as u16);
+            }
         } else if address == 0xC00004 || address == 0xC00006 {
-            // self.vdp.as_ref().unwrap().borrow_mut().write_control_port(data as u16);
+            let mut vdp_port_ref = self.vdp_ports.as_ref().unwrap().borrow_mut();
+            if amount == 4 {
+                vdp_port_ref.write_control_port((data >> 16) as u16);
+                vdp_port_ref.write_control_port(data as u16);
+            } else {
+                vdp_port_ref.write_control_port(data as u16);
+            }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
             let ptr = &self.memory_space.as_ref().borrow_mut().m68k_ram[address as usize]

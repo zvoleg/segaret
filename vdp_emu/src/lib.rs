@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, fmt::Display};
 use std::rc::Rc;
 
 use m68k_emu::interrupt_line::{self, InterruptLine};
@@ -21,6 +21,7 @@ impl DisplayMod {
     }
 }
 
+#[allow(non_camel_case_types)]
 enum RamAccessMode {
     VRAM_R,
     VRAM_W,
@@ -28,7 +29,34 @@ enum RamAccessMode {
     CRAM_W,
     VSRAM_R,
     VSRAM_W,
-    TMP,
+}
+
+#[allow(non_camel_case_types)]
+enum DmaMode {
+    MEM_VRAM_COPY,
+    MEM_CRAM_COPY,
+    MEM_VSRAM_COPY,
+    VRAM_VRAM_COPY,
+    VRAM_CRAM_COPY,
+    VRAM_VSRAM_COPY,
+    VRAM_FILL,
+    CRAM_FILL,
+    VSRAM_FILL,
+}
+
+impl Display for RamAccessMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mode_str = match self {
+            RamAccessMode::VRAM_R => "VRAM_R",
+            RamAccessMode::VRAM_W => "VRAM_W",
+            RamAccessMode::CRAM_R => "CRAM_R",
+            RamAccessMode::CRAM_W => "CRAM_W",
+            RamAccessMode::VSRAM_R => "VSRAM_R",
+            RamAccessMode::VSRAM_W => "VSRAM_W",
+            RamAccessMode::NONE => "NONE"
+        };
+        write!(f, "{}", mode_str)
+    }
 }
 
 impl RamAccessMode {
@@ -40,7 +68,7 @@ impl RamAccessMode {
             0b0100 => RamAccessMode::VSRAM_R,
             0b0101 => RamAccessMode::VSRAM_W,
             0b1000 => RamAccessMode::CRAM_R,
-            _ => RamAccessMode::TMP,
+            _ => panic!("RamAccessMode: get_access_moed: unexpected mode mask {:05b}", mask),
         }
     }
 }
@@ -69,6 +97,8 @@ pub trait BusVdp {
 pub struct Vdp {
     screen: Canvas,
 
+    registers: [u8; 24],
+
     vram: [u8; 0x100],
     cram: [u16; 0x40],
     vsram: [u16; 0x28],
@@ -83,21 +113,24 @@ pub struct Vdp {
     line_intrpt_counter: u8,
 
     control_port_write_latch: bool,
-    first_command_word: u16,
-    second_command_word: u16,
 
-    ram_access_bits: u16,
+    dma_mode: Option<DmaMode>,
+
+    ram_access_mode: Option<RamAccessMode>,
     ram_address: u16,
 
-    registers: [u8; 24],
-
     interrupt_line: Option<Rc<RefCell<InterruptLine>>>,
+
+    address_setting_raw_word: u32,
+    address_setting_latch: bool
 }
 
 impl Vdp {
     pub fn new(canvas: Canvas) -> Self {
         Self {
             screen: canvas,
+
+            registers: [0; 24],
 
             vram: [0; 0x100],
             cram: [0; 0x40],
@@ -113,14 +146,15 @@ impl Vdp {
             line_intrpt_counter: 0,
 
             control_port_write_latch: false,
-            first_command_word: 0,
-            second_command_word: 0,
-            ram_access_bits: 0,
+
+            dma_mode: None,
+
+            ram_access_mode: None,
             ram_address: 0,
 
-            registers: [0; 24],
-
             interrupt_line: None,
+            address_setting_raw_word: 0,
+            address_setting_latch: false,
         }
     }
 
@@ -147,76 +181,6 @@ impl Vdp {
         //         self.screen.set_pixel(x, y, Color::from_u32(0xFFFFFF * pixel_color)).unwrap();
         //     }
         // }
-    }
-
-    pub fn write_data_port(&mut self, data: u16) {
-        // self.control_port_write_latch = false;
-        // let access_mode = RamAccessMode::get_access_mode(self.ram_access_bits);
-        // match access_mode {
-        //     RamAccessMode::VRAM_W => unsafe {
-        //         let vram_ptr = self.vram.as_mut_ptr().offset(self.ram_address as isize);
-        //         let vram_ptr = vram_ptr as *mut _ as *mut u16;
-        //         (*vram_ptr) = data; // TODO shoud be some magic with swapping bytes
-        //     },
-        //     RamAccessMode::CRAM_W => self.cram[self.ram_address as usize] = data,
-        //     RamAccessMode::VSRAM_W => self.vsram[self.ram_address as usize] = data,
-        //     _ => (),
-        // }
-        // self.ram_address = self.ram_address.wrapping_add(self.address_increment as u16);
-    }
-
-    pub fn read_data_port(&mut self) -> u16 {
-        // self.control_port_write_latch = false;
-        // let access_mode = RamAccessMode::get_access_mode(self.ram_access_bits);
-        // let data = match access_mode {
-        //     RamAccessMode::VRAM_R => unsafe {
-        //         let vram_ptr = self.vram.as_ptr().offset(self.ram_address as isize);
-        //         let vram_ptr = vram_ptr as *const _ as *const u16;
-        //         *vram_ptr
-        //     },
-        //     RamAccessMode::CRAM_R => self.cram[self.ram_address as usize],
-        //     RamAccessMode::VSRAM_R => self.vsram[self.ram_address as usize],
-        //     _ => 0,
-        // };
-        // self.ram_address = self.ram_address.wrapping_add(self.address_increment as u16);
-        // data
-        0
-    }
-
-    pub fn read_control_port(&mut self) -> u16 {
-        self.control_port_write_latch = false;
-        self.status_register
-    }
-
-    pub fn write_control_port(&mut self, data: u16) {
-        let reg_setup_mode = data & 0x8000 != 0;
-
-        if reg_setup_mode && !self.control_port_write_latch {
-            let reg_idx = (data >> 8) & 0x1F;
-            let reg_data = data & 0xFF;
-
-            self.registers[reg_idx as usize] = reg_data as u8;
-            println!("VDP: setup register {} = {:02X}", reg_idx, reg_data as u8);
-        } else {
-            if !self.control_port_write_latch {
-                self.first_command_word = data;
-
-                let access_bits = self.first_command_word >> 14;
-                let address_bits = self.first_command_word & 0x3FFF;
-
-                self.ram_access_bits = (self.ram_access_bits & !0x0003) | access_bits;
-                self.ram_address = (self.ram_address & 0xC000) | address_bits;
-            } else {
-                self.second_command_word = data;
-
-                let access_bits = (self.second_command_word & 0x00F0) >> 4;
-                let address_bits = self.second_command_word & 0x0003;
-
-                self.ram_access_bits = (self.ram_access_bits & !0xFFFC) | (access_bits << 2);
-                self.ram_address = (self.ram_address & !0xC000) | (address_bits << 14);
-            }
-            self.control_port_write_latch = !self.control_port_write_latch;
-        }
     }
 
     fn update_counters(&mut self) {
