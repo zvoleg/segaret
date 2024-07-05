@@ -1,10 +1,12 @@
-use std::{cell::RefCell, fmt::Display};
 use std::rc::Rc;
+use std::{cell::RefCell, fmt::Display};
 
 use m68k_emu::interrupt_line::{self, InterruptLine};
 use spriter::Canvas;
 
 pub mod vdp_port;
+
+mod registers;
 
 #[derive(PartialEq)]
 enum DisplayMod {
@@ -21,54 +23,39 @@ impl DisplayMod {
     }
 }
 
-#[allow(non_camel_case_types)]
 enum RamAccessMode {
-    VRAM_R,
-    VRAM_W,
-    CRAM_R,
-    CRAM_W,
-    VSRAM_R,
-    VSRAM_W,
-}
-
-#[allow(non_camel_case_types)]
-enum DmaMode {
-    MEM_VRAM_COPY,
-    MEM_CRAM_COPY,
-    MEM_VSRAM_COPY,
-    VRAM_VRAM_COPY,
-    VRAM_CRAM_COPY,
-    VRAM_VSRAM_COPY,
-    VRAM_FILL,
-    CRAM_FILL,
-    VSRAM_FILL,
+    VramR,
+    VramW,
+    CramR,
+    CramW,
+    VSramR,
+    VSramW,
 }
 
 impl Display for RamAccessMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mode_str = match self {
-            RamAccessMode::VRAM_R => "VRAM_R",
-            RamAccessMode::VRAM_W => "VRAM_W",
-            RamAccessMode::CRAM_R => "CRAM_R",
-            RamAccessMode::CRAM_W => "CRAM_W",
-            RamAccessMode::VSRAM_R => "VSRAM_R",
-            RamAccessMode::VSRAM_W => "VSRAM_W",
-            RamAccessMode::NONE => "NONE"
+            RamAccessMode::VramR => "VramR",
+            RamAccessMode::VramW => "VramW",
+            RamAccessMode::CramR => "CramR",
+            RamAccessMode::CramW => "CramW",
+            RamAccessMode::VSramR => "VSramR",
+            RamAccessMode::VSramW => "VSramW",
         };
         write!(f, "{}", mode_str)
     }
 }
 
 impl RamAccessMode {
-    fn get_access_mode(mask: u16) -> RamAccessMode {
+    fn new(mask: u16) -> RamAccessMode {
         match mask {
-            0b0000 => RamAccessMode::VRAM_R,
-            0b0001 => RamAccessMode::VRAM_W,
-            0b0011 => RamAccessMode::CRAM_W,
-            0b0100 => RamAccessMode::VSRAM_R,
-            0b0101 => RamAccessMode::VSRAM_W,
-            0b1000 => RamAccessMode::CRAM_R,
-            _ => panic!("RamAccessMode: get_access_moed: unexpected mode mask {:05b}", mask),
+            0b0000 => RamAccessMode::VramR,
+            0b0001 => RamAccessMode::VramW,
+            0b0011 => RamAccessMode::CramW,
+            0b0100 => RamAccessMode::VSramR,
+            0b0101 => RamAccessMode::VSramW,
+            0b1000 => RamAccessMode::CramR,
+            _ => panic!("RamAccessMode: new: unexpected mode mask {:05b}", mask),
         }
     }
 }
@@ -86,6 +73,23 @@ enum Status {
     FIFO_EMPTY = 9,
 }
 
+enum DmaMode {
+    BusToRamCopy,
+    RamToRamCopy,
+    RamFill,
+}
+
+impl Display for DmaMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mode_str = match self {
+            DmaMode::BusToRamCopy => "memory to vdp ram",
+            DmaMode::RamToRamCopy => "vdp ram to vdp ram copy",
+            DmaMode::RamFill => "vdp ram filling",
+        };
+        write!(f, "{}", mode_str)
+    }
+}
+
 pub trait BusVdp {
     fn read_data_port(&self) -> u16;
     fn write_data_port(&self, data: u16);
@@ -99,7 +103,7 @@ pub struct Vdp {
 
     registers: [u8; 24],
 
-    vram: [u8; 0x100],
+    vram: [u8; 0x10000],
     cram: [u16; 0x40],
     vsram: [u16; 0x28],
 
@@ -122,7 +126,7 @@ pub struct Vdp {
     interrupt_line: Option<Rc<RefCell<InterruptLine>>>,
 
     address_setting_raw_word: u32,
-    address_setting_latch: bool
+    address_setting_latch: bool,
 }
 
 impl Vdp {
@@ -132,7 +136,7 @@ impl Vdp {
 
             registers: [0; 24],
 
-            vram: [0; 0x100],
+            vram: [0; 0x10000],
             cram: [0; 0x40],
             vsram: [0; 0x28],
 
@@ -161,7 +165,6 @@ impl Vdp {
     pub fn set_interrupt_line(&mut self, interrupt_line: Rc<RefCell<InterruptLine>>) {
         self.interrupt_line = Some(interrupt_line);
     }
-
 
     pub fn clock(&mut self) {
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {

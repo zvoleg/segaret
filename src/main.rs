@@ -26,13 +26,13 @@ fn main() {
 
     let mut m68k = M68k::new();
     let vdp = Rc::new(RefCell::new(Vdp::new(canvas)));
-    
+
     let mut cpu_bus = CpuBus::init(memory_space.clone());
     cpu_bus.set_vdp_ports(vdp.clone());
-    
+
     m68k.set_bus(cpu_bus);
     m68k.reset();
-    
+
     let interrupt_line = m68k.get_interrupt_lint();
     vdp.borrow_mut().set_interrupt_line(interrupt_line.clone());
 
