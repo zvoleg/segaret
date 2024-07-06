@@ -1,7 +1,6 @@
-use crate::{
-    registers::{DMA_SOURC_III, STATUS_REGISTER},
-    DmaMode, RamAccessMode, Vdp,
-};
+use crate::{bus::BusVdp, registers::DMA_SOURC_III, DmaMode, RamAccessMode};
+
+use super::vdp_emu::Vdp;
 
 pub trait VdpPorts {
     fn read_data_port(&self) -> u32;
@@ -10,7 +9,10 @@ pub trait VdpPorts {
     fn write_control_port(&mut self, data: u16);
 }
 
-impl VdpPorts for Vdp {
+impl<T> VdpPorts for Vdp<T>
+where
+    T: BusVdp,
+{
     fn read_data_port(&self) -> u32 {
         0
     }
