@@ -8,7 +8,7 @@ use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
 use spriter::{if_pressed, Color};
 use vdp_bus::VdpBus;
-use vdp_emu::{bus::BusVdp, vdp_emu::Vdp};
+use vdp_emu::vdp_emu::Vdp;
 
 mod cpu_bus;
 mod memory_space;

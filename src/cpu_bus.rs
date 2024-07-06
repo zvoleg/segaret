@@ -14,14 +14,17 @@ use crate::memory_space::MemorySpace;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
 // const Z80_RESET: u32 = 0xA11200;
 
-pub struct CpuBus {
+pub struct CpuBus<T: VdpPorts> {
     memory_space: Rc<RefCell<MemorySpace>>,
     // TODO rewrite after implementation of the peripheral devices
-    vdp_ports: Option<Rc<RefCell<dyn VdpPorts>>>,
+    vdp_ports: Option<Rc<RefCell<T>>>,
     z80_bus_request_reg: RefCell<u32>,
 }
 
-impl CpuBus {
+impl<T> CpuBus<T>
+where
+    T: VdpPorts,
+{
     pub fn init(memory_space: Rc<RefCell<MemorySpace>>) -> Self {
         Self {
             memory_space: memory_space,
@@ -30,7 +33,7 @@ impl CpuBus {
         }
     }
 
-    pub fn set_vdp_ports(&mut self, vdp_port: Rc<RefCell<dyn VdpPorts>>) {
+    pub fn set_vdp_ports(&mut self, vdp_port: Rc<RefCell<T>>) {
         self.vdp_ports = Some(vdp_port);
     }
 
@@ -57,7 +60,10 @@ impl CpuBus {
     }
 }
 
-impl BusM68k for CpuBus {
+impl<T> BusM68k for CpuBus<T>
+where
+    T: VdpPorts,
+{
     fn read(&self, address: u32, amount: u32) -> u32 {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
