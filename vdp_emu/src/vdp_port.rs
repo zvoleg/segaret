@@ -66,15 +66,12 @@ where
                     println!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
                 }
                 // it is address set mode
-                self.ram_access_mode =
-                    Some(RamAccessMode::new((ram_access_mode_mask & 0x7) as u16));
-                self.ram_address = address as u16;
+                self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
+                self.ram_address = address;
 
-                self.dma_mode = None;
                 println!(
                     "VDP: set ram access mode '{}' and address {:04X}",
-                    self.ram_access_mode.as_ref().unwrap(),
-                    self.ram_address
+                    self.ram_access_mode, self.ram_address
                 );
             }
             self.address_setting_latch = !self.address_setting_latch

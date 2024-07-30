@@ -45,11 +45,13 @@ fn main() {
         if_pressed!(spriter::Key::A, { auto = !auto });
         if_pressed!(spriter::Key::C, {
             m68k.clock();
+            vdp.borrow_mut().clock();
             auto = false;
         });
         if_pressed!(spriter::Key::Escape, { spriter::program_stop() });
         if auto {
             m68k.clock();
+            vdp.borrow_mut().clock();
         }
         true
     });
