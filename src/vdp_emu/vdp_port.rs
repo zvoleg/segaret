@@ -1,6 +1,4 @@
-use crate::{bus::BusVdp, registers::DMA_SOURC_III, DmaMode, RamAccessMode};
-
-use super::vdp_emu::Vdp;
+use super::{bus::BusVdp, vdp_emu::Vdp, registers::DMA_SOURC_III, DmaMode, RamAccessMode};
 
 pub trait VdpPorts {
     fn read_data_port(&self) -> u32;

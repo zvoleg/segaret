@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use vdp_emu::bus::BusVdp;
+use super::vdp_emu::bus::BusVdp;
 
 use crate::memory_space::MemorySpace;
 

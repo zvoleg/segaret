@@ -10,8 +10,9 @@ use spriter::{if_pressed, Color};
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 
-mod cpu_bus;
+mod vdp_emu;
 mod memory_space;
+mod cpu_bus;
 mod vdp_bus;
 // pub mod cartridge;
 

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use m68k_emu::interrupt_line::InterruptLine;
 use spriter::Canvas;
 
-use crate::{
+use super::{
     bus::BusVdp,
     registers::{
         AUTO_INCREMENT, DMA_LENGTH_I, DMA_LENGTH_II, DMA_SOURC_I, DMA_SOURC_II, DMA_SOURC_III,

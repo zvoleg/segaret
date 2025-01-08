@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use m68k_emu::bus::BusM68k;
-use vdp_emu::vdp_port::VdpPorts;
+use super::vdp_emu::vdp_port::VdpPorts;
 
 use crate::memory_space::MemorySpace;
 
