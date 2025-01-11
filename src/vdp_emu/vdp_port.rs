@@ -1,29 +1,29 @@
-use super::{bus::BusVdp, vdp_emu::Vdp, registers::DMA_SOURC_III, DmaMode, RamAccessMode};
+use super::{bus::BusVdp, registers::DMA_SOURC_III, vdp_emu::Vdp, DmaMode, RamAccessMode};
 
 pub trait VdpPorts {
-    fn read_data_port(&self) -> u32;
-    fn write_data_port(&mut self, data: u16);
-    fn read_control_port(&self) -> u32;
-    fn write_control_port(&mut self, data: u16);
+    fn read_data_port(&self) -> Result<u32, ()>;
+    fn write_data_port(&mut self, data: u16) -> Result<(), ()>;
+    fn read_control_port(&self) -> Result<u32, ()>;
+    fn write_control_port(&mut self, data: u16) -> Result<(), ()>;
 }
 
 impl<T> VdpPorts for Vdp<T>
 where
     T: BusVdp,
 {
-    fn read_data_port(&self) -> u32 {
-        0
+    fn read_data_port(&self) -> Result<u32, ()> {
+        Ok(0)
     }
 
-    fn write_data_port(&mut self, data: u16) {
-        ()
+    fn write_data_port(&mut self, data: u16) -> Result<(), ()> {
+        Ok(())
     }
 
-    fn read_control_port(&self) -> u32 {
-        self.status_register as u32
+    fn read_control_port(&self) -> Result<u32, ()> {
+        Ok(self.status_register as u32)
     }
 
-    fn write_control_port(&mut self, data: u16) {
+    fn write_control_port(&mut self, data: u16) -> Result<(), ()> {
         if data & (0b111 << 13) == (0b1 << 15) {
             // then it is register set mode
             let register_id = (data >> 8) & 0x1F;
@@ -74,5 +74,6 @@ where
             }
             self.address_setting_latch = !self.address_setting_latch
         }
+        Ok(())
     }
 }

@@ -18,13 +18,14 @@ impl Display for TST {
 }
 
 impl<T: BusM68k> Instruction<T> for TST {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let data = operand_set.next().read();
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let data = operand_set.next().read()?;
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, data.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }
 
@@ -44,9 +45,9 @@ impl Display for Bcc {
 }
 
 impl<T: BusM68k> Instruction<T> for Bcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read().sign_extend(Size::Word)
+            operand_set.next().read()?.sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
@@ -60,6 +61,7 @@ impl<T: BusM68k> Instruction<T> for Bcc {
             let clock_corection = if self.displacement == 0 { 2 } else { -2i32 };
             cpu.cycles_counter = cpu.cycles_counter.wrapping_add(clock_corection);
         }
+        Ok(())
     }
 }
 
@@ -74,15 +76,15 @@ impl Display for DBcc {
 }
 
 impl<T: BusM68k> Instruction<T> for DBcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data_reg_operand = operand_set.next();
         let displacement_operand = operand_set.next();
-        let displacement = displacement_operand.read().sign_extend(Size::Word);
+        let displacement = displacement_operand.read()?.sign_extend(Size::Word);
 
         if !check_condition(self.condition, &cpu.register_set.sr) {
-            let mut counter = data_reg_operand.read();
+            let mut counter = data_reg_operand.read()?;
             counter = counter.wrapping_sub(1);
-            data_reg_operand.write(counter);
+            data_reg_operand.write(counter)?;
             // compare counter with -1
             if counter != 0xFFFFFFFF {
                 let pc = &mut cpu.register_set.pc;
@@ -94,6 +96,7 @@ impl<T: BusM68k> Instruction<T> for DBcc {
         } else {
             cpu.cycles_counter += 2 // if condition true
         }
+        Ok(())
     }
 }
 
@@ -108,11 +111,12 @@ impl Display for Scc {
 }
 
 impl<T: BusM68k> Instruction<T> for Scc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         let condition = check_condition(self.condition, &cpu.register_set.sr);
         let result = if condition { 0xFF } else { 0x00 };
-        operand.write(result);
+        operand.write(result)?;
+        Ok(())
     }
 }
 
@@ -131,15 +135,16 @@ impl Display for BRA {
 }
 
 impl<T: BusM68k> Instruction<T> for BRA {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read().sign_extend(Size::Word)
+            operand_set.next().read()?.sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
 
         let pc = &mut cpu.register_set.pc;
         *pc = pc.wrapping_add(displacement);
+        Ok(())
     }
 }
 
@@ -158,9 +163,9 @@ impl Display for BSR {
 }
 
 impl<T: BusM68k> Instruction<T> for BSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read().sign_extend(Size::Word)
+            operand_set.next().read()?.sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
@@ -168,6 +173,7 @@ impl<T: BusM68k> Instruction<T> for BSR {
         let pc = cpu.register_set.pc;
         cpu.stack_push(pc, Size::Long);
         cpu.register_set.pc = pc.wrapping_add(displacement);
+        Ok(())
     }
 }
 
@@ -180,9 +186,10 @@ impl Display for JMP {
 }
 
 impl<T: BusM68k> Instruction<T> for JMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         cpu.register_set.pc = operand.operand_address;
+        Ok(())
     }
 }
 
@@ -195,11 +202,12 @@ impl Display for JSR {
 }
 
 impl<T: BusM68k> Instruction<T> for JSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
 
         cpu.stack_push(cpu.register_set.pc, Size::Long);
         cpu.register_set.pc = operand.operand_address;
+        Ok(())
     }
 }
 
@@ -212,7 +220,9 @@ impl Display for NOP {
 }
 
 impl<T: BusM68k> Instruction<T> for NOP {
-    fn execute(&self, _: OperandSet, _: &mut M68k<T>) {}
+    fn execute(&self, _: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
+        Ok(())
+    }
 }
 
 pub(crate) struct RTR();
@@ -224,12 +234,13 @@ impl Display for RTR {
 }
 
 impl<T: BusM68k> Instruction<T> for RTR {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let ccr = cpu.stack_pop(Size::Word);
         cpu.register_set.sr.set_ccr(ccr);
 
         let pc = cpu.stack_pop(Size::Long);
         cpu.register_set.pc = pc;
+        Ok(())
     }
 }
 
@@ -242,9 +253,10 @@ impl Display for RTS {
 }
 
 impl<T: BusM68k> Instruction<T> for RTS {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let pc = cpu.stack_pop(Size::Long);
         cpu.register_set.pc = pc;
+        Ok(())
     }
 }
 

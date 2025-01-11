@@ -19,7 +19,7 @@ pub(crate) trait Instruction<T>: Display
 where
     T: BusM68k,
 {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>);
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()>;
 }
 
 /// It is used for MOVEM, MOVE_USP and MOVEP instructions

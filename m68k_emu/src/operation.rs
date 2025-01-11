@@ -29,13 +29,13 @@ where
         }
     }
 
-    pub(crate) fn disassembly(&self, address: u32, opcode_ptr: MemoryPtr) -> String {
+    pub(crate) fn disassembly(&self, opcode_ptr: MemoryPtr) -> Result<String, ()> {
         let mut offset = 0;
         let mut disassembly_parts = Vec::new();
-        disassembly_parts.push(format!("{:08X}:", address));
+        disassembly_parts.push(format!("{}:", opcode_ptr));
 
         let mut raw_bytes = Vec::new();
-        let opcode = opcode_ptr.read_offset(Size::Word, offset);
+        let opcode = opcode_ptr.read_offset(Size::Word, offset)?;
         offset += Size::Word as isize;
         raw_bytes.push(format!("{:04x}", opcode));
 
@@ -43,12 +43,12 @@ where
         for am in &self.addressing_mode_list {
             let extension_words_amount = am.extension_word_length();
             if extension_words_amount == 1 {
-                let extension_word = opcode_ptr.read_offset(Size::Word, offset);
+                let extension_word = opcode_ptr.read_offset(Size::Word, offset)?;
                 offset += Size::Word as isize;
                 raw_bytes.push(format!("{:04x}", extension_word));
                 am_disassembly_parts.push(am.disassembly(extension_word))
             } else if extension_words_amount == 2 {
-                let extension_word = opcode_ptr.read_offset(Size::Long, offset);
+                let extension_word = opcode_ptr.read_offset(Size::Long, offset)?;
                 offset += Size::Long as isize;
                 raw_bytes.push(format!("{:08x}", extension_word));
                 am_disassembly_parts.push(am.disassembly(extension_word));
@@ -62,6 +62,6 @@ where
         disassembly_parts.push(self.instruction.to_string());
         disassembly_parts.append(&mut am_disassembly_parts);
 
-        String::from(disassembly_parts.join(" "))
+        Ok(String::from(disassembly_parts.join(" ")))
     }
 }

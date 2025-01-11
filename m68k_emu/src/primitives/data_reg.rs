@@ -33,25 +33,27 @@ impl DataRegisterPtr {
 }
 
 impl Pointer for DataRegisterPtr {
-    fn read(&self, size: Size) -> u32 {
-        DataRegisterPtr::read_ptr(self.0, size)
+    fn read(&self, size: Size) -> Result<u32, ()> {
+        Ok(DataRegisterPtr::read_ptr(self.0, size))
     }
 
-    fn write(&self, data: u32, size: Size) {
+    fn write(&self, data: u32, size: Size) -> Result<(), ()> {
         DataRegisterPtr::write_ptr(self.0, data, size);
+        Ok(())
     }
 
-    fn read_offset(&self, size: Size, offset: isize) -> u32 {
+    fn read_offset(&self, size: Size, offset: isize) -> Result<u32, ()> {
         unsafe {
             let offset_ptr = self.0.offset(offset);
-            DataRegisterPtr::read_ptr(offset_ptr, size)
+            Ok(DataRegisterPtr::read_ptr(offset_ptr, size))
         }
     }
 
-    fn write_offset(&self, data: u32, size: Size, offset: isize) {
+    fn write_offset(&self, data: u32, size: Size, offset: isize) -> Result<(), ()> {
         unsafe {
             let offset_ptr = self.0.offset(offset);
             DataRegisterPtr::write_ptr(offset_ptr, data, size);
+            Ok(())
         }
     }
 }
@@ -65,7 +67,7 @@ mod test {
         let mut data = 0u32;
         let ptr = DataRegisterPtr(&mut data);
         ptr.write(0xFF, Size::Byte);
-        assert_eq!(ptr.read(Size::Word), 0xFF);
+        assert_eq!(ptr.read(Size::Word), Ok(0xFF));
     }
 
     #[test]
@@ -73,7 +75,7 @@ mod test {
         let mut data = 0u32;
         let ptr = DataRegisterPtr(&mut data);
         ptr.write(0x9911, Size::Word);
-        assert_eq!(ptr.read(Size::Byte), 0x11);
+        assert_eq!(ptr.read(Size::Byte), Ok(0x11));
     }
 
     #[test]
@@ -82,7 +84,7 @@ mod test {
         let ptr = DataRegisterPtr(&mut data);
         ptr.write(0x99000000, Size::Long);
         ptr.write(0x11, Size::Byte);
-        assert_eq!(ptr.read(Size::Long), 0x99000011);
+        assert_eq!(ptr.read(Size::Long), Ok(0x99000011));
     }
 
     #[test]

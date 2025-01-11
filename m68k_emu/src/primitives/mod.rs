@@ -22,8 +22,8 @@ impl Display for Size {
 }
 
 pub(crate) trait Pointer {
-    fn read(&self, size: Size) -> u32;
-    fn write(&self, data: u32, size: Size);
-    fn read_offset(&self, size: Size, offset: isize) -> u32;
-    fn write_offset(&self, data: u32, size: Size, offset: isize);
+    fn read(&self, size: Size) -> Result<u32, ()>;
+    fn write(&self, data: u32, size: Size) -> Result<(), ()>;
+    fn read_offset(&self, size: Size, offset: isize) -> Result<u32, ()>;
+    fn write_offset(&self, data: u32, size: Size, offset: isize) -> Result<(), ()>;
 }

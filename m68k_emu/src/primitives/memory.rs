@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt::Display, rc::Rc};
 
 use crate::bus::BusM68k;
 
@@ -7,8 +7,12 @@ use super::{Pointer, Size};
 pub(crate) struct MemoryPtr {
     address: u32,
     bus: Rc<dyn BusM68k>,
-    // read_ptr: *const u8,
-    // write_ptr: *mut u8,
+}
+
+impl Display for MemoryPtr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:08}", self.address)
+    }
 }
 
 impl MemoryPtr {
@@ -22,21 +26,21 @@ impl MemoryPtr {
 }
 
 impl Pointer for MemoryPtr {
-    fn read(&self, size: Size) -> u32 {
+    fn read(&self, size: Size) -> Result<u32, ()> {
         self.bus.read(self.address, size as u32)
     }
 
-    fn write(&self, data: u32, size: Size) {
-        self.bus.write(data, self.address, size as u32);
+    fn write(&self, data: u32, size: Size) -> Result<(), ()> {
+        self.bus.write(data, self.address, size as u32)
     }
 
-    fn read_offset(&self, size: Size, offset: isize) -> u32 {
+    fn read_offset(&self, size: Size, offset: isize) -> Result<u32, ()> {
         self.bus
             .read(self.address.wrapping_add(offset as u32), size as u32)
     }
 
-    fn write_offset(&self, data: u32, size: Size, offset: isize) {
+    fn write_offset(&self, data: u32, size: Size, offset: isize) -> Result<(), ()> {
         self.bus
-            .write(data, self.address.wrapping_add(offset as u32), size as u32);
+            .write(data, self.address.wrapping_add(offset as u32), size as u32)
     }
 }

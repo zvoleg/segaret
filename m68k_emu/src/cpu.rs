@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fmt::Display, rc::Rc};
+use std::{fmt::Display, rc::Rc};
 
 use crate::{
     bus::BusM68k,
@@ -58,6 +58,7 @@ where
     }
 
     pub fn clock(&mut self) {
+        let register_set_backup = self.register_set;
         let opcode_address = self.register_set.pc;
         let opcode = self.fetch_opcode();
 
@@ -66,17 +67,24 @@ where
         let operation_set = self.operation_set.as_ptr();
         let operation = unsafe { &*operation_set.offset(opcode as isize) };
 
-        let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
-        println!("{}", operation.disassembly(opcode_address, operation_ptr));
         self.cycles_counter = operation.cycles;
 
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
-            operands
-                .add(am.get_operand(&mut self.register_set, self.bus.as_ref().unwrap().clone()));
+            let operand =
+                match am.get_operand(&mut self.register_set, self.bus.as_ref().unwrap().clone()) {
+                    Ok(o) => o,
+                    Err(_) => {
+                        self.register_set = register_set_backup; // if cpu can't get operand from any memory location then tere is roll back its state for another try
+                        return;
+                    }
+                };
+            operands.add(operand);
         }
         let instruction = &operation.instruction;
         instruction.execute(operands, self);
+        let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
+        println!("{}", operation.disassembly(operation_ptr).unwrap());
         println!("{}", self);
         if let Some(vector) = self.trap {
             if vector == RESET_SP {
@@ -114,7 +122,7 @@ where
         let stack_register_ptr = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let mut address = stack_register_ptr.read(Size::Long);
+        let mut address = stack_register_ptr.read(Size::Long).unwrap();
         address = address.wrapping_sub(size as u32); // predecrementing
         stack_register_ptr.write(address, Size::Long);
 
@@ -126,10 +134,10 @@ where
         let stack_register_ptr = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        let address = stack_register_ptr.read(Size::Long);
+        let address = stack_register_ptr.read(Size::Long).unwrap();
 
         let read_ptr = MemoryPtr::new(address, self.bus.as_ref().unwrap().clone());
-        let data = read_ptr.read(size);
+        let data = read_ptr.read(size).unwrap();
 
         stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long); // postincrement
         data
@@ -139,7 +147,7 @@ where
         let stack_register_ptr = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register_ptr.read(Size::Long)
+        stack_register_ptr.read(Size::Long).unwrap()
     }
 
     pub(crate) fn set_stack_address(&mut self, new_stack_address: u32) {
@@ -154,11 +162,23 @@ where
             self.register_set.get_and_increment_pc(),
             self.bus.as_ref().unwrap().clone(),
         );
-        opcode_ptr.read(Size::Word) as u16
+        match opcode_ptr.read(Size::Word) {
+            Ok(opcode_bytes) => opcode_bytes as u16,
+            Err(_) => panic!(
+                "M68k: fetch_opcode: can't fetching opcode by address: {}",
+                opcode_ptr
+            ),
+        }
     }
 
     fn read_header(&self, vector: u32) -> u32 {
-        self.bus.as_ref().unwrap().read(vector, Size::Long as u32)
+        match self.bus.as_ref().unwrap().read(vector, Size::Long as u32) {
+            Ok(header) => header,
+            Err(_) => panic!(
+                "M68k: read_header: can't read header by vector: {:08X}",
+                vector
+            ),
+        }
     }
 }
 

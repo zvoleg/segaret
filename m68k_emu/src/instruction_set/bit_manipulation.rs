@@ -16,8 +16,8 @@ impl Display for BCHG {
 }
 
 impl<T: BusM68k> Instruction<T> for BCHG {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let mut bit_number = operand_set.next().read();
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set.next().read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
@@ -25,12 +25,13 @@ impl<T: BusM68k> Instruction<T> for BCHG {
         }
         let operand = operand_set.next();
 
-        let data = operand.read();
+        let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
         let result = data ^ (1 << bit_number);
-        operand.write(result);
+        operand.write(result)?;
 
         cpu.register_set.sr.set_flag(StatusFlag::Z, bit == 0);
+        Ok(())
     }
 }
 
@@ -45,8 +46,8 @@ impl Display for BCLR {
 }
 
 impl<T: BusM68k> Instruction<T> for BCLR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let mut bit_number = operand_set.next().read();
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set.next().read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
@@ -54,12 +55,13 @@ impl<T: BusM68k> Instruction<T> for BCLR {
         }
         let operand = operand_set.next();
 
-        let data = operand.read();
+        let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
         let result = data & !(1 << bit_number);
-        operand.write(result);
+        operand.write(result)?;
 
         cpu.register_set.sr.set_flag(StatusFlag::Z, bit == 0);
+        Ok(())
     }
 }
 
@@ -74,8 +76,8 @@ impl Display for BSET {
 }
 
 impl<T: BusM68k> Instruction<T> for BSET {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let mut bit_number = operand_set.next().read();
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set.next().read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
@@ -83,12 +85,13 @@ impl<T: BusM68k> Instruction<T> for BSET {
         }
         let operand = operand_set.next();
 
-        let data = operand.read();
+        let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
         let result = data | (1 << bit_number);
-        operand.write(result);
+        operand.write(result)?;
 
         cpu.register_set.sr.set_flag(StatusFlag::Z, bit == 0);
+        Ok(())
     }
 }
 
@@ -103,8 +106,8 @@ impl Display for BTST {
 }
 
 impl<T: BusM68k> Instruction<T> for BTST {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
-        let mut bit_number = operand_set.next().read();
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set.next().read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
@@ -112,9 +115,10 @@ impl<T: BusM68k> Instruction<T> for BTST {
         }
         let operand = operand_set.next();
 
-        let data = operand.read();
+        let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
 
         cpu.register_set.sr.set_flag(StatusFlag::Z, bit == 0);
+        Ok(())
     }
 }

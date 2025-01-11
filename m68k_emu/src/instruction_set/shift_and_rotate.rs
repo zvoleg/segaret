@@ -25,10 +25,10 @@ impl Display for ASdDataReg {
 }
 
 impl<T: BusM68k> Instruction<T> for ASdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
-        let count = data_reg_operand.read() % 64;
+        let count = data_reg_operand.read()? % 64;
         match self.direction {
             ShiftDirection::Right => asr(count, operand, self.size, &mut cpu.register_set.sr),
             ShiftDirection::Left => asl(count, operand, self.size, &mut cpu.register_set.sr),
@@ -49,7 +49,7 @@ impl Display for ASdImplied {
 }
 
 impl<T: BusM68k> Instruction<T> for ASdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => asr(self.count, operand, self.size, &mut cpu.register_set.sr),
@@ -69,7 +69,7 @@ impl Display for ASdMemory {
 }
 
 impl<T: BusM68k> Instruction<T> for ASdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => asr(1, operand, Size::Word, &mut cpu.register_set.sr),
@@ -78,8 +78,8 @@ impl<T: BusM68k> Instruction<T> for ASdMemory {
     }
 }
 
-fn asl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn asl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     let mut overflow = false;
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
     for _ in 0..count {
@@ -93,15 +93,16 @@ fn asl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, poped_bit);
         sr.set_flag(StatusFlag::C, poped_bit);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, overflow);
+    Ok(())
 }
 
-fn asr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn asr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     let msb = if data.msb_is_set(size) { 1 } else { 0 };
     let msb_mask = msb << ((8 * size as u32) - 1);
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
@@ -114,11 +115,12 @@ fn asr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, poped_bit);
         sr.set_flag(StatusFlag::C, poped_bit);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
 pub(crate) struct LSdDataReg {
@@ -133,10 +135,10 @@ impl Display for LSdDataReg {
 }
 
 impl<T: BusM68k> Instruction<T> for LSdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
-        let count = data_reg_operand.read() % 64;
+        let count = data_reg_operand.read()? % 64;
         match self.direction {
             ShiftDirection::Right => lsr(count, operand, self.size, &mut cpu.register_set.sr),
             ShiftDirection::Left => lsl(count, operand, self.size, &mut cpu.register_set.sr),
@@ -157,7 +159,7 @@ impl Display for LSdImplied {
 }
 
 impl<T: BusM68k> Instruction<T> for LSdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => lsr(self.count, operand, self.size, &mut cpu.register_set.sr),
@@ -177,7 +179,7 @@ impl Display for LSdMemory {
 }
 
 impl<T: BusM68k> Instruction<T> for LSdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => lsr(1, operand, Size::Word, &mut cpu.register_set.sr),
@@ -186,8 +188,8 @@ impl<T: BusM68k> Instruction<T> for LSdMemory {
     }
 }
 
-fn lsl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn lsl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
     for _ in 0..count {
         let poped_bit = data.msb_is_set(size);
@@ -196,15 +198,16 @@ fn lsl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, poped_bit);
         sr.set_flag(StatusFlag::C, poped_bit);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
-fn lsr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn lsr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
     for _ in 0..count {
         let poped_bit = data & 1 == 1;
@@ -213,11 +216,12 @@ fn lsr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, poped_bit);
         sr.set_flag(StatusFlag::C, poped_bit);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
 pub(crate) struct ROdDataReg {
@@ -232,10 +236,10 @@ impl Display for ROdDataReg {
 }
 
 impl<T: BusM68k> Instruction<T> for ROdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
-        let count = data_reg_operand.read() % 64;
+        let count = data_reg_operand.read()? % 64;
         match self.direction {
             ShiftDirection::Right => ror(count, operand, self.size, &mut cpu.register_set.sr),
             ShiftDirection::Left => rol(count, operand, self.size, &mut cpu.register_set.sr),
@@ -256,7 +260,7 @@ impl Display for ROdImplied {
 }
 
 impl<T: BusM68k> Instruction<T> for ROdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => ror(self.count, operand, self.size, &mut cpu.register_set.sr),
@@ -276,7 +280,7 @@ impl Display for ROdMemory {
 }
 
 impl<T: BusM68k> Instruction<T> for ROdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => ror(1, operand, Size::Word, &mut cpu.register_set.sr),
@@ -285,8 +289,8 @@ impl<T: BusM68k> Instruction<T> for ROdMemory {
     }
 }
 
-fn rol(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn rol(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
     for _ in 0..count {
         let msb = (data >> ((8 * size as u32) - 1)) & 1;
@@ -295,15 +299,16 @@ fn rol(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
 
         sr.set_flag(StatusFlag::C, msb == 1);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
-fn ror(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn ror(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, false); // cleared if count == 0
     for _ in 0..count {
         let lsb = data & 1;
@@ -313,11 +318,12 @@ fn ror(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
 
         sr.set_flag(StatusFlag::C, lsb == 1);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
 pub(crate) struct ROXdDataReg {
@@ -332,10 +338,10 @@ impl Display for ROXdDataReg {
 }
 
 impl<T: BusM68k> Instruction<T> for ROXdDataReg {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data_reg_operand = operand_set.next();
         let operand = operand_set.next();
-        let count = data_reg_operand.read() % 64;
+        let count = data_reg_operand.read()? % 64;
         match self.direction {
             ShiftDirection::Right => roxr(count, operand, self.size, &mut cpu.register_set.sr),
             ShiftDirection::Left => roxl(count, operand, self.size, &mut cpu.register_set.sr),
@@ -356,7 +362,7 @@ impl Display for ROXdImplied {
 }
 
 impl<T: BusM68k> Instruction<T> for ROXdImplied {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => roxr(self.count, operand, self.size, &mut cpu.register_set.sr),
@@ -376,7 +382,7 @@ impl Display for ROXdMemory {
 }
 
 impl<T: BusM68k> Instruction<T> for ROXdMemory {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
         match self.direction {
             ShiftDirection::Right => roxr(1, operand, Size::Word, &mut cpu.register_set.sr),
@@ -385,8 +391,8 @@ impl<T: BusM68k> Instruction<T> for ROXdMemory {
     }
 }
 
-fn roxl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn roxl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, sr.get_flag(StatusFlag::X)); // if count == 0 then C == X
     for _ in 0..count {
         let msb = (data >> ((8 * size as u32) - 1)) & 1;
@@ -396,15 +402,16 @@ fn roxl(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, msb == 1);
         sr.set_flag(StatusFlag::C, msb == 1);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
-fn roxr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
-    let mut data = operand.read();
+fn roxr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) -> Result<(), ()> {
+    let mut data = operand.read()?;
     sr.set_flag(StatusFlag::C, sr.get_flag(StatusFlag::X)); // if count == 0 then C == X
     for _ in 0..count {
         let lsb = data & 1;
@@ -415,11 +422,12 @@ fn roxr(count: u32, operand: Operand, size: Size, sr: &mut StatusRegister) {
         sr.set_flag(StatusFlag::X, lsb == 1);
         sr.set_flag(StatusFlag::C, lsb == 1);
     }
-    operand.write(data);
+    operand.write(data)?;
 
     sr.set_flag(StatusFlag::N, data.is_negate(size));
     sr.set_flag(StatusFlag::Z, data.is_zero(size));
     sr.set_flag(StatusFlag::V, false);
+    Ok(())
 }
 
 pub(crate) struct SWAP();
@@ -431,20 +439,21 @@ impl Display for SWAP {
 }
 
 impl<T: BusM68k> Instruction<T> for SWAP {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
-        let mut data = operand.read();
+        let mut data = operand.read()?;
 
         let msw = (data & 0xFFFF0000) >> 16;
         let lsw = (data & 0x0000FFFF) << 16;
         data = lsw | msw;
 
-        operand.write(data);
+        operand.write(data)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, data.is_zero(Size::Long));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }

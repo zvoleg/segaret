@@ -14,9 +14,9 @@ impl Display for TAS {
 }
 
 impl<T: BusM68k> Instruction<T> for TAS {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
-        let data = operand.read();
+        let data = operand.read()?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(Size::Byte));
@@ -25,6 +25,7 @@ impl<T: BusM68k> Instruction<T> for TAS {
         sr.set_flag(StatusFlag::C, false);
 
         let result = data | 0x80;
-        operand.write(result);
+        operand.write(result)?;
+        Ok(())
     }
 }

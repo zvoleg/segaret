@@ -11,11 +11,11 @@ use spriter::{if_pressed, Color};
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 
-mod vdp_emu;
-mod memory_space;
 mod cpu_bus;
-mod vdp_bus;
+mod memory_space;
 mod signal_bus;
+mod vdp_bus;
+mod vdp_emu;
 // pub mod cartridge;
 
 fn main() {
@@ -41,7 +41,6 @@ fn main() {
     let vdp_bus = VdpBus::new(memory_space.clone());
     vdp.borrow_mut().set_bus(vdp_bus);
 
-
     let mut auto = false;
     let mut run = false;
     runner.run(window, move |_| {
@@ -55,7 +54,10 @@ fn main() {
             run = true;
         }
         if run {
-            if !signal_bus.borrow_mut().handle_signal(signal_bus::Signal::CPU_HALT) {
+            if !signal_bus
+                .borrow_mut()
+                .handle_signal(signal_bus::Signal::CPU_HALT)
+            {
                 m68k.clock();
             }
             vdp.borrow_mut().clock();

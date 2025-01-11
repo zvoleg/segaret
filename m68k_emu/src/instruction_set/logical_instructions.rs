@@ -16,20 +16,21 @@ impl Display for AND {
 }
 
 impl<T: BusM68k> Instruction<T> for AND {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read();
-        let dst_data = dst_operand.read();
+        let src_data = src_operand.read()?;
+        let dst_data = dst_operand.read()?;
 
         let result = src_data & dst_data;
-        dst_operand.write(result);
+        dst_operand.write(result)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }
 
@@ -44,8 +45,8 @@ impl Display for ANDI {
 }
 
 impl<T: BusM68k> Instruction<T> for ANDI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
-        AND { size: self.size }.execute(operand_set, cpu);
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        AND { size: self.size }.execute(operand_set, cpu)
     }
 }
 
@@ -60,20 +61,21 @@ impl Display for EOR {
 }
 
 impl<T: BusM68k> Instruction<T> for EOR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read();
-        let dst_data = dst_operand.read();
+        let src_data = src_operand.read()?;
+        let dst_data = dst_operand.read()?;
 
         let result = src_data ^ dst_data;
-        dst_operand.write(result);
+        dst_operand.write(result)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }
 
@@ -88,8 +90,8 @@ impl Display for EORI {
 }
 
 impl<T: BusM68k> Instruction<T> for EORI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
-        EOR { size: self.size }.execute(operand_set, cpu);
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        EOR { size: self.size }.execute(operand_set, cpu)
     }
 }
 
@@ -104,20 +106,21 @@ impl Display for OR {
 }
 
 impl<T: BusM68k> Instruction<T> for OR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read();
-        let dst_data = dst_operand.read();
+        let src_data = src_operand.read()?;
+        let dst_data = dst_operand.read()?;
 
         let result = src_data | dst_data;
-        dst_operand.write(result);
+        dst_operand.write(result)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }
 
@@ -132,8 +135,8 @@ impl Display for ORI {
 }
 
 impl<T: BusM68k> Instruction<T> for ORI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) {
-        OR { size: self.size }.execute(operand_set, cpu);
+    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        OR { size: self.size }.execute(operand_set, cpu)
     }
 }
 
@@ -148,17 +151,18 @@ impl Display for NOT {
 }
 
 impl<T: BusM68k> Instruction<T> for NOT {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) {
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let operand = operand_set.next();
-        let data = operand.read();
+        let data = operand.read()?;
 
         let result = !data;
-        operand.write(result);
+        operand.write(result)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
         sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
+        Ok(())
     }
 }

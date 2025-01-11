@@ -31,20 +31,20 @@ impl Operand {
         }
     }
 
-    pub(crate) fn read(&self) -> u32 {
+    pub(crate) fn read(&self) -> Result<u32, ()> {
         self.operand_ptr.read(self.size)
     }
 
-    pub(crate) fn read_sized(&self, size: Size) -> u32 {
+    pub(crate) fn read_sized(&self, size: Size) -> Result<u32, ()> {
         self.operand_ptr.read(size)
     }
 
-    pub(crate) fn write(&self, data: u32) {
-        self.operand_ptr.write(data, self.size);
+    pub(crate) fn write(&self, data: u32) -> Result<(), ()> {
+        self.operand_ptr.write(data, self.size)
     }
 
-    pub(crate) fn write_sized(&self, data: u32, size: Size) {
-        self.operand_ptr.write(data, size);
+    pub(crate) fn write_sized(&self, data: u32, size: Size) -> Result<(), ()> {
+        self.operand_ptr.write(data, size)
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::status_flag::StatusFlag;
 
+#[derive(Clone, Copy)]
 pub(crate) struct StatusRegister {
     reg: u16,
 }

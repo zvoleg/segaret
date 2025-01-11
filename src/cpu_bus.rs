@@ -1,7 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
-use m68k_emu::bus::BusM68k;
 use super::vdp_emu::vdp_port::VdpPorts;
+use m68k_emu::bus::BusM68k;
 
 use crate::memory_space::MemorySpace;
 
@@ -64,26 +64,26 @@ impl<T> BusM68k for CpuBus<T>
 where
     T: VdpPorts,
 {
-    fn read(&self, address: u32, amount: u32) -> u32 {
+    fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
-            self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize])
+            Ok(self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize]))
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            self.read_ptr(
+            Ok(self.read_ptr(
                 amount,
                 &self.memory_space.borrow().z80_ram[address as usize],
-            )
+            ))
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 if *self.z80_bus_request_reg.borrow() == 0x0100 {
-                    return 0;
+                    return Ok(0);
                 } else {
-                    return 1;
+                    return Ok(1);
                 }
             }
             let address = (address & 0x3f) as usize;
-            self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address])
+            Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
         } else if address == 0xC00000 || address == 0xC00002 {
             self.vdp_ports.as_ref().unwrap().borrow().read_data_port()
         } else if address == 0xC00004 || address == 0xC00006 {
@@ -94,20 +94,20 @@ where
                 .read_control_port()
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            self.read_ptr(
+            Ok(self.read_ptr(
                 amount,
                 &self.memory_space.borrow().m68k_ram[address as usize],
-            )
+            ))
         } else {
             let address = address & 0x1f;
-            self.read_ptr(
+            Ok(self.read_ptr(
                 amount,
                 &self.memory_space.borrow().io_area_read[address as usize],
-            )
+            ))
         }
     }
 
-    fn write(&self, data: u32, address: u32, amount: u32) {
+    fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
         if address <= 0x3FFFFF {
             let ptr = &self.memory_space.as_ref().borrow_mut().rom[address as usize] as *const _
@@ -155,6 +155,7 @@ where
                 as *const _ as *mut u8;
             self.write_ptr(data, amount, ptr);
         };
+        Ok(())
     }
 }
 

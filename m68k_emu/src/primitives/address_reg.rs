@@ -39,25 +39,27 @@ impl AddressRegisterPtr {
 }
 
 impl Pointer for AddressRegisterPtr {
-    fn read(&self, size: Size) -> u32 {
-        AddressRegisterPtr::read_ptr(self.0, size)
+    fn read(&self, size: Size) -> Result<u32, ()> {
+        Ok(AddressRegisterPtr::read_ptr(self.0, size))
     }
 
-    fn write(&self, data: u32, size: Size) {
+    fn write(&self, data: u32, size: Size) -> Result<(), ()> {
         AddressRegisterPtr::write_ptr(self.0, data, size);
+        Ok(())
     }
 
-    fn read_offset(&self, size: Size, offset: isize) -> u32 {
+    fn read_offset(&self, size: Size, offset: isize) -> Result<u32, ()> {
         unsafe {
             let offset_ptr = self.0.offset(offset);
-            AddressRegisterPtr::read_ptr(offset_ptr, size)
+            Ok(AddressRegisterPtr::read_ptr(offset_ptr, size))
         }
     }
 
-    fn write_offset(&self, data: u32, size: Size, offset: isize) {
+    fn write_offset(&self, data: u32, size: Size, offset: isize) -> Result<(), ()> {
         unsafe {
             let offset_ptr = self.0.offset(offset);
             AddressRegisterPtr::write_ptr(offset_ptr, data, size);
+            Ok(())
         }
     }
 }
@@ -71,7 +73,7 @@ mod tests {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
         ptr.write(0x8000, Size::Word);
-        assert_eq!(ptr.read(Size::Long), 0xFFFF8000);
+        assert_eq!(ptr.read(Size::Long), Ok(0xFFFF8000));
     }
 
     #[test]
@@ -79,7 +81,7 @@ mod tests {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
         ptr.write(0x7000, Size::Word);
-        assert_eq!(ptr.read(Size::Long), 0x00007000);
+        assert_eq!(ptr.read(Size::Long), Ok(0x00007000));
     }
 
     #[test]
@@ -88,7 +90,7 @@ mod tests {
         let ptr = AddressRegisterPtr(&mut data);
         ptr.write(0x55559999, Size::Long);
         ptr.write(0x7000, Size::Word);
-        assert_eq!(ptr.read(Size::Long), 0x00007000);
+        assert_eq!(ptr.read(Size::Long), Ok(0x00007000));
     }
 
     #[test]
@@ -96,8 +98,8 @@ mod tests {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
         ptr.write(0x55559999, Size::Long);
-        assert_eq!(ptr.read(Size::Word), 0x9999);
-        assert_eq!(ptr.read(Size::Long), 0x55559999);
+        assert_eq!(ptr.read(Size::Word), Ok(0x9999));
+        assert_eq!(ptr.read(Size::Long), Ok(0x55559999));
     }
 
     #[test]

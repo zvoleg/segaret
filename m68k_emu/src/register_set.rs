@@ -10,6 +10,7 @@ pub(crate) enum RegisterType {
     Data,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) struct RegisterSet {
     registers: [u32; 16],
     pub(crate) pc: u32,

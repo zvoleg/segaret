@@ -39,10 +39,10 @@ pub struct Vdp<T: BusVdp> {
     pub(super) ram_address: u32,
 
     pub(super) data_port_reg: u16,
-    
+
     pub(super) address_setting_raw_word: u32,
     pub(super) address_setting_latch: bool,
-    
+
     pub(super) bus: Option<T>,
     pub(super) signal_bus: Rc<RefCell<SignalBus>>,
 }
