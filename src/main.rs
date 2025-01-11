@@ -6,6 +6,7 @@ use m68k_emu::cpu::M68k;
 
 use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
+use signal_bus::SignalBus;
 use spriter::{if_pressed, Color};
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
@@ -14,6 +15,7 @@ mod vdp_emu;
 mod memory_space;
 mod cpu_bus;
 mod vdp_bus;
+mod signal_bus;
 // pub mod cartridge;
 
 fn main() {
@@ -27,7 +29,8 @@ fn main() {
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
-    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(canvas)));
+    let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
+    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(canvas, signal_bus.clone())));
 
     let mut cpu_bus = CpuBus::init(memory_space.clone());
     cpu_bus.set_vdp_ports(vdp.clone());
@@ -38,21 +41,25 @@ fn main() {
     let vdp_bus = VdpBus::new(memory_space.clone());
     vdp.borrow_mut().set_bus(vdp_bus);
 
-    let interrupt_line = m68k.get_interrupt_lint();
-    vdp.borrow_mut().set_interrupt_line(interrupt_line.clone());
 
     let mut auto = false;
+    let mut run = false;
     runner.run(window, move |_| {
         if_pressed!(spriter::Key::A, { auto = !auto });
         if_pressed!(spriter::Key::C, {
-            m68k.clock();
-            vdp.borrow_mut().clock();
             auto = false;
+            run = true;
         });
         if_pressed!(spriter::Key::Escape, { spriter::program_stop() });
         if auto {
-            m68k.clock();
+            run = true;
+        }
+        if run {
+            if !signal_bus.borrow_mut().handle_signal(signal_bus::Signal::CPU_HALT) {
+                m68k.clock();
+            }
             vdp.borrow_mut().clock();
+            run = false;
         }
         true
     });

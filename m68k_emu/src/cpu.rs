@@ -3,7 +3,6 @@ use std::{cell::RefCell, fmt::Display, rc::Rc};
 use crate::{
     bus::BusM68k,
     instruction_set::system_control::ILLEAGL,
-    interrupt_line::InterruptLine,
     opcode_generators::generate_opcode_list,
     operand::OperandSet,
     operation::Operation,
@@ -20,7 +19,6 @@ pub struct M68k<T: 'static + BusM68k> {
 
     operation_set: Vec<Operation<T>>,
     bus: Option<Rc<T>>,
-    interrupt_line: Rc<RefCell<InterruptLine>>,
 }
 
 impl<T> M68k<T>
@@ -41,16 +39,11 @@ where
 
             operation_set: table,
             bus: None,
-            interrupt_line: Rc::new(RefCell::new(InterruptLine::new())),
         }
     }
 
     pub fn set_bus(&mut self, bus: T) {
         self.bus = Some(Rc::new(bus));
-    }
-
-    pub fn get_interrupt_lint(&self) -> Rc<RefCell<InterruptLine>> {
-        self.interrupt_line.clone()
     }
 
     pub fn reset(&mut self) {
@@ -65,23 +58,6 @@ where
     }
 
     pub fn clock(&mut self) {
-        let interrupt_level = self.interrupt_line.borrow_mut().receive();
-        let ipl = self.register_set.sr.ipl() as usize;
-        if interrupt_level >= ipl && interrupt_level != 0 {
-            let vector = match interrupt_level {
-                1 => LEVEL_1,
-                2 => LEVEL_2,
-                3 => LEVEL_3,
-                4 => LEVEL_4,
-                5 => LEVEL_5,
-                6 => LEVEL_6,
-                7 => LEVEL_7,
-                _ => panic!("M68k: clock: wrong interrupt level: {}", interrupt_level),
-            };
-            self.stack_push(self.register_set.pc, Size::Long);
-            self.stack_push(self.register_set.sr.get_sr() as u32, Size::Word);
-            self.register_set.pc = self.read_header(vector);
-        }
         let opcode_address = self.register_set.pc;
         let opcode = self.fetch_opcode();
 
@@ -112,6 +88,25 @@ where
                 self.register_set.pc = vector_address;
             }
             self.trap = None;
+        }
+    }
+
+    pub fn interrupt(&mut self, level: u32) {
+        let ipl = self.register_set.sr.ipl();
+        if level >= ipl && level != 0 {
+            let vector = match level {
+                1 => LEVEL_1,
+                2 => LEVEL_2,
+                3 => LEVEL_3,
+                4 => LEVEL_4,
+                5 => LEVEL_5,
+                6 => LEVEL_6,
+                7 => LEVEL_7,
+                _ => panic!("M68k: clock: wrong interrupt level: {}", level),
+            };
+            self.stack_push(self.register_set.pc, Size::Long);
+            self.stack_push(self.register_set.sr.get_sr() as u32, Size::Word);
+            self.register_set.pc = self.read_header(vector);
         }
     }
 

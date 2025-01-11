@@ -1,7 +1,8 @@
 use std::{cell::RefCell, rc::Rc};
 
-use m68k_emu::interrupt_line::InterruptLine;
 use spriter::Canvas;
+
+use crate::signal_bus::SignalBus;
 
 use super::{
     bus::BusVdp,
@@ -37,21 +38,20 @@ pub struct Vdp<T: BusVdp> {
     pub(super) ram_access_mode: RamAccessMode,
     pub(super) ram_address: u32,
 
-    pub(super) interrupt_line: Option<Rc<RefCell<InterruptLine>>>,
-
     pub(super) data_port_reg: u16,
-
+    
     pub(super) address_setting_raw_word: u32,
     pub(super) address_setting_latch: bool,
-
+    
     pub(super) bus: Option<T>,
+    pub(super) signal_bus: Rc<RefCell<SignalBus>>,
 }
 
 impl<T> Vdp<T>
 where
     T: BusVdp,
 {
-    pub fn new(canvas: Canvas) -> Self {
+    pub fn new(canvas: Canvas, signal_bus: Rc<RefCell<SignalBus>>) -> Self {
         Self {
             screen: canvas,
 
@@ -77,19 +77,14 @@ where
             ram_access_mode: RamAccessMode::VramR,
             ram_address: 0,
 
-            interrupt_line: None,
-
             data_port_reg: 0,
 
             address_setting_raw_word: 0,
             address_setting_latch: false,
 
             bus: None,
+            signal_bus: signal_bus,
         }
-    }
-
-    pub fn set_interrupt_line(&mut self, interrupt_line: Rc<RefCell<InterruptLine>>) {
-        self.interrupt_line = Some(interrupt_line);
     }
 
     pub fn set_bus(&mut self, bus: T) {
