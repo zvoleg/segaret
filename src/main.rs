@@ -18,6 +18,8 @@ mod vdp_bus;
 mod vdp_emu;
 // pub mod cartridge;
 
+const VDP_CLOCK_PER_CPU: f32 = 1.75;
+
 fn main() {
     let (runner, mut window) = spriter::init("segaret", 640, 448);
     let mut canvas = window.create_canvas(0, 0, 640, 448, 320, 224);
@@ -43,6 +45,7 @@ fn main() {
 
     let mut auto = false;
     let mut run = false;
+    let mut vdp_clocks_remainder = 0.0f32;
     runner.run(window, move |_| {
         if_pressed!(spriter::Key::A, { auto = !auto });
         if_pressed!(spriter::Key::C, {
@@ -54,13 +57,18 @@ fn main() {
             run = true;
         }
         if run {
+            let mut vdp_clocks = 1;
             if !signal_bus
                 .borrow_mut()
                 .handle_signal(signal_bus::Signal::CPU_HALT)
             {
-                m68k.clock();
+                let vdp_clocks_rational = m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
+                vdp_clocks = vdp_clocks_rational.trunc() as i32;
+                vdp_clocks_remainder = vdp_clocks_rational.fract();
             }
-            vdp.borrow_mut().clock();
+            for _ in 0..vdp_clocks {
+                vdp.borrow_mut().clock();
+            }
             run = false;
         }
         true

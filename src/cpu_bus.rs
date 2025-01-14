@@ -5,7 +5,7 @@ use m68k_emu::bus::BusM68k;
 
 use crate::memory_space::MemorySpace;
 
-// const VERSION_REGISTER: u32 = 0xA10000;
+const VERSION_REGISTER: u32 = 0xA10001;
 // const CONTROLLER_A_DATA: u32 = 0xA10002;
 // const CONTROLLER_B_DATA: u32 = 0xA10004;
 // const CONTROLLER_A_CONTROL: u32 = 0xA10008;
@@ -75,15 +75,18 @@ where
                 &self.memory_space.borrow().z80_ram[address as usize],
             ))
         } else if address >= 0xA10000 && address < 0xA20000 {
-            if address == Z80_REQUEST_BUS {
+            if address == VERSION_REGISTER {
+                Ok(0x80)
+            } else if address == Z80_REQUEST_BUS {
                 if *self.z80_bus_request_reg.borrow() == 0x0100 {
                     return Ok(0);
                 } else {
                     return Ok(1);
                 }
+            } else {
+                let address = (address & 0x3f) as usize;
+                Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
             }
-            let address = (address & 0x3f) as usize;
-            Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
         } else if address == 0xC00000 || address == 0xC00002 {
             self.vdp_ports.as_ref().unwrap().borrow().read_data_port()
         } else if address == 0xC00004 || address == 0xC00006 {

@@ -11,7 +11,7 @@ pub(crate) struct MemoryPtr {
 
 impl Display for MemoryPtr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:08}", self.address)
+        write!(f, "{:08X}", self.address)
     }
 }
 

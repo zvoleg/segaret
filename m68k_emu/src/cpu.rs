@@ -51,13 +51,13 @@ where
         let stack_register = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register.write(stack_pointer, Size::Long);
+        stack_register.write(stack_pointer, Size::Long).unwrap();
 
         let pc = self.read_header(RESET_PC);
         self.register_set.pc = pc;
     }
 
-    pub fn clock(&mut self) {
+    pub fn clock(&mut self) -> i32 {
         let register_set_backup = self.register_set;
         let opcode_address = self.register_set.pc;
         let opcode = self.fetch_opcode();
@@ -76,13 +76,19 @@ where
                     Ok(o) => o,
                     Err(_) => {
                         self.register_set = register_set_backup; // if cpu can't get operand from any memory location then tere is roll back its state for another try
-                        return;
+                        return 1;
                     }
                 };
             operands.add(operand);
         }
         let instruction = &operation.instruction;
-        instruction.execute(operands, self);
+        match instruction.execute(operands, self) {
+            Ok(_) => (),
+            Err(_) => {
+                self.register_set = register_set_backup; // if cpu can't execute an instruction then tere is roll back its state for another try
+                return 1;
+            }
+        }
         let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
         println!("{}", operation.disassembly(operation_ptr).unwrap());
         println!("{}", self);
@@ -97,6 +103,7 @@ where
             }
             self.trap = None;
         }
+        self.cycles_counter
     }
 
     pub fn interrupt(&mut self, level: u32) {
@@ -124,10 +131,10 @@ where
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
         let mut address = stack_register_ptr.read(Size::Long).unwrap();
         address = address.wrapping_sub(size as u32); // predecrementing
-        stack_register_ptr.write(address, Size::Long);
+        stack_register_ptr.write(address, Size::Long).unwrap();
 
         let write_ptr = MemoryPtr::new(address, self.bus.as_ref().unwrap().clone());
-        write_ptr.write(data, size);
+        write_ptr.write(data, size).unwrap();
     }
 
     pub(crate) fn stack_pop(&mut self, size: Size) -> u32 {
@@ -139,7 +146,7 @@ where
         let read_ptr = MemoryPtr::new(address, self.bus.as_ref().unwrap().clone());
         let data = read_ptr.read(size).unwrap();
 
-        stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long); // postincrement
+        stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long).unwrap(); // postincrement
         data
     }
 
@@ -154,7 +161,7 @@ where
         let stack_register_ptr = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register_ptr.write(new_stack_address, Size::Long);
+        stack_register_ptr.write(new_stack_address, Size::Long).unwrap();
     }
 
     fn fetch_opcode(&mut self) -> u16 {

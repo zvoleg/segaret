@@ -405,7 +405,7 @@ mod test {
         let address_reg_ptr = cpu
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
-        address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long);
+        address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long).unwrap();
         operand_set.add(Operand::new(
             address_reg_ptr,
             None,
@@ -417,7 +417,7 @@ mod test {
         // it just value in some place of memory
         let bus = Rc::new(Bus { ram: ram.clone() });
         let offset_ptr = MemoryPtr::new_boxed(OFFSET_ADDRESS as u32, bus);
-        offset_ptr.write(OFFSET_VALUE, Size::Word);
+        offset_ptr.write(OFFSET_VALUE, Size::Word).unwrap();
         operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
 
         operand_set
@@ -449,7 +449,7 @@ mod test {
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
         let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
-        link.execute(link_operand_set, &mut cpu);
+        link.execute(link_operand_set, &mut cpu).unwrap();
 
         let old_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // stack address should be decremented after pushing data to it
         let bus_stub = Rc::new(Bus { ram: ram.clone() });
@@ -480,11 +480,11 @@ mod test {
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
         let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
         let link = LINK();
-        link.execute(link_operand_set, &mut cpu);
+        link.execute(link_operand_set, &mut cpu).unwrap();
 
         let unlk_operand_set = prepare_unlk_operands(&mut cpu);
         let unlk = UNLK();
-        unlk.execute(unlk_operand_set, &mut cpu);
+        unlk.execute(unlk_operand_set, &mut cpu).unwrap();
 
         assert_eq!(
             cpu.register_set
@@ -511,14 +511,14 @@ mod test {
         cpu.set_bus(bus);
 
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
-        d2.write(0xDDDD2222, Size::Long);
+        d2.write(0xDDDD2222, Size::Long).unwrap();
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
-        a3.write(0xAAAA3333, Size::Long);
+        a3.write(0xAAAA3333, Size::Long).unwrap();
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
-        a5_am.write(0x0000000A, Size::Long);
+        a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = OperandSet::new();
-        bus_stub.write(0x2010, 0, Size::Word as u32);
+        bus_stub.write(0x2010, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.add(operand);
@@ -538,7 +538,7 @@ mod test {
             addressing_mode_type: AddressingModeType::AddressRegisterPreDecrement,
             am_register_idx: 5,
         };
-        movem.execute(operand_set, &mut cpu);
+        movem.execute(operand_set, &mut cpu).unwrap();
 
         assert_eq!(
             a5_am.read(Size::Long).unwrap(),
@@ -569,10 +569,10 @@ mod test {
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
-        a5_am.write(0x0000000A, Size::Long);
+        a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = OperandSet::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32);
+        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.add(operand);
@@ -592,7 +592,7 @@ mod test {
             addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
             am_register_idx: 5,
         };
-        movem.execute(operand_set, &mut cpu);
+        movem.execute(operand_set, &mut cpu).unwrap();
         assert_eq!(
             a5_am.read(Size::Long).unwrap(),
             0x0000000A + 2 * Size::Word as u32
@@ -614,10 +614,10 @@ mod test {
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
-        a5_am.write(0x0000000A, Size::Long);
+        a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = OperandSet::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32);
+        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.add(operand);
@@ -637,7 +637,7 @@ mod test {
             addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
             am_register_idx: 5,
         };
-        movem.execute(operand_set, &mut cpu);
+        movem.execute(operand_set, &mut cpu).unwrap();
         assert_eq!(
             a5_am.read(Size::Long).unwrap(),
             0x0000000A + 2 * Size::Long as u32
@@ -659,10 +659,10 @@ mod test {
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
-        a5_am.write(0x0000000A, Size::Long);
+        a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = OperandSet::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32);
+        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.add(operand);
@@ -682,7 +682,7 @@ mod test {
             addressing_mode_type: AddressingModeType::AddressRegisterIndirect,
             am_register_idx: 5,
         };
-        movem.execute(operand_set, &mut cpu);
+        movem.execute(operand_set, &mut cpu).unwrap();
 
         assert_eq!(a5_am.read(Size::Long).unwrap(), 0xA);
         assert_eq!(d2.read(Size::Long).unwrap(), 0x00007055);

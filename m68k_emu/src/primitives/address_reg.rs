@@ -72,7 +72,7 @@ mod tests {
     fn address_register_word_sign_extended() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.write(0x8000, Size::Word);
+        ptr.write(0x8000, Size::Word).unwrap();
         assert_eq!(ptr.read(Size::Long), Ok(0xFFFF8000));
     }
 
@@ -80,7 +80,7 @@ mod tests {
     fn address_register_word() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.write(0x7000, Size::Word);
+        ptr.write(0x7000, Size::Word).unwrap();
         assert_eq!(ptr.read(Size::Long), Ok(0x00007000));
     }
 
@@ -88,8 +88,8 @@ mod tests {
     fn address_register_word_override() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.write(0x55559999, Size::Long);
-        ptr.write(0x7000, Size::Word);
+        ptr.write(0x55559999, Size::Long).unwrap();
+        ptr.write(0x7000, Size::Word).unwrap();
         assert_eq!(ptr.read(Size::Long), Ok(0x00007000));
     }
 
@@ -97,7 +97,7 @@ mod tests {
     fn address_register_long() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.write(0x55559999, Size::Long);
+        ptr.write(0x55559999, Size::Long).unwrap();
         assert_eq!(ptr.read(Size::Word), Ok(0x9999));
         assert_eq!(ptr.read(Size::Long), Ok(0x55559999));
     }
@@ -107,7 +107,7 @@ mod tests {
     fn address_register_cant_read_byte() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.read(Size::Byte);
+        ptr.read(Size::Byte).unwrap();
     }
 
     #[test]
@@ -115,14 +115,14 @@ mod tests {
     fn address_register_cant_write_byte() {
         let mut data = 0u32;
         let ptr = AddressRegisterPtr(&mut data);
-        ptr.write(0x33, Size::Byte);
+        ptr.write(0x33, Size::Byte).unwrap();
     }
 
     #[test]
     fn address_register_write_word_with_offset() {
         let mut data: [u32; 16] = [0; 16];
         let ptr = AddressRegisterPtr(&mut data[0]);
-        ptr.write_offset(0x8000, Size::Word, 5);
+        ptr.write_offset(0x8000, Size::Word, 5).unwrap();
         assert_eq!(data[5], 0xFFFF8000);
     }
 }

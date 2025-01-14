@@ -107,7 +107,7 @@ impl AddressingMode for AddressRegisterPostIncrement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: Rc<dyn BusM68k>) -> Result<Operand, ()> {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long)?;
-        address_register_ptr.write(address.wrapping_add(self.size as u32), Size::Long);
+        address_register_ptr.write(address.wrapping_add(self.size as u32), Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,
@@ -136,7 +136,7 @@ impl AddressingMode for AddressRegisterPreDecrement {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let mut address = address_register_ptr.read(Size::Long)?;
         address = address.wrapping_sub(self.size as u32);
-        address_register_ptr.write(address, Size::Long);
+        address_register_ptr.write(address, Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,

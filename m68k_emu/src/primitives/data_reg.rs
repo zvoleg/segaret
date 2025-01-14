@@ -66,7 +66,7 @@ mod test {
     fn data_register_byte() {
         let mut data = 0u32;
         let ptr = DataRegisterPtr(&mut data);
-        ptr.write(0xFF, Size::Byte);
+        ptr.write(0xFF, Size::Byte).unwrap();
         assert_eq!(ptr.read(Size::Word), Ok(0xFF));
     }
 
@@ -74,7 +74,7 @@ mod test {
     fn data_register_word() {
         let mut data = 0u32;
         let ptr = DataRegisterPtr(&mut data);
-        ptr.write(0x9911, Size::Word);
+        ptr.write(0x9911, Size::Word).unwrap();
         assert_eq!(ptr.read(Size::Byte), Ok(0x11));
     }
 
@@ -82,8 +82,8 @@ mod test {
     fn data_register_overlapping_writes() {
         let mut data = 0u32;
         let ptr = DataRegisterPtr(&mut data);
-        ptr.write(0x99000000, Size::Long);
-        ptr.write(0x11, Size::Byte);
+        ptr.write(0x99000000, Size::Long).unwrap();
+        ptr.write(0x11, Size::Byte).unwrap();
         assert_eq!(ptr.read(Size::Long), Ok(0x99000011));
     }
 
@@ -91,7 +91,7 @@ mod test {
     fn data_register_write_byte_with_offset() {
         let mut data: [u32; 16] = [0; 16];
         let ptr = DataRegisterPtr(&mut data[0]);
-        ptr.write_offset(0x55, Size::Byte, 2);
+        ptr.write_offset(0x55, Size::Byte, 2).unwrap();
         assert_eq!(data[2], 0x55);
     }
 
@@ -99,8 +99,8 @@ mod test {
     fn data_register_overlapping_write_with_offset() {
         let mut data: [u32; 16] = [0; 16];
         let ptr = DataRegisterPtr(&mut data[0]);
-        ptr.write_offset(0x55000000, Size::Long, 15);
-        ptr.write_offset(0x8000, Size::Word, 15);
+        ptr.write_offset(0x55000000, Size::Long, 15).unwrap();
+        ptr.write_offset(0x8000, Size::Word, 15).unwrap();
         assert_eq!(data[15], 0x55008000);
     }
 }
