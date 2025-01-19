@@ -21,9 +21,7 @@ mod vdp_emu;
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
 
 fn main() {
-    let (runner, mut window) = spriter::init("segaret", 640, 448);
-    let mut canvas = window.create_canvas(0, 0, 640, 448, 320, 224);
-    canvas.set_clear_color(Color::from_u32(0xAAAAAA));
+    let (runner, mut window) = spriter::init("segaret", 916 + 256, 1024);
 
     let mut file = File::open("pop.md").unwrap();
     let mut rom = Vec::new();
@@ -32,7 +30,7 @@ fn main() {
 
     let mut m68k = M68k::new();
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
-    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(canvas, signal_bus.clone())));
+    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(&mut window, signal_bus.clone())));
 
     let mut cpu_bus = CpuBus::init(memory_space.clone());
     cpu_bus.set_vdp_ports(vdp.clone());

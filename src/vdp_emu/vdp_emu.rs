@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use spriter::Canvas;
+use spriter::{window::Window, Canvas, Color};
 
 use crate::signal_bus::{Signal, SignalBus};
 
@@ -15,12 +15,13 @@ use super::{
 
 pub struct Vdp<T: BusVdp> {
     pub(super) screen: Canvas,
+    pub(crate) vram_table: Canvas,
 
     pub(super) registers: [u8; 24],
 
     pub(super) vram: [u8; 0x10000],
     pub(super) cram: [u8; 0x80],
-    pub(super) vsram: [u16; 0x50],
+    pub(super) vsram: [u8; 0x50],
 
     pub(super) status_register: u16,
 
@@ -47,15 +48,24 @@ pub struct Vdp<T: BusVdp> {
 
     pub(super) bus: Option<T>,
     pub(super) signal_bus: Rc<RefCell<SignalBus>>,
+
+    clock_counter: u64,
 }
 
 impl<T> Vdp<T>
 where
     T: BusVdp,
 {
-    pub fn new(canvas: Canvas, signal_bus: Rc<RefCell<SignalBus>>) -> Self {
+    pub fn new(window: &mut Window, signal_bus: Rc<RefCell<SignalBus>>) -> Self {
+        let mut screen = window.create_canvas(0, 0, 640, 448, 320, 224);
+        screen.set_clear_color(Color::from_u32(0xAAAAAA));
+        screen.clear();
+        let mut vram_table = window.create_canvas(660, 0, 512, 1024, 256, 512);
+        vram_table.set_clear_color(Color::from_u32(0xAAAACC));
+        vram_table.clear();
         Self {
-            screen: canvas,
+            screen,
+            vram_table,
 
             registers: [0; 24],
 
@@ -88,6 +98,8 @@ where
 
             bus: None,
             signal_bus: signal_bus,
+
+            clock_counter: 0,
         }
     }
 
@@ -99,6 +111,10 @@ where
         if let Some(_) = self.dma_mode.as_ref() {
             self.dma_clock();
         }
+        if self.clock_counter % 286720 == 0 { // each frame?
+            self.update_vram_table();
+        }
+        self.clock_counter = self.clock_counter.wrapping_add(1);
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
         //     self.interrupt_line.borrow_mut().send(4);
         //     self.line_intrpt_counter = self.line_intrpt_counter_value;
@@ -120,7 +136,7 @@ where
 
     fn dma_clock(&mut self) {
         let dma_enabled = self.registers[MODE_REGISTER_II] & 0x10 != 0;
-        if dma_enabled && self.dma_run{
+        if dma_enabled && self.dma_run {
             let dma_length = self.get_dma_length();
             println!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
             match self.dma_mode.as_ref().unwrap() {
@@ -142,14 +158,17 @@ where
         let dst_address = self.ram_address;
         let data = self.bus.as_ref().unwrap().read(src_address);
         println!("VDP: dma_bus_to_ram_copy: transfer word: {:04X}", data);
-        match self.ram_access_mode {
-            RamAccessMode::VramW => self.vram[dst_address as usize] = data as u8,
-            RamAccessMode::CramW => self.cram[dst_address as usize] = data as u8,
-            RamAccessMode::VSramW => self.vsram[dst_address as usize] = data,
-            _ => panic!(
-                "VDP: dma_bus_to_ram_copy: unexpected RamAccessMode during of the DMA cycles: {}",
-                self.ram_access_mode
-            ),
+        unsafe {
+            let ptr = match self.ram_access_mode {
+                RamAccessMode::VramW => (&self.vram as *const u8).offset(dst_address as isize) as *mut u16,
+                RamAccessMode::CramW => (&self.cram as *const u8).offset(dst_address as isize) as *mut u16,
+                RamAccessMode::VSramW => (&self.vsram as *const u8).offset(dst_address as isize) as *mut u16,
+                _ => panic!(
+                    "VDP: dma_bus_to_ram_copy: unexpected RamAccessMode during of the DMA cycles: {}",
+                    self.ram_access_mode
+                ),
+            };
+            *ptr = data;
         }
         self.set_dma_src_address(src_address + 2);
         self.ram_address += self.get_address_increment();
@@ -169,10 +188,12 @@ where
         );
         match self.ram_access_mode {
             RamAccessMode::VramW => {
-                if dst_address & 0x1 == 0 { // even address
+                if dst_address & 0x1 == 0 {
+                    // even address
                     self.vram[dst_address] = lsb;
                     self.vram[dst_address + 1] = msb;
-                } else { // odd address
+                } else {
+                    // odd address
                     self.vram[dst_address] = lsb;
                     self.vram[dst_address - 1] = msb;
                 }
@@ -185,6 +206,39 @@ where
         self.ram_address += self.get_address_increment();
         let dma_length = self.get_dma_length();
         self.set_dma_length(dma_length - 1);
+    }
+
+    fn update_vram_table(&mut self) {
+        let color_table = [
+            Color::from_u32(0xCCCCFF),
+            Color::from_u32(0xAAAAAA),
+            Color::from_u32(0x9999CC),
+            Color::from_u32(0xCC9999),
+            Color::from_u32(0x99CC99),
+            Color::from_u32(0x883333),
+            Color::from_u32(0x333388),
+            Color::from_u32(0x338833),
+            Color::from_u32(0xAAAA33),
+            Color::from_u32(0x999999),
+            Color::from_u32(0xCCCCCC),
+            Color::from_u32(0x888888),
+            Color::from_u32(0x333377),
+            Color::from_u32(0x228888),
+            Color::from_u32(0x555555),
+            Color::from_u32(0x000000),
+        ];
+        for tile_idx in 0..2048 {
+            for byte_idx in 0..32 {
+                let idx = tile_idx * 32 + byte_idx;
+                let data_byte = self.vram[idx].rotate_left(4);
+                for pixel_num in 0..2 {
+                    let x = (tile_idx % 32) * 8 + (byte_idx % 4) * 2 + pixel_num;
+                    let y = (tile_idx / 32) * 8 + byte_idx / 4;
+                    let dot = ((data_byte >> (4 * pixel_num)) & 0xF) as usize;
+                    self.vram_table.set_pixel(x as i32, y as i32, color_table[dot]).unwrap();
+                }
+            }
+        }
     }
 
     fn get_dma_src_address(&self) -> u32 {
