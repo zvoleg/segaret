@@ -18,7 +18,7 @@ impl BriefExtensionWord {
         } else {
             Size::Word
         };
-        let index_reg_idx = ((word >> 11) & 0x07) as usize;
+        let index_reg_idx = ((word >> 12) & 0x07) as usize;
         let mut scale = ((word >> 9) & 0b11) * 2;
         if scale == 0 {
             scale = 1

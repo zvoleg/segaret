@@ -1,3 +1,4 @@
+#[derive(PartialEq)]
 pub enum Signal {
     V_INTERRUPT,
     H_INTERRUPT,
@@ -13,9 +14,17 @@ impl SignalBus {
         Self { signal_que: vec![] }
     }
 
-    pub fn push_siganal(&mut self, signal: Signal) {}
+    pub fn push_siganal(&mut self, signal: Signal) {
+        self.signal_que.push(signal);
+    }
 
     pub fn handle_signal(&mut self, signal: Signal) -> bool {
+        for i in 0..self.signal_que.len() {
+            if signal == self.signal_que[i] {
+                self.signal_que.swap_remove(i);
+                return true;
+            }
+        }
         false
     }
 }

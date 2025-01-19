@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use spriter::Canvas;
 
-use crate::signal_bus::SignalBus;
+use crate::signal_bus::{Signal, SignalBus};
 
 use super::{
     bus::BusVdp,
@@ -19,8 +19,8 @@ pub struct Vdp<T: BusVdp> {
     pub(super) registers: [u8; 24],
 
     pub(super) vram: [u8; 0x10000],
-    pub(super) cram: [u16; 0x40],
-    pub(super) vsram: [u16; 0x28],
+    pub(super) cram: [u8; 0x80],
+    pub(super) vsram: [u16; 0x50],
 
     pub(super) status_register: u16,
 
@@ -34,6 +34,8 @@ pub struct Vdp<T: BusVdp> {
     pub(super) control_port_write_latch: bool,
 
     pub(super) dma_mode: Option<DmaMode>,
+    pub(super) dma_run: bool,
+    pub(super) dma_data_wait: bool,
 
     pub(super) ram_access_mode: RamAccessMode,
     pub(super) ram_address: u32,
@@ -58,8 +60,8 @@ where
             registers: [0; 24],
 
             vram: [0; 0x10000],
-            cram: [0; 0x40],
-            vsram: [0; 0x28],
+            cram: [0; 0x80],
+            vsram: [0; 0x50],
 
             status_register: 0x3400,
 
@@ -73,6 +75,8 @@ where
             control_port_write_latch: false,
 
             dma_mode: None,
+            dma_run: false,
+            dma_data_wait: false,
 
             ram_access_mode: RamAccessMode::VramR,
             ram_address: 0,
@@ -92,24 +96,8 @@ where
     }
 
     pub fn clock(&mut self) {
-        if let Some(dma_mode) = self.dma_mode.as_ref() {
-            let dma_enabled = self.registers[MODE_REGISTER_II] & 0x10 != 0;
-            if dma_enabled {
-                let dma_length = self.get_dma_length();
-                println!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
-                if dma_length == 0 {
-                    self.registers[MODE_REGISTER_II] = self.registers[MODE_REGISTER_II] & !0x10;
-                    self.dma_mode = None;
-                    return;
-                }
-                match dma_mode {
-                    DmaMode::BusToRamCopy => self.dma_bus_to_ram_copy(),
-                    DmaMode::RamToRamCopy => (),
-                    DmaMode::RamFill => self.dma_ram_fill(),
-                }
-            }
-        } else {
-            // TODO
+        if let Some(_) = self.dma_mode.as_ref() {
+            self.dma_clock();
         }
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
         //     self.interrupt_line.borrow_mut().send(4);
@@ -130,6 +118,25 @@ where
         // }
     }
 
+    fn dma_clock(&mut self) {
+        let dma_enabled = self.registers[MODE_REGISTER_II] & 0x10 != 0;
+        if dma_enabled && self.dma_run{
+            let dma_length = self.get_dma_length();
+            println!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
+            match self.dma_mode.as_ref().unwrap() {
+                DmaMode::BusToRamCopy => self.dma_bus_to_ram_copy(),
+                DmaMode::RamToRamCopy => (),
+                DmaMode::RamFill => self.dma_ram_fill(),
+            }
+            if self.get_dma_length() == 0 {
+                self.registers[MODE_REGISTER_II] = self.registers[MODE_REGISTER_II] & !0x10;
+                self.dma_mode = None;
+                self.dma_run = false;
+                return;
+            }
+        }
+    }
+
     fn dma_bus_to_ram_copy(&mut self) {
         let src_address = self.get_dma_src_address();
         let dst_address = self.ram_address;
@@ -137,7 +144,7 @@ where
         println!("VDP: dma_bus_to_ram_copy: transfer word: {:04X}", data);
         match self.ram_access_mode {
             RamAccessMode::VramW => self.vram[dst_address as usize] = data as u8,
-            RamAccessMode::CramW => self.cram[dst_address as usize] = data,
+            RamAccessMode::CramW => self.cram[dst_address as usize] = data as u8,
             RamAccessMode::VSramW => self.vsram[dst_address as usize] = data,
             _ => panic!(
                 "VDP: dma_bus_to_ram_copy: unexpected RamAccessMode during of the DMA cycles: {}",
@@ -148,6 +155,7 @@ where
         self.ram_address += self.get_address_increment();
         let dma_length = self.get_dma_length();
         self.set_dma_length(dma_length - 1);
+        self.signal_bus.borrow_mut().push_siganal(Signal::CPU_HALT);
     }
 
     fn dma_ram_fill(&mut self) {
@@ -161,11 +169,10 @@ where
         );
         match self.ram_access_mode {
             RamAccessMode::VramW => {
-                // even address
-                if dst_address & 0x1 == 0 {
+                if dst_address & 0x1 == 0 { // even address
                     self.vram[dst_address] = lsb;
                     self.vram[dst_address + 1] = msb;
-                } else {
+                } else { // odd address
                     self.vram[dst_address] = lsb;
                     self.vram[dst_address - 1] = msb;
                 }
@@ -201,7 +208,7 @@ where
         self.registers[DMA_LENGTH_II] = (value >> 8) as u8;
     }
 
-    fn get_address_increment(&self) -> u32 {
+    pub(crate) fn get_address_increment(&self) -> u32 {
         self.registers[AUTO_INCREMENT] as u32
     }
 

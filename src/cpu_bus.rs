@@ -88,7 +88,7 @@ where
                 Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
             }
         } else if address == 0xC00000 || address == 0xC00002 {
-            self.vdp_ports.as_ref().unwrap().borrow().read_data_port()
+            self.vdp_ports.as_ref().unwrap().borrow_mut().read_data_port()
         } else if address == 0xC00004 || address == 0xC00006 {
             self.vdp_ports
                 .as_ref()
@@ -116,9 +116,10 @@ where
             let ptr = &self.memory_space.as_ref().borrow_mut().rom[address as usize] as *const _
                 as *mut u8;
             self.write_ptr(data, amount, ptr);
-        // } else if address >= 0xA00000 && address <= 0xA0FFFF {
-        //     let address = address & 0xFFFF;
-        //     &self.z80_ram[address as usize..(address + amount) as usize]
+        } else if address >= 0xA00000 && address <= 0xA0FFFF {
+            let address = address & 0xFFFF;
+            let ptr = &self.memory_space.as_ref().borrow_mut().z80_ram[address as usize] as *const _ as *mut u8;
+            self.write_ptr(data, amount, ptr);
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_request_reg.borrow_mut() = data;
@@ -134,18 +135,18 @@ where
         } else if address == 0xC00000 || address == 0xC00002 {
             let mut vdp_port_ref = self.vdp_ports.as_ref().unwrap().borrow_mut();
             if amount == 4 {
-                vdp_port_ref.write_data_port((data >> 16) as u16);
-                vdp_port_ref.write_data_port(data as u16);
+                vdp_port_ref.write_data_port((data >> 16) as u16)?;
+                vdp_port_ref.write_data_port(data as u16)?;
             } else {
-                vdp_port_ref.write_data_port(data as u16);
+                vdp_port_ref.write_data_port(data as u16)?;
             }
         } else if address == 0xC00004 || address == 0xC00006 {
             let mut vdp_port_ref = self.vdp_ports.as_ref().unwrap().borrow_mut();
             if amount == 4 {
-                vdp_port_ref.write_control_port((data >> 16) as u16);
-                vdp_port_ref.write_control_port(data as u16);
+                vdp_port_ref.write_control_port((data >> 16) as u16)?;
+                vdp_port_ref.write_control_port(data as u16)?;
             } else {
-                vdp_port_ref.write_control_port(data as u16);
+                vdp_port_ref.write_control_port(data as u16)?;
             }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;

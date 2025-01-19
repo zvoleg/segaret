@@ -25,6 +25,6 @@ impl BusVdp for VdpBus {
             } else {
                 panic!("VdpBus: read: wrong address value: {:08X}", address)
             }
-        }
+        }.to_be()
     }
 }
