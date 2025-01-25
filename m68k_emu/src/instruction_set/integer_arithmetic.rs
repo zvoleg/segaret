@@ -422,7 +422,7 @@ impl<T: BusM68k> Instruction<T> for CMP {
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
-        sr.set_flag(StatusFlag::N, result.is_zero(self.size));
+        sr.set_flag(StatusFlag::N, result.is_negate(self.size));
         sr.set_flag(StatusFlag::V, overflow);
         sr.set_flag(StatusFlag::C, carry);
         Ok(())

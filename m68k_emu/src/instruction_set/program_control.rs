@@ -136,14 +136,17 @@ impl Display for BRA {
 
 impl<T: BusM68k> Instruction<T> for BRA {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let target: u32;
         let displacement = if self.displacement == 0 {
-            operand_set.next().read()?.sign_extend(Size::Word)
+            let operand = operand_set.next();
+            target = operand.operand_address;
+            operand.read()?.sign_extend(Size::Word)
         } else {
+            target = cpu.register_set.pc;
             self.displacement.sign_extend(Size::Byte)
         };
 
-        let pc = &mut cpu.register_set.pc;
-        *pc = pc.wrapping_add(displacement);
+        cpu.register_set.pc = target.wrapping_add(displacement);
         Ok(())
     }
 }
@@ -164,15 +167,19 @@ impl Display for BSR {
 
 impl<T: BusM68k> Instruction<T> for BSR {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let target: u32;
         let displacement = if self.displacement == 0 {
-            operand_set.next().read()?.sign_extend(Size::Word)
+            let operand = operand_set.next();
+            target = operand.operand_address;
+            operand.read()?.sign_extend(Size::Word)
         } else {
+            target = cpu.register_set.pc;
             self.displacement.sign_extend(Size::Byte)
         };
 
         let pc = cpu.register_set.pc;
         cpu.stack_push(pc, Size::Long);
-        cpu.register_set.pc = pc.wrapping_add(displacement);
+        cpu.register_set.pc = target.wrapping_add(displacement);
         Ok(())
     }
 }
