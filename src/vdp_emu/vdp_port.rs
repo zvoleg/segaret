@@ -1,3 +1,5 @@
+use log::debug;
+
 use super::{bus::BusVdp, registers::DMA_SOURC_III, vdp_emu::Vdp, DmaMode, RamAccessMode};
 
 const VDP_CTRL_OPERATION_TYPE_MASK: u16 = 0x7 << 13;
@@ -31,7 +33,7 @@ where
             self.dma_run = true;
             self.dma_data_wait = false;
         } else {
-            println!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.ram_address);
+            debug!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.ram_address);
             match self.ram_access_mode {
                 RamAccessMode::VramW => unsafe {
                     let ptr = self.vram.as_ptr().offset(self.ram_address as isize) as *const _ as *mut u16;
@@ -71,7 +73,7 @@ impl<T> Vdp<T> where T: BusVdp {
         let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as u8;
         let register_data = data as u8;
         self.registers[register_id as usize] = register_data;
-        println!(
+        debug!(
             "VDP: set register {:02X} to value {:02X}",
             register_id, register_data
         )
@@ -107,13 +109,13 @@ impl<T> Vdp<T> where T: BusVdp {
                 } else {
                     panic!("VDP: write_control_port: unexpected dma mode bits sequence");
                 }
-                println!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
+                debug!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
             }
             // it is address set mode
             self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
             self.ram_address = address;
 
-            println!(
+            debug!(
                 "VDP: set ram access mode '{}' and address {:04X}",
                 self.ram_access_mode, self.ram_address
             );

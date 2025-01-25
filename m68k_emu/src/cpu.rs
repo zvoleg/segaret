@@ -1,5 +1,7 @@
 use std::{fmt::Display, rc::Rc};
 
+use log::{info, debug};
+
 use crate::{
     bus::BusM68k,
     instruction_set::system_control::ILLEAGL,
@@ -90,8 +92,8 @@ where
             }
         }
         let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
-        println!("{}", operation.disassembly(operation_ptr).unwrap());
-        println!("{}", self);
+        debug!("{}", operation.disassembly(operation_ptr).unwrap());
+        debug!("{}", self);
         if let Some(vector) = self.trap {
             if vector == RESET_SP {
                 self.reset();

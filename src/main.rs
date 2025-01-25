@@ -1,13 +1,14 @@
 extern crate spriter;
 
-use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
+use std::{cell::RefCell, fs::File, io::Read, rc::Rc, time::{self, Instant}};
 
+use log::info;
 use m68k_emu::cpu::M68k;
 
 use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
 use signal_bus::SignalBus;
-use spriter::{if_pressed, Color};
+use spriter::if_pressed;
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 
@@ -21,6 +22,7 @@ mod vdp_emu;
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
 
 fn main() {
+    env_logger::init();
     let (runner, mut window) = spriter::init("segaret", 916 + 256, 1024);
 
     let mut file = File::open("pop.md").unwrap();
@@ -42,19 +44,49 @@ fn main() {
     vdp.borrow_mut().set_bus(vdp_bus);
 
     let mut auto = false;
-    let mut run = false;
     let mut vdp_clocks_remainder = 0.0f32;
+    let mut vdp_clocks_accum = 0;
+    let mut start = time::Instant::now();
     runner.run(window, move |_| {
-        if_pressed!(spriter::Key::A, { auto = !auto });
+        let mut manual_clock = false;
+        if_pressed!(spriter::Key::A, { 
+            auto = !auto;
+            info!("Auto Clock mode = {}", auto);
+        });
         if_pressed!(spriter::Key::C, {
             auto = false;
-            run = true;
+            manual_clock = true;
+            info!("Manual clock");
         });
-        if_pressed!(spriter::Key::Escape, { spriter::program_stop() });
+        if_pressed!(spriter::Key::Escape, {
+            spriter::program_stop();
+            info!("Exit from segaret");
+        });
         if auto {
-            run = true;
-        }
-        if run {
+            let mut update_screen = false;
+            while !update_screen {
+                let mut vdp_clocks = 1;
+                if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
+                    m68k.interrupt(6);
+                }
+                if !signal_bus
+                    .borrow_mut()
+                    .handle_signal(signal_bus::Signal::CPU_HALT)
+                {
+                    let vdp_clocks_rational = m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
+                    vdp_clocks = vdp_clocks_rational.trunc() as i32;
+                    vdp_clocks_remainder = vdp_clocks_rational.fract();
+                }
+                for _ in 0..vdp_clocks {
+                    let update = vdp.borrow_mut().clock();
+                    if !update_screen {
+                        update_screen = update
+                    }
+                }
+                vdp_clocks_accum += vdp_clocks;
+            }
+            true
+        } else if manual_clock {
             let mut vdp_clocks = 1;
             if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
                 m68k.interrupt(6);
@@ -70,8 +102,10 @@ fn main() {
             for _ in 0..vdp_clocks {
                 vdp.borrow_mut().clock();
             }
-            run = false;
+            vdp_clocks_accum += vdp_clocks;
+            true
+        } else {
+            false
         }
-        true
     });
 }

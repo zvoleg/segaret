@@ -2,6 +2,8 @@ use std::{cell::RefCell, rc::Rc};
 
 use spriter::{window::Window, Canvas, Color};
 
+use log::{info, debug};
+
 use crate::signal_bus::{Signal, SignalBus};
 
 use super::{
@@ -107,7 +109,8 @@ where
         self.bus = Some(bus);
     }
 
-    pub fn clock(&mut self) {
+    pub fn clock(&mut self) -> bool {
+        let mut update_screen = false;
         if let Some(_) = self.dma_mode.as_ref() {
             self.dma_clock();
         }
@@ -116,8 +119,10 @@ where
             if self.registers[MODE_REGISTER_II] &0x20 == 0x20 {
                 self.signal_bus.borrow_mut().push_siganal(Signal::V_INTERRUPT);
             }
+            update_screen = true;
         }
         self.clock_counter = self.clock_counter.wrapping_add(1);
+        update_screen
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
         //     self.interrupt_line.borrow_mut().send(4);
         //     self.line_intrpt_counter = self.line_intrpt_counter_value;
@@ -141,7 +146,7 @@ where
         let dma_enabled = self.registers[MODE_REGISTER_II] & 0x10 != 0;
         if dma_enabled && self.dma_run {
             let dma_length = self.get_dma_length();
-            println!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
+            debug!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
             match self.dma_mode.as_ref().unwrap() {
                 DmaMode::BusToRamCopy => self.dma_bus_to_ram_copy(),
                 DmaMode::RamToRamCopy => (),
@@ -160,7 +165,7 @@ where
         let src_address = self.get_dma_src_address();
         let dst_address = self.ram_address;
         let data = self.bus.as_ref().unwrap().read(src_address);
-        println!("VDP: dma_bus_to_ram_copy: transfer word: {:04X}", data);
+        debug!("VDP: dma_bus_to_ram_copy: transfer word: {:04X}", data);
         unsafe {
             let ptr = match self.ram_access_mode {
                 RamAccessMode::VramW => (&self.vram as *const u8).offset(dst_address as isize) as *mut u16,
@@ -185,7 +190,7 @@ where
         let data = self.data_port_reg;
         let msb = (data >> 8) as u8;
         let lsb = data as u8;
-        println!(
+        debug!(
             "VDP: dma_ram_fill: fill address {:08X} with data {:04X}",
             dst_address, data
         );
