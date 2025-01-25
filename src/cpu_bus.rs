@@ -70,13 +70,20 @@ where
             Ok(self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize]))
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            Ok(self.read_ptr(
+            let data = self.read_ptr(
                 amount,
                 &self.memory_space.borrow().z80_ram[address as usize],
-            ))
+            );
+            Ok(data)
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == VERSION_REGISTER {
-                Ok(0x80)
+                let program_region = self.memory_space.borrow().rom[0x1F0];
+                match program_region {
+                    0x55 => Ok(0x80),
+                    0x45 => Ok(0xC0),
+                    0x4A => Ok(0x00),
+                    _ => panic!("unexpected program region code {:02X}", program_region),
+                }
             } else if address == Z80_REQUEST_BUS {
                 if *self.z80_bus_request_reg.borrow() == 0x0100 {
                     return Ok(0);

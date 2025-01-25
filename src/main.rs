@@ -56,6 +56,9 @@ fn main() {
         }
         if run {
             let mut vdp_clocks = 1;
+            if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
+                m68k.interrupt(6);
+            }
             if !signal_bus
                 .borrow_mut()
                 .handle_signal(signal_bus::Signal::CPU_HALT)

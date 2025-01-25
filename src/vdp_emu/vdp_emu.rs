@@ -113,6 +113,9 @@ where
         }
         if self.clock_counter % 286720 == 0 { // each frame?
             self.update_vram_table();
+            if self.registers[MODE_REGISTER_II] &0x20 == 0x20 {
+                self.signal_bus.borrow_mut().push_siganal(Signal::V_INTERRUPT);
+            }
         }
         self.clock_counter = self.clock_counter.wrapping_add(1);
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
