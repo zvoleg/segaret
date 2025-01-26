@@ -1,6 +1,6 @@
 use std::{fmt::Display, rc::Rc};
 
-use log::{info, debug};
+use log::debug;
 
 use crate::{
     bus::BusM68k,
@@ -71,6 +71,9 @@ where
 
         self.cycles_counter = operation.cycles;
 
+        let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
+        debug!("{}", operation.disassembly(operation_ptr).unwrap());
+        
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
             let operand =
@@ -91,9 +94,7 @@ where
                 return 1;
             }
         }
-        let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
-        debug!("{}", operation.disassembly(operation_ptr).unwrap());
-        debug!("{}", self);
+        debug!("\n{}", self);
         if let Some(vector) = self.trap {
             if vector == RESET_SP {
                 self.reset();

@@ -1,5 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
+use log::debug;
+
 use super::vdp_emu::bus::BusVdp;
 
 use crate::memory_space::MemorySpace;
@@ -16,6 +18,7 @@ impl VdpBus {
 
 impl BusVdp for VdpBus {
     fn read(&self, address: u32) -> u16 {
+        debug!("VDP reads address {:08X}", address);
         unsafe {
             if address < 0x400000 {
                 *(&self.memory_space.borrow().rom[address as usize] as *const _ as *const u16)

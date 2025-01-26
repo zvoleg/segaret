@@ -55,7 +55,7 @@ impl Display for RegisterSet {
             let address = self.registers[i + 8];
             buffer.push(format!("D{}: {:08X}\tA{}: {:08X}\n", i, data, i, address))
         }
-        buffer.push(format!("{:>35}\n", "10SM_210___XNZVC"));
+        buffer.push(format!("{:>39}\n", "10SM_210___XNZVC"));
         // PC: 00000202	SR:0000000000000000
         buffer.push(format!(
             "PC: {:08X}\tSR:{:016b}\n",

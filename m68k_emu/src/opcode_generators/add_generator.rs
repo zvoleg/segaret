@@ -255,7 +255,9 @@ fn generate_addi<T: BusM68k>(table: &mut [Operation<T>]) {
 impl OpcodeMaskGenerator for ADDQ {
     fn generate_mask(&self) -> usize {
         let mut base_mask = 0b0101000000000000;
-        base_mask |= (self.data as usize) << 9;
+        if self.data < 8 {
+            base_mask |= (self.data as usize) << 9;
+        }
         base_mask |= match self.size {
             Size::Byte => 0b00,
             Size::Word => 0b01,
@@ -282,6 +284,7 @@ fn generate_addq<T: BusM68k>(table: &mut [Operation<T>]) {
         for size in [Size::Byte, Size::Word, Size::Long] {
             for am_type in am_types {
                 for idx in range!(am_type) {
+                    let data = if data == 0 { 8 } else { data };
                     let instruction = Box::new(ADDQ {
                         size: size,
                         data: data,
