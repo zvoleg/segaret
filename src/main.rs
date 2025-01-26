@@ -1,7 +1,8 @@
 extern crate spriter;
 
-use std::{cell::RefCell, fs::File, io::Read, rc::Rc, time::{self, Instant}};
+use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
 
+use controller::Controller;
 use log::info;
 use m68k_emu::cpu::M68k;
 
@@ -17,6 +18,7 @@ mod memory_space;
 mod signal_bus;
 mod vdp_bus;
 mod vdp_emu;
+mod controller;
 // pub mod cartridge;
 
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
@@ -34,7 +36,9 @@ fn main() {
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
     let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(&mut window, signal_bus.clone())));
 
-    let mut cpu_bus = CpuBus::init(memory_space.clone());
+    let controller = Rc::new(RefCell::new(Controller::new()));
+
+    let mut cpu_bus = CpuBus::init(memory_space.clone(), controller.clone());
     cpu_bus.set_vdp_ports(vdp.clone());
 
     m68k.set_bus(cpu_bus);
@@ -46,7 +50,6 @@ fn main() {
     let mut auto = false;
     let mut vdp_clocks_remainder = 0.0f32;
     let mut vdp_clocks_accum = 0;
-    let mut start = time::Instant::now();
     runner.run(window, move |_| {
         let mut manual_clock = false;
         if_pressed!(spriter::Key::A, { 

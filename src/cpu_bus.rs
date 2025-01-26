@@ -1,14 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
+use log::debug;
+
 use super::vdp_emu::vdp_port::VdpPorts;
 use m68k_emu::bus::BusM68k;
 
-use crate::memory_space::MemorySpace;
+use crate::{controller::Controller, memory_space::MemorySpace};
 
 const VERSION_REGISTER: u32 = 0xA10001;
-// const CONTROLLER_A_DATA: u32 = 0xA10002;
+const CONTROLLER_A_DATA: u32 = 0xA10002;
 // const CONTROLLER_B_DATA: u32 = 0xA10004;
-// const CONTROLLER_A_CONTROL: u32 = 0xA10008;
+const CONTROLLER_A_CONTROL: u32 = 0xA10008;
 // const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
 // const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
@@ -19,17 +21,21 @@ pub struct CpuBus<T: VdpPorts> {
     // TODO rewrite after implementation of the peripheral devices
     vdp_ports: Option<Rc<RefCell<T>>>,
     z80_bus_request_reg: RefCell<u32>,
+
+    controller_1: Rc<RefCell<Controller>>,
 }
 
 impl<T> CpuBus<T>
 where
     T: VdpPorts,
 {
-    pub fn init(memory_space: Rc<RefCell<MemorySpace>>) -> Self {
+    pub fn init(memory_space: Rc<RefCell<MemorySpace>>, controller: Rc<RefCell<Controller>>) -> Self {
         Self {
             memory_space: memory_space,
             vdp_ports: None,
             z80_bus_request_reg: RefCell::new(0),
+
+            controller_1: controller,
         }
     }
 
@@ -66,6 +72,7 @@ where
 {
     fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
+        debug!("CPU reads address {:08X}\tsize: {}", address, amount);
         if address <= 0x3FFFFF {
             Ok(self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize]))
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
@@ -90,6 +97,8 @@ where
                 } else {
                     return Ok(1);
                 }
+            } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
+                Ok(self.controller_1.borrow().read() as u32)
             } else {
                 let address = (address & 0x3f) as usize;
                 Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
@@ -119,6 +128,7 @@ where
 
     fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
+        debug!("CPU writes address {:08X}\tdata {:08X}\tsize: {}", address, data, amount);
         if address <= 0x3FFFFF {
             let ptr = &self.memory_space.as_ref().borrow_mut().rom[address as usize] as *const _
                 as *mut u8;
@@ -130,6 +140,8 @@ where
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_request_reg.borrow_mut() = data;
+            } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
+                self.controller_1.borrow_mut().write(data as u8);
             } else {
                 let address = (address & 0x3f) as usize;
                 self.write_ptr(
