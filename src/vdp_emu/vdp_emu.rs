@@ -9,17 +9,17 @@ use crate::signal_bus::{Signal, SignalBus};
 use super::{
     bus::BusVdp,
     registers::{
-        AUTO_INCREMENT, DMA_LENGTH_I, DMA_LENGTH_II, DMA_SOURC_I, DMA_SOURC_II, DMA_SOURC_III,
-        MODE_REGISTER_I, MODE_REGISTER_II,
+        RegisterSet, AUTO_INCREMENT, DMA_LENGTH_H, DMA_LENGTH_L, DMA_SOURCE_H, DMA_SOURCE_L, DMA_SOURCE_M, MODE_REGISTER_II
     },
     DmaMode, RamAccessMode, Status,
 };
 
 pub struct Vdp<T: BusVdp> {
-    pub(super) screen: Canvas,
+    screen: Canvas,
     pub(crate) vram_table: Canvas,
 
-    pub(super) registers: [u8; 24],
+    pub(crate) raw_registers: [u8; 24],
+    pub(crate) register_set: RegisterSet,
 
     pub(super) vram: [u8; 0x10000],
     pub(super) cram: [u8; 0x80],
@@ -65,11 +65,14 @@ where
         let mut vram_table = window.create_canvas(660, 0, 512, 1024, 256, 512);
         vram_table.set_clear_color(Color::from_u32(0xAAAACC));
         vram_table.clear();
+        let raw_registers = [0; 24];
+        let register_set = RegisterSet::new(&raw_registers);
         Self {
             screen,
             vram_table,
 
-            registers: [0; 24],
+            raw_registers: [0; 24],
+            register_set: register_set,
 
             vram: [0; 0x10000],
             cram: [0; 0x80],
@@ -116,7 +119,7 @@ where
         }
         if self.clock_counter % 286720 == 0 { // each frame?
             self.update_vram_table();
-            if self.registers[MODE_REGISTER_II] &0x20 == 0x20 {
+            if self.raw_registers[MODE_REGISTER_II] &0x20 == 0x20 {
                 self.signal_bus.borrow_mut().push_siganal(Signal::V_INTERRUPT);
             }
             update_screen = true;
@@ -143,7 +146,7 @@ where
     }
 
     fn dma_clock(&mut self) {
-        let dma_enabled = self.registers[MODE_REGISTER_II] & 0x10 != 0;
+        let dma_enabled = self.raw_registers[MODE_REGISTER_II] & 0x10 != 0;
         if dma_enabled && self.dma_run {
             let dma_length = self.get_dma_length();
             debug!("VDP: clock: dma enabled, dma cycles remined {}", dma_length);
@@ -153,7 +156,7 @@ where
                 DmaMode::RamFill => self.dma_ram_fill(),
             }
             if self.get_dma_length() == 0 {
-                self.registers[MODE_REGISTER_II] = self.registers[MODE_REGISTER_II] & !0x10;
+                self.raw_registers[MODE_REGISTER_II] = self.raw_registers[MODE_REGISTER_II] & !0x10;
                 self.dma_mode = None;
                 self.dma_run = false;
                 return;
@@ -250,28 +253,28 @@ where
     }
 
     fn get_dma_src_address(&self) -> u32 {
-        ((self.registers[DMA_SOURC_III] as u32) << 17)
-            | ((self.registers[DMA_SOURC_II] as u32) << 9)
-            | (self.registers[DMA_SOURC_I] as u32) << 1
+        ((self.raw_registers[DMA_SOURCE_H] as u32) << 17)
+            | ((self.raw_registers[DMA_SOURCE_M] as u32) << 9)
+            | (self.raw_registers[DMA_SOURCE_L] as u32) << 1
     }
 
     fn set_dma_src_address(&mut self, address: u32) {
-        self.registers[DMA_SOURC_I] = (address >> 1) as u8;
-        self.registers[DMA_SOURC_II] = (address >> 9) as u8;
-        self.registers[DMA_SOURC_III] = (address >> 17) as u8;
+        self.raw_registers[DMA_SOURCE_L] = (address >> 1) as u8;
+        self.raw_registers[DMA_SOURCE_M] = (address >> 9) as u8;
+        self.raw_registers[DMA_SOURCE_H] = (address >> 17) as u8;
     }
 
     fn get_dma_length(&self) -> u32 {
-        ((self.registers[DMA_LENGTH_II] as u32) << 8) | self.registers[DMA_LENGTH_I] as u32
+        ((self.raw_registers[DMA_LENGTH_H] as u32) << 8) | self.raw_registers[DMA_LENGTH_L] as u32
     }
 
     fn set_dma_length(&mut self, value: u32) {
-        self.registers[DMA_LENGTH_I] = value as u8;
-        self.registers[DMA_LENGTH_II] = (value >> 8) as u8;
+        self.raw_registers[DMA_LENGTH_L] = value as u8;
+        self.raw_registers[DMA_LENGTH_H] = (value >> 8) as u8;
     }
 
     pub(crate) fn get_address_increment(&self) -> u32 {
-        self.registers[AUTO_INCREMENT] as u32
+        self.raw_registers[AUTO_INCREMENT] as u32
     }
 
     fn update_counters(&mut self) {

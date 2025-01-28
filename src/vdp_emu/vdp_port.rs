@@ -1,6 +1,6 @@
 use log::debug;
 
-use super::{bus::BusVdp, registers::DMA_SOURC_III, vdp_emu::Vdp, DmaMode, RamAccessMode};
+use super::{bus::BusVdp, registers::DMA_SOURCE_H, vdp_emu::Vdp, DmaMode, RamAccessMode};
 
 const VDP_CTRL_OPERATION_TYPE_MASK: u16 = 0x7 << 13;
 const VDP_CTRL_REGISTER_SET_MODE_MASK: u16 = 0x1 << 15;
@@ -72,7 +72,7 @@ impl<T> Vdp<T> where T: BusVdp {
     fn set_register(&mut self, data: u16) {
         let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as u8;
         let register_data = data as u8;
-        self.registers[register_id as usize] = register_data;
+        self.raw_registers[register_id as usize] = register_data;
         debug!(
             "VDP: set register {:02X} to value {:02X}",
             register_id, register_data
@@ -96,7 +96,7 @@ impl<T> Vdp<T> where T: BusVdp {
             if self.address_setting_raw_word & 0x00000080 != 0 {
                 // it is dma transfer mode
                 let dma_mode_mask = ram_access_mode_mask >> 4;
-                let dma_src_reg = self.registers[DMA_SOURC_III];
+                let dma_src_reg = self.raw_registers[DMA_SOURCE_H];
                 if (dma_mode_mask == 0b10) && (dma_src_reg & 0x80 == 0) {
                     self.dma_mode = Some(DmaMode::BusToRamCopy);
                     self.dma_run = true;
