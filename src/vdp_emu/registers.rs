@@ -1,23 +1,25 @@
-pub(crate) const MODE_REGISTER_I: usize = 0;
-pub(crate) const MODE_REGISTER_II: usize = 1;
-pub(crate) const PLANE_A_NAME_TABLE_LOCATION: usize = 2;
-pub(crate) const WINDOW_NAME_TABLE_LOCATION: usize = 3;
-pub(crate) const PLANE_B_NAME_TABLE_LOCATION: usize = 4;
-pub(crate) const SPRITE_TABLE_LOCATION: usize = 5;
-pub(crate) const BACKGROUND_COLOR: usize = 7;
-pub(crate) const H_INTERRUPT_COUNTER: usize = 10;
-pub(crate) const MODE_REGISTER_III: usize = 11;
-pub(crate) const MODE_REGISTER_IV: usize = 12;
-pub(crate) const H_SCROLL_DATA_LOCATION: usize = 13;
-pub(crate) const AUTO_INCREMENT: usize = 15;
-pub(crate) const PLANE_SIZE: usize = 16;
-pub(crate) const WINDOW_PLANE_H_POSITION: usize = 17;
-pub(crate) const WINDOW_PLANE_V_POSITION: usize = 18;
-pub(crate) const DMA_LENGTH_L: usize = 19;
-pub(crate) const DMA_LENGTH_H: usize = 20;
-pub(crate) const DMA_SOURCE_L: usize = 21;
-pub(crate) const DMA_SOURCE_M: usize = 22;
-pub(crate) const DMA_SOURCE_H: usize = 23;
+use super::DmaMode;
+
+const MODE_REGISTER_I: usize = 0;
+const MODE_REGISTER_II: usize = 1;
+const PLANE_A_NAME_TABLE_LOCATION: usize = 2;
+const WINDOW_NAME_TABLE_LOCATION: usize = 3;
+const PLANE_B_NAME_TABLE_LOCATION: usize = 4;
+const SPRITE_TABLE_LOCATION: usize = 5;
+const BACKGROUND_COLOR: usize = 7;
+const H_INTERRUPT_COUNTER: usize = 10;
+const MODE_REGISTER_III: usize = 11;
+const MODE_REGISTER_IV: usize = 12;
+const H_SCROLL_DATA_LOCATION: usize = 13;
+const AUTO_INCREMENT: usize = 15;
+const PLANE_SIZE: usize = 16;
+const WINDOW_PLANE_H_POSITION: usize = 17;
+const WINDOW_PLANE_V_POSITION: usize = 18;
+const DMA_LENGTH_L: usize = 19;
+const DMA_LENGTH_H: usize = 20;
+const DMA_SOURCE_L: usize = 21;
+const DMA_SOURCE_M: usize = 22;
+const DMA_SOURCE_H: usize = 23;
 
 pub(crate) enum VScrollMode {
     Full,
@@ -68,12 +70,6 @@ pub(crate) enum WindowHPostion {
     Right,
 }
 
-pub(crate) enum RegDmaMode {
-    BusToRam,
-    FillRam,
-    CopyRam,
-}
-
 pub(crate) struct ModeRegister {
     data_i: *const u8,
     data_ii: *const u8,
@@ -103,7 +99,7 @@ impl ModeRegister {
         unsafe { *self.data_ii & 0x40 != 0 }
     }
 
-    pub(crate) fn v_interrupt_enabled(&self) -> bool {
+    pub(crate) fn vinterrupt_enabled(&self) -> bool {
         unsafe { *self.data_ii & 0x20 != 0 }
     }
 
@@ -164,6 +160,13 @@ impl ModeRegister {
                 0b110 => InterlaceMode::DoubleResolution,
                 _ => InterlaceMode::Prohibited,
             }
+        }
+    }
+    
+    pub(crate) fn clear_dma_enabled(&mut self) {
+        unsafe {
+            let data = *self.data_ii;
+            *(self.data_ii as *const _ as *mut u8) = data & !0x10;
         }
     }
 }
@@ -414,9 +417,9 @@ impl DmaLnegth {
         }
     }
 
-    pub(crate) fn length(&self) -> u32 {
+    pub(crate) fn length(&self) -> u16 {
         unsafe {
-            ((*self.data_h as u32) << 8) | *self.data_l as u32
+            ((*self.data_h as u16) << 8) | *self.data_l as u16
         }
     }
 }
@@ -436,12 +439,12 @@ impl DmaSource {
         }
     }
 
-    pub(crate) fn dma_mode(&self) -> RegDmaMode {
+    pub(crate) fn dma_mode(&self) -> DmaMode {
         unsafe {
             match *self.data_h & 0xC0 {
-                0x00 | 0x40 => RegDmaMode::BusToRam,
-                0x80 => RegDmaMode::FillRam,
-                0xC0 => RegDmaMode::CopyRam,
+                0x00 | 0x40 => DmaMode::BusToRam,
+                0x80 => DmaMode::FillRam,
+                0xC0 => DmaMode::CopyRam,
                 _ => panic!("Vdp: DmaSource register: unexpected dma mode bit mask")
             }
         }
@@ -468,6 +471,7 @@ impl Status {
 }
 
 pub(crate) struct RegisterSet {
+    raw_registers: Box<[u8; 24]>,
     pub(crate) mode_register: ModeRegister,
     pub(crate) plane_a_name_table_location: PlaneANameTableLocation,
     pub(crate) window_name_table_location: WindowNameTableLocation,
@@ -486,23 +490,44 @@ pub(crate) struct RegisterSet {
 }
 
 impl RegisterSet {
-    pub(crate) fn new(data: &[u8]) -> Self {
+    pub(crate) fn new() -> Self {
+        let raw_registers = Box::new([0u8; 24]);
+        let mode_register = ModeRegister::new(raw_registers.as_ref());
+        let plane_a_name_table_location = PlaneANameTableLocation::new(raw_registers.as_ref());
+        let window_name_table_location = WindowNameTableLocation::new(raw_registers.as_ref());
+        let plane_b_name_table_location = PlaneBNameTableLocation::new(raw_registers.as_ref());
+        let sprite_table_location = SpriteTableLocation::new(raw_registers.as_ref());
+        let background_color = BackgroundColor::new(raw_registers.as_ref());
+        let hinterrupt_counter = HInterruptCounter::new(raw_registers.as_ref());
+        let hscroll_data_location = HScrollDataLocation::new(raw_registers.as_ref());
+        let autoincrement = AutoIncrement::new(raw_registers.as_ref());
+        let plane_size = PlaneSize::new(raw_registers.as_ref());
+        let window_plane_hpostion = WindowPlaneHPostion::new(raw_registers.as_ref());
+        let window_plane_vpostion = WindowPlaneVPostion::new(raw_registers.as_ref());
+        let dma_lnegth = DmaLnegth::new(raw_registers.as_ref());
+        let dma_source = DmaSource::new(raw_registers.as_ref());
+        let status = Status::new();
         Self {
-            mode_register: ModeRegister::new(data),
-            plane_a_name_table_location: PlaneANameTableLocation::new(data),
-            window_name_table_location: WindowNameTableLocation::new(data),
-            plane_b_name_table_location: PlaneBNameTableLocation::new(data),
-            sprite_table_location: SpriteTableLocation::new(data),
-            background_color: BackgroundColor::new(data),
-            hinterrupt_counter: HInterruptCounter::new(data),
-            hscroll_data_location: HScrollDataLocation::new(data),
-            autoincrement: AutoIncrement::new(data),
-            plane_size: PlaneSize::new(data),
-            window_plane_hpostion: WindowPlaneHPostion::new(data),
-            window_plane_vpostion: WindowPlaneVPostion::new(data),
-            dma_lnegth: DmaLnegth::new(data),
-            dma_source: DmaSource::new(data),
-            status: Status::new(),
+            raw_registers,
+            mode_register,
+            plane_a_name_table_location,
+            window_name_table_location,
+            plane_b_name_table_location,
+            sprite_table_location,
+            background_color,
+            hinterrupt_counter,
+            hscroll_data_location,
+            autoincrement,
+            plane_size,
+            window_plane_hpostion,
+            window_plane_vpostion,
+            dma_lnegth,
+            dma_source,
+            status,
         }
+    }
+
+    pub(crate) fn set_register_by_id(&mut self, reg_id: usize, data: u8) {
+        self.raw_registers[reg_id] = data;
     }
 }

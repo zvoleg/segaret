@@ -71,18 +71,19 @@ enum Status {
     FIFO_EMPTY = 9,
 }
 
+#[derive(PartialEq)]
 enum DmaMode {
-    BusToRamCopy,
-    RamToRamCopy,
-    RamFill,
+    BusToRam,
+    CopyRam,
+    FillRam,
 }
 
 impl Display for DmaMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mode_str = match self {
-            DmaMode::BusToRamCopy => "memory to vdp ram",
-            DmaMode::RamToRamCopy => "vdp ram to vdp ram copy",
-            DmaMode::RamFill => "vdp ram filling",
+            DmaMode::BusToRam => "memory to vdp ram",
+            DmaMode::CopyRam => "vdp ram to vdp ram copy",
+            DmaMode::FillRam => "vdp ram filling",
         };
         write!(f, "{}", mode_str)
     }

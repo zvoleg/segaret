@@ -1,6 +1,6 @@
 use log::debug;
 
-use super::{bus::BusVdp, registers::DMA_SOURCE_H, vdp_emu::Vdp, DmaMode, RamAccessMode};
+use super::{bus::BusVdp, vdp_emu::Vdp, DmaMode, RamAccessMode};
 
 const VDP_CTRL_OPERATION_TYPE_MASK: u16 = 0x7 << 13;
 const VDP_CTRL_REGISTER_SET_MODE_MASK: u16 = 0x1 << 15;
@@ -24,33 +24,34 @@ where
             RamAccessMode::VSramR => (),
             _ => (), // wron access mode just ignoring (by docks)
         }
-        self.ram_address += self.get_address_increment();
+        self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         Ok(0)
     }
 
     fn write_data_port(&mut self, data: u16) -> Result<(), ()> {
-        if let Some(DmaMode::RamFill) = self.dma_mode {
+        if let Some(DmaMode::FillRam) = self.dma_mode {
             self.dma_run = true;
             self.dma_data_wait = false;
         } else {
-            debug!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.ram_address);
+            debug!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.vdp_ram_address);
             match self.ram_access_mode {
                 RamAccessMode::VramW => unsafe {
-                    let ptr = self.vram.as_ptr().offset(self.ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
                     *ptr = data;
                 },
                 RamAccessMode::CramW => unsafe {
-                    let ptr = self.cram.as_ptr().offset(self.ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
                     *ptr = data;
                 },
                 RamAccessMode::VSramW => unsafe {
-                    let ptr = self.vsram.as_ptr().offset(self.ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
                     *ptr = data;
                 },
                 _ => (), // wron access mode just ignoring (by docks)
             }
-            self.ram_address += self.get_address_increment();
+            self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         }
+        self.data_port_reg = data;
         Ok(())
     }
 
@@ -70,9 +71,9 @@ where
 
 impl<T> Vdp<T> where T: BusVdp {
     fn set_register(&mut self, data: u16) {
-        let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as u8;
+        let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as usize;
         let register_data = data as u8;
-        self.raw_registers[register_id as usize] = register_data;
+        self.register_set.set_register_by_id(register_id, register_data);
         debug!(
             "VDP: set register {:02X} to value {:02X}",
             register_id, register_data
@@ -96,28 +97,30 @@ impl<T> Vdp<T> where T: BusVdp {
             if self.address_setting_raw_word & 0x00000080 != 0 {
                 // it is dma transfer mode
                 let dma_mode_mask = ram_access_mode_mask >> 4;
-                let dma_src_reg = self.raw_registers[DMA_SOURCE_H];
-                if (dma_mode_mask == 0b10) && (dma_src_reg & 0x80 == 0) {
-                    self.dma_mode = Some(DmaMode::BusToRamCopy);
+                let reg_dma_mode = self.register_set.dma_source.dma_mode();
+                if (dma_mode_mask == 0b10) && reg_dma_mode == DmaMode::BusToRam {
+                    self.dma_mode = Some(DmaMode::BusToRam);
                     self.dma_run = true;
-                } else if (dma_mode_mask == 0b10) && (dma_src_reg & 0x80 != 0) {
-                    self.dma_mode = Some(DmaMode::RamFill);
+                } else if (dma_mode_mask == 0b10) && (reg_dma_mode == DmaMode::FillRam) {
+                    self.dma_mode = Some(DmaMode::FillRam);
                     self.dma_data_wait = true;
-                } else if (dma_mode_mask == 0b11) && (dma_src_reg & 0xC0 != 0) {
-                    self.dma_mode = Some(DmaMode::RamToRamCopy);
+                } else if (dma_mode_mask == 0b11) && reg_dma_mode == DmaMode::CopyRam {
+                    self.dma_mode = Some(DmaMode::CopyRam);
                     self.dma_run = true;
                 } else {
-                    panic!("VDP: write_control_port: unexpected dma mode bits sequence");
+                    panic!("VDP: write_control_port: unexpected dma mode bits sequence. dma_mode_mask = '{:02b}'\treg_dma_mod = '{}'", dma_mode_mask, reg_dma_mode);
                 }
+                self.dma_src_address = self.register_set.dma_source.src_address();
+                self.dma_length = self.register_set.dma_lnegth.length();
                 debug!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
             }
             // it is address set mode
             self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
-            self.ram_address = address;
+            self.vdp_ram_address = address;
 
             debug!(
                 "VDP: set ram access mode '{}' and address {:04X}",
-                self.ram_access_mode, self.ram_address
+                self.ram_access_mode, self.vdp_ram_address
             );
         }
         self.address_setting_latch = !self.address_setting_latch
