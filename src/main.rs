@@ -67,7 +67,8 @@ fn main() {
         });
         if auto {
             let mut update_screen = false;
-            while !update_screen {
+            let mut clock_counter = 0;
+            while !update_screen && clock_counter < 71680 {
                 let mut vdp_clocks = 1;
                 if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
                     m68k.interrupt(6);
@@ -86,7 +87,7 @@ fn main() {
                         update_screen = update
                     }
                 }
-                vdp_clocks_accum += vdp_clocks;
+                clock_counter += vdp_clocks;
             }
             true
         } else if manual_clock {
