@@ -29,9 +29,12 @@ where
     }
 
     fn write_data_port(&mut self, data: u16) -> Result<(), ()> {
-        if let Some(DmaMode::FillRam) = self.dma_mode {
-            self.dma_run = true;
-            self.dma_data_wait = false;
+        if let Some(DmaMode::FillRam) = self.dma_mode  {
+            let dma_enabled = self.register_set.mode_register.dma_enabled();
+            if dma_enabled {
+                self.dma_run = true;
+                self.dma_data_wait = false;
+            }
         } else {
             debug!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.vdp_ram_address);
             match self.ram_access_mode {
@@ -99,15 +102,16 @@ impl<T> Vdp<T> where T: BusVdp {
                 // it is dma transfer mode
                 let dma_mode_mask = ram_access_mode_mask >> 4;
                 let reg_dma_mode = self.register_set.dma_source.dma_mode();
+                let dma_enabled = self.register_set.mode_register.dma_enabled();
                 if (dma_mode_mask == 0b10) && reg_dma_mode == DmaMode::BusToRam {
                     self.dma_mode = Some(DmaMode::BusToRam);
-                    self.dma_run = true;
+                    self.dma_run = dma_enabled;
                 } else if (dma_mode_mask == 0b10) && (reg_dma_mode == DmaMode::FillRam) {
                     self.dma_mode = Some(DmaMode::FillRam);
                     self.dma_data_wait = true;
                 } else if (dma_mode_mask == 0b11) && reg_dma_mode == DmaMode::CopyRam {
                     self.dma_mode = Some(DmaMode::CopyRam);
-                    self.dma_run = true;
+                    self.dma_run = dma_enabled;
                 } else {
                     panic!("VDP: write_control_port: unexpected dma mode bits sequence. dma_mode_mask = '{:02b}'\treg_dma_mod = '{}'", dma_mode_mask, reg_dma_mode);
                 }
