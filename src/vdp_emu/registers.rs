@@ -40,17 +40,17 @@ pub(crate) enum HCellMode {
 }
 
 pub(crate) enum VPlaneSize {
-    V32Cell,
-    V64Cell,
-    V128Cell,
-    Prohibited,
+    V32Cell = 32,
+    V64Cell = 64,
+    V128Cell = 128,
+    Prohibited = 0,
 }
 
 pub(crate) enum HPlaneSize {
-    H32Cell,
-    H64Cell,
-    H128Cell,
-    Prohibited,
+    H32Cell = 32,
+    H64Cell = 64,
+    H128Cell = 128,
+    Prohibited = 0,
 }
 
 pub(crate) enum InterlaceMode {
@@ -171,58 +171,58 @@ impl ModeRegister {
     }
 }
 
-pub(crate) struct PlaneANameTableLocation {
+pub(crate) struct PlaneATableLocation {
     data: *const u8,
 }
 
-impl PlaneANameTableLocation {
+impl PlaneATableLocation {
     pub(crate) fn new(data: &[u8]) -> Self {
         Self {
             data: &data[PLANE_A_NAME_TABLE_LOCATION],
         }
     }
 
-    pub(crate) fn plane_a_address(&self) -> u32 {
+    pub(crate) fn address(&self) -> usize {
         unsafe {
-            let mask = (*self.data >> 3) as u32 & 0x7;
+            let mask = (*self.data >> 3) as usize & 0x7;
             mask << 13
         }
     }
 }
 
-pub(crate) struct WindowNameTableLocation {
+pub(crate) struct WindowTableLocation {
     data: *const u8,
 }
 
-impl WindowNameTableLocation {
+impl WindowTableLocation {
     pub(crate) fn new(data: &[u8]) -> Self {
         Self {
             data: &data[WINDOW_NAME_TABLE_LOCATION],
         }
     }
 
-    pub(crate) fn window_address(&self) -> u32 {
+    pub(crate) fn address(&self) -> usize {
         unsafe {
-            let mask = (*self.data >> 1) as u32 & 0x1F;
+            let mask = (*self.data >> 1) as usize & 0x1F;
             mask << 11
         }
     }
 }
 
-pub(crate) struct PlaneBNameTableLocation {
+pub(crate) struct PlaneBTableLocation {
     data: *const u8,
 }
 
-impl PlaneBNameTableLocation {
+impl PlaneBTableLocation {
     pub(crate) fn new(data: &[u8]) -> Self {
         Self {
             data: &data[PLANE_B_NAME_TABLE_LOCATION],
         }
     }
 
-    pub(crate) fn plane_b_address(&self) -> u32 {
+    pub(crate) fn address(&self) -> usize {
         unsafe {
-            let mask = *self.data as u32 & 0x03;
+            let mask = *self.data as usize & 0x7;
             mask << 13
         }
     }
@@ -258,7 +258,7 @@ impl BackgroundColor {
         }
     }
 
-    pub(crate) fn pallet_id(&self) -> usize {
+    pub(crate) fn palette_id(&self) -> usize {
         unsafe { (*self.data & 0x30) as usize >> 4 }
     }
 
@@ -468,14 +468,18 @@ impl Status {
     pub(crate) fn new() -> Self {
         Self { data: 0 }
     }
+
+    pub(crate) fn read(&self) -> u8 {
+        self.data
+    }
 }
 
 pub(crate) struct RegisterSet {
     raw_registers: Box<[u8; 24]>,
     pub(crate) mode_register: ModeRegister,
-    pub(crate) plane_a_name_table_location: PlaneANameTableLocation,
-    pub(crate) window_name_table_location: WindowNameTableLocation,
-    pub(crate) plane_b_name_table_location: PlaneBNameTableLocation,
+    pub(crate) plane_a_table_location: PlaneATableLocation,
+    pub(crate) window_table_location: WindowTableLocation,
+    pub(crate) plane_b_table_location: PlaneBTableLocation,
     pub(crate) sprite_table_location: SpriteTableLocation,
     pub(crate) background_color: BackgroundColor,
     pub(crate) hinterrupt_counter: HInterruptCounter,
@@ -493,9 +497,9 @@ impl RegisterSet {
     pub(crate) fn new() -> Self {
         let raw_registers = Box::new([0u8; 24]);
         let mode_register = ModeRegister::new(raw_registers.as_ref());
-        let plane_a_name_table_location = PlaneANameTableLocation::new(raw_registers.as_ref());
-        let window_name_table_location = WindowNameTableLocation::new(raw_registers.as_ref());
-        let plane_b_name_table_location = PlaneBNameTableLocation::new(raw_registers.as_ref());
+        let plane_a_table_location = PlaneATableLocation::new(raw_registers.as_ref());
+        let window_table_location = WindowTableLocation::new(raw_registers.as_ref());
+        let plane_b_table_location = PlaneBTableLocation::new(raw_registers.as_ref());
         let sprite_table_location = SpriteTableLocation::new(raw_registers.as_ref());
         let background_color = BackgroundColor::new(raw_registers.as_ref());
         let hinterrupt_counter = HInterruptCounter::new(raw_registers.as_ref());
@@ -510,9 +514,9 @@ impl RegisterSet {
         Self {
             raw_registers,
             mode_register,
-            plane_a_name_table_location,
-            window_name_table_location,
-            plane_b_name_table_location,
+            plane_a_table_location,
+            window_table_location,
+            plane_b_table_location,
             sprite_table_location,
             background_color,
             hinterrupt_counter,

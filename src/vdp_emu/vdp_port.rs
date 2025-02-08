@@ -37,15 +37,15 @@ where
             match self.ram_access_mode {
                 RamAccessMode::VramW => unsafe {
                     let ptr = self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
-                    *ptr = data;
+                    *ptr = data.to_be();
                 },
                 RamAccessMode::CramW => unsafe {
                     let ptr = self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
-                    *ptr = data;
+                    *ptr = data.to_be();
                 },
                 RamAccessMode::VSramW => unsafe {
                     let ptr = self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
-                    *ptr = data;
+                    *ptr = data.to_be();
                 },
                 _ => (), // wron access mode just ignoring (by docks)
             }
@@ -56,7 +56,8 @@ where
     }
 
     fn read_control_port(&self) -> Result<u32, ()> {
-        Ok(self.status_register as u32)
+        let status = self.register_set.status.read();
+        Ok(status as u32)
     }
 
     fn write_control_port(&mut self, data: u16) -> Result<(), ()> {

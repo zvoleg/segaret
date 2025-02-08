@@ -2,15 +2,11 @@ use std::{cell::RefCell, rc::Rc};
 
 use spriter::{window::Window, Canvas, Color};
 
-use log::{info, debug};
+use log::debug;
 
 use crate::signal_bus::{Signal, SignalBus};
 
-use super::{
-    bus::BusVdp,
-    registers::RegisterSet,
-    DmaMode, RamAccessMode, Status,
-};
+use super::{bus::BusVdp, registers::RegisterSet, DmaMode, RamAccessMode, Status};
 
 pub struct Vdp<T: BusVdp> {
     screen: Canvas,
@@ -21,8 +17,6 @@ pub struct Vdp<T: BusVdp> {
     pub(crate) vram: [u8; 0x10000],
     pub(crate) cram: [u8; 0x80],
     pub(crate) vsram: [u8; 0x50],
-
-    pub(crate) status_register: u16,
 
     pub(crate) v_counter: u16,
     pub(crate) h_counter: u16,
@@ -50,7 +44,7 @@ pub struct Vdp<T: BusVdp> {
 
     pub(crate) dma_src_address: u32,
     pub(crate) dma_length: u16,
- 
+
     clock_counter: u64,
 }
 
@@ -70,13 +64,11 @@ where
             screen,
             vram_table,
 
-            register_set: register_set,
+            register_set,
 
             vram: [0; 0x10000],
             cram: [0; 0x80],
             vsram: [0; 0x50],
-
-            status_register: 0x3400,
 
             v_counter: 0,
             h_counter: 0,
@@ -118,14 +110,55 @@ where
         if let Some(_) = self.dma_mode.as_ref() {
             self.dma_clock();
         }
-        if self.clock_counter % 286720 == 0 { // each frame?
-            self.update_vram_table_on_screen();
-            if self.register_set.mode_register.vinterrupt_enabled() {
-                self.signal_bus.borrow_mut().push_siganal(Signal::V_INTERRUPT);
+
+        if self.register_set.mode_register.display_enabled() {
+            let bg_palette_id = self.register_set.background_color.palette_id();
+            let bg_color_id = self.register_set.background_color.color_id();
+            let mut color = self.get_color(bg_palette_id, bg_color_id);
+
+            let hplane_size = self.register_set.plane_size.hplane_size();
+            let vplane_size = self.register_set.plane_size.vplane_size();
+
+            let plane_b_base = self.register_set.plane_a_table_location.address();
+            let plane_b_offset =
+                ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
+            let b_h = (self.vram[plane_b_base + plane_b_offset] as u16) << 8;
+            let b_l = self.vram[plane_b_base + 1 + plane_b_offset] as u16;
+            let plane_b_data = b_h | b_l;
+            let b_palette_id = (plane_b_data >> 11) & 0x3;
+            let sprite_id = (plane_b_data & 0x7FF) * 32;
+            let sprite_point_address =
+                sprite_id + (self.h_counter % 8) / 2 + (self.v_counter % 8) * 4;
+            let sprite_byte = self.vram[sprite_point_address as usize];
+            let b_color_id = if self.h_counter % 2 == 0 {
+                sprite_byte.rotate_left(4) & 0xF
+            } else {
+                sprite_byte & 0xF
+            };
+            color = self.get_color(b_palette_id as usize, b_color_id as usize);
+
+            self.screen
+                .set_pixel(self.h_counter as i32, self.v_counter as i32, color)
+                .unwrap();
+            self.h_counter += 1;
+            if self.h_counter >= 320 {
+                self.h_counter = 0;
+                self.v_counter += 1;
             }
-            update_screen = true;
+            if self.v_counter >= 224 {
+                self.v_counter = 0;
+                update_screen = true;
+                self.update_vram_table_on_screen();
+
+                if self.register_set.mode_register.vinterrupt_enabled() {
+                    self.signal_bus
+                        .borrow_mut()
+                        .push_siganal(Signal::V_INTERRUPT);
+                    debug!("VDP: send vinterrupt signtal");
+                }
+            }
         }
-        self.clock_counter = self.clock_counter.wrapping_add(1);
+
         update_screen
         // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
         //     self.interrupt_line.borrow_mut().send(4);
@@ -148,7 +181,10 @@ where
 
     fn dma_clock(&mut self) {
         if self.register_set.mode_register.dma_enabled() && self.dma_run {
-            debug!("VDP: clock: dma enabled, dma cycles remined {}", self.dma_length);
+            debug!(
+                "VDP: clock: dma enabled, dma cycles remined {}",
+                self.dma_length
+            );
             match self.dma_mode.as_ref().unwrap() {
                 DmaMode::BusToRam => self.dma_bus_to_ram_copy(),
                 DmaMode::CopyRam => (),
@@ -214,6 +250,30 @@ where
         self.dma_length -= 1;
     }
 
+    fn get_color(&self, palette_id: usize, color_id: usize) -> Color {
+        let converter = |b: u16| -> u32 {
+            match b {
+                0x0 => 0x00u32,
+                0x2 => 0x34,
+                0x4 => 0x57,
+                0x6 => 0x74,
+                0x8 => 0x90,
+                0xA => 0xAC,
+                0xC => 0xCE,
+                0xE => 0xFF,
+                _ => 0x00,
+            }
+        };
+        let hb = self.cram[palette_id * 32 + color_id * 2];
+        let lb = self.cram[palette_id * 32 + color_id * 2 + 1];
+        let raw_color = (hb as u16) << 8 | lb as u16;
+        let r = converter(raw_color & 0xF);
+        let g = converter(raw_color >> 4 & 0xF);
+        let b = converter(raw_color >> 8 & 0xF);
+        let color_code = r << 16 | g << 8 | b;
+        Color::from_u32(color_code)
+    }
+
     fn update_vram_table_on_screen(&mut self) {
         let color_table = [
             Color::from_u32(0xCCCCFF),
@@ -241,7 +301,9 @@ where
                     let x = (tile_idx % 32) * 8 + (byte_idx % 4) * 2 + pixel_num;
                     let y = (tile_idx / 32) * 8 + byte_idx / 4;
                     let dot = ((data_byte >> (4 * pixel_num)) & 0xF) as usize;
-                    self.vram_table.set_pixel(x as i32, y as i32, color_table[dot]).unwrap();
+                    self.vram_table
+                        .set_pixel(x as i32, y as i32, color_table[dot])
+                        .unwrap();
                 }
             }
         }
@@ -262,10 +324,10 @@ where
         }
 
         if self.h_counter == 0xE4 {
-            self.set_status(Status::H_BLANKING, true);
+            // self.set_status(Status::H_BLANKING, true);
         }
         if self.h_counter == 0x08 {
-            self.set_status(Status::H_BLANKING, false);
+            // self.set_status(Status::H_BLANKING, false);
         }
 
         if !self.v_counter_jumped && self.v_counter == 0xEB {
@@ -277,25 +339,16 @@ where
             self.v_counter_jumped = false;
 
             // self.line_intrpt_counter = self.line_intrpt_counter_value;
-            self.set_status(Status::V_INTRPT_PENDING, false);
+            // self.set_status(Status::V_INTRPT_PENDING, false);
         }
 
         if self.v_counter == 0xE0 && self.h_counter == 0xAA {
-            self.set_status(Status::V_BLANKING, true);
+            // self.set_status(Status::V_BLANKING, true);
         }
         if self.v_counter == 0xFF && self.h_counter == 0xAA {
-            self.set_status(Status::V_BLANKING, false);
+            // self.set_status(Status::V_BLANKING, false);
         }
 
         // TODO add update line itrpt countr on lines between 225 and 261
-    }
-
-    fn set_status(&mut self, status: Status, set: bool) {
-        let mask = 1 << status as u16;
-        if set {
-            self.status_register = self.status_register | mask;
-        } else {
-            self.status_register = self.status_register & !mask;
-        }
     }
 }
