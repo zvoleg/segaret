@@ -3,6 +3,7 @@ use std::fmt::Display;
 pub mod bus;
 pub mod vdp_emu;
 pub mod vdp_port;
+pub mod dot;
 
 mod registers;
 

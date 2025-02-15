@@ -6,7 +6,7 @@ use log::debug;
 
 use crate::signal_bus::{Signal, SignalBus};
 
-use super::{bus::BusVdp, registers::RegisterSet, DmaMode, RamAccessMode, Status};
+use super::{bus::BusVdp, dot::{Dot, Priority}, registers::RegisterSet, DmaMode, RamAccessMode};
 
 pub struct Vdp<T: BusVdp> {
     screen: Canvas,
@@ -114,31 +114,30 @@ where
         if self.register_set.mode_register.display_enabled() {
             let bg_palette_id = self.register_set.background_color.palette_id();
             let bg_color_id = self.register_set.background_color.color_id();
-            let mut color = self.get_color(bg_palette_id, bg_color_id);
+            let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
 
-            let hplane_size = self.register_set.plane_size.hplane_size();
-            let vplane_size = self.register_set.plane_size.vplane_size();
+            let plane_a_base_address = self.register_set.plane_a_table_location.address();
+            let plane_a_dot = self.get_plane_dot(plane_a_base_address);
 
-            let plane_b_base = self.register_set.plane_a_table_location.address();
-            let plane_b_offset =
-                ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
-            let b_h = (self.vram[plane_b_base + plane_b_offset] as u16) << 8;
-            let b_l = self.vram[plane_b_base + 1 + plane_b_offset] as u16;
-            let plane_b_data = b_h | b_l;
-            let b_palette_id = (plane_b_data >> 11) & 0x3;
-            let sprite_id = (plane_b_data & 0x7FF) * 32;
-            let sprite_point_address =
-                sprite_id + (self.h_counter % 8) / 2 + (self.v_counter % 8) * 4;
-            let sprite_byte = self.vram[sprite_point_address as usize];
-            let b_color_id = if self.h_counter % 2 == 0 {
-                sprite_byte.rotate_left(4) & 0xF
-            } else {
-                sprite_byte & 0xF
+            let plane_b_base_address = self.register_set.plane_b_table_location.address();
+            let plane_b_dot = self.get_plane_dot(plane_b_base_address);
+
+            let dot = {
+                let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                if let Some(plane_color) = plane_b_dot.color {
+                    if plane_b_dot.priority == Priority::High {
+                        color = plane_color;
+                    }
+                }
+                if let Some(plane_color) = plane_a_dot.color {
+                    if plane_a_dot.priority == Priority::High {
+                        color = plane_color;
+                    }
+                }
+                color
             };
-            color = self.get_color(b_palette_id as usize, b_color_id as usize);
-
             self.screen
-                .set_pixel(self.h_counter as i32, self.v_counter as i32, color)
+                .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
                 .unwrap();
             self.h_counter += 1;
             if self.h_counter >= 320 {
@@ -248,6 +247,33 @@ where
         }
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         self.dma_length -= 1;
+    }
+
+    fn get_plane_dot(&self, plane_attribute_address: usize) -> Dot {
+        let hplane_size = self.register_set.plane_size.hplane_size();
+        let plane_b_offset = ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
+        let byte_h = (self.vram[plane_attribute_address + plane_b_offset] as u16) << 8;
+        let byte_l = self.vram[plane_attribute_address + 1 + plane_b_offset] as u16;
+        let attribute_data = byte_h | byte_l;
+        
+        let palette_id = (attribute_data >> 11) & 0x3;
+        let sprite_id = (attribute_data & 0x7FF) * 32;
+        let sprite_point_address =
+            sprite_id + (self.h_counter % 8) / 2 + (self.v_counter % 8) * 4;
+        let sprite_byte = self.vram[sprite_point_address as usize];
+        let color_id = if self.h_counter % 2 == 0 {
+            sprite_byte.rotate_left(4) & 0xF
+        } else {
+            sprite_byte & 0xF
+        };
+        let color  = if color_id != 0 {
+            Some(self.get_color(palette_id as usize, color_id as usize))
+        } else {
+            None
+        };
+
+        let priority = if attribute_data & 0x8000 != 0 { Priority:: High} else { Priority::Low };
+        Dot::new(color, priority)
     }
 
     fn get_color(&self, palette_id: usize, color_id: usize) -> Color {
