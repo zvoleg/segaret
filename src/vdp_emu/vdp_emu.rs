@@ -255,16 +255,31 @@ where
         let byte_h = (self.vram[plane_attribute_address + plane_b_offset] as u16) << 8;
         let byte_l = self.vram[plane_attribute_address + 1 + plane_b_offset] as u16;
         let attribute_data = byte_h | byte_l;
+
         
-        let palette_id = (attribute_data >> 11) & 0x3;
+        let palette_id = (attribute_data >> 13) & 0x3;
         let sprite_id = (attribute_data & 0x7FF) * 32;
-        let sprite_point_address =
-            sprite_id + (self.h_counter % 8) / 2 + (self.v_counter % 8) * 4;
+        
+        // each sprite byte contains 2 dots
+        let h_flip = attribute_data & 0x0800!= 0;
+        let h_dot_offset = {
+            let offset = (self.h_counter % 8) / 2;
+            if h_flip { 3 - offset } else { offset }
+        };
+        // and each sprite row contains 4 bytes
+        let v_dot_offset = {
+            let v_flip = attribute_data & 0x1000 != 0;
+            let offset: u16 = (self.v_counter % 8) * 4;
+            if v_flip { 28 - offset } else { offset }
+        };
+
+        let sprite_point_address = sprite_id + h_dot_offset + v_dot_offset;
         let sprite_byte = self.vram[sprite_point_address as usize];
-        let color_id = if self.h_counter % 2 == 0 {
-            sprite_byte.rotate_left(4) & 0xF
+        // let color_id = if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF };
+        let color_id = if !h_flip {
+            if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF }
         } else {
-            sprite_byte & 0xF
+            if self.h_counter % 2 == 0 { sprite_byte & 0xF } else { sprite_byte.rotate_left(4) & 0xF }
         };
         let color  = if color_id != 0 {
             Some(self.get_color(palette_id as usize, color_id as usize))
