@@ -136,23 +136,24 @@ impl<T: BusM68k> Instruction<T> for MOVEM {
             }
         }
 
-        let address_reg_ptr = operand.address_register_ptr.unwrap();
-        let base_address = operand.operand_address;
-        match self.addressing_mode_type {
-            AddressingModeType::AddressRegisterPostIncrement => {
-                address_reg_ptr.write(
-                    base_address + src_offsets.len() as u32 * self.size as u32,
-                    Size::Long,
-                )?;
-            }
-            AddressingModeType::AddressRegisterPreDecrement => {
-                address_reg_ptr.write(
-                    base_address - (src_offsets.len() - 1) as u32 * self.size as u32,
-                    Size::Long,
-                )?;
-            }
-            _ => (),
-        };
+        if let Some(address_reg_ptr) = operand.address_register_ptr {
+            let base_address = operand.operand_address;
+            match self.addressing_mode_type {
+                AddressingModeType::AddressRegisterPostIncrement => {
+                    address_reg_ptr.write(
+                        base_address + src_offsets.len() as u32 * self.size as u32,
+                        Size::Long,
+                    )?;
+                }
+                AddressingModeType::AddressRegisterPreDecrement => {
+                    address_reg_ptr.write(
+                        base_address - (src_offsets.len() - 1) as u32 * self.size as u32,
+                        Size::Long,
+                    )?;
+                }
+                _ => (),
+            };
+        }
         Ok(())
     }
 }

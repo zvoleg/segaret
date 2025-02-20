@@ -176,7 +176,7 @@ fn generate_suba<T: BusM68k>(table: &mut [Operation<T>]) {
                     let src_am = am_type.addressing_mode_by_type(idx, size);
                     let dst_am = Box::new(AddressRegister {
                         reg: address_reg_idx,
-                        size,
+                        size: Size::Long,
                     });
 
                     let base_mask = instruction.generate_mask();

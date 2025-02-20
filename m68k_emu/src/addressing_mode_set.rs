@@ -6,7 +6,7 @@ use crate::{
     operand::Operand,
     primitives::{memory::MemoryPtr, Pointer},
     register_set::{RegisterSet, RegisterType},
-    SignExtending, Size,
+    SignExtending, Size, STACK_REGISTER,
 };
 
 #[derive(Clone, Copy, PartialEq)]
@@ -107,13 +107,18 @@ impl AddressingMode for AddressRegisterPostIncrement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: Rc<dyn BusM68k>) -> Result<Operand, ()> {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long)?;
-        address_register_ptr.write(address.wrapping_add(self.size as u32), Size::Long).unwrap();
+        let size = if self.reg == STACK_REGISTER && self.size == Size::Byte {
+            Size::Word
+        } else {
+            self.size
+        };
+        address_register_ptr.write(address.wrapping_add(size as u32), Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,
             Some(address_register_ptr),
             address,
-            self.size,
+            size,
         ))
     }
 
@@ -135,14 +140,19 @@ impl AddressingMode for AddressRegisterPreDecrement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: Rc<dyn BusM68k>) -> Result<Operand, ()> {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let mut address = address_register_ptr.read(Size::Long)?;
-        address = address.wrapping_sub(self.size as u32);
+        let size = if self.reg == STACK_REGISTER && self.size == Size::Byte {
+            Size::Word
+        } else {
+            self.size
+        };
+        address = address.wrapping_sub(size as u32);
         address_register_ptr.write(address, Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,
             Some(address_register_ptr),
             address,
-            self.size,
+            size,
         ))
     }
 
@@ -296,7 +306,7 @@ impl AddressingMode for AbsShort {
     }
 
     fn disassembly(&self, extension_word: u32) -> String {
-        format!("({:04X})", extension_word)
+        format!("({:04X})", extension_word.sign_extend(Size::Word))
     }
 
     fn extension_word_length(&self) -> u32 {
