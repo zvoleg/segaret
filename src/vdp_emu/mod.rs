@@ -59,19 +59,6 @@ impl RamAccessMode {
     }
 }
 
-enum Status {
-    PAL = 0,
-    DMA_PROGRESS = 1,
-    H_BLANKING = 2,
-    V_BLANKING = 3,
-    ODD_FRAME = 4,
-    SPITE_COLLISION = 5,
-    SPRITE_OVERFLOW = 6,
-    V_INTRPT_PENDING = 7,
-    FIFO_FULL = 8,
-    FIFO_EMPTY = 9,
-}
-
 #[derive(PartialEq)]
 enum DmaMode {
     BusToRam,

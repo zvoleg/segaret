@@ -21,6 +21,19 @@ const DMA_SOURCE_L: usize = 21;
 const DMA_SOURCE_M: usize = 22;
 const DMA_SOURCE_H: usize = 23;
 
+pub(crate) enum StatusFlag {
+    PAL = 0,
+    DMA_PROGRESS = 1,
+    H_BLANKING = 2,
+    V_BLANKING = 3,
+    ODD_FRAME = 4,
+    SPITE_COLLISION = 5,
+    SPRITE_OVERFLOW = 6,
+    V_INTRPT_PENDING = 7,
+    FIFO_FULL = 8,
+    FIFO_EMPTY = 9,
+}
+
 pub(crate) enum VScrollMode {
     Full,
     Each2Cell,
@@ -203,8 +216,8 @@ impl WindowTableLocation {
 
     pub(crate) fn address(&self) -> usize {
         unsafe {
-            let mask = (*self.data >> 1) as usize & 0x1F;
-            mask << 11
+            let mask = (*self.data) as usize & 0x7E;
+            mask << 10
         }
     }
 }
@@ -471,6 +484,14 @@ impl Status {
 
     pub(crate) fn read(&self) -> u8 {
         self.data
+    }
+
+    pub(crate) fn set_flag(&mut self, flag: StatusFlag, set: bool) {
+        if set {
+            self.data |= (1 << flag as u8);
+        } else {
+            self.data &= !(1 << flag as u8);
+        }
     }
 }
 

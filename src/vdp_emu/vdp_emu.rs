@@ -6,7 +6,7 @@ use log::debug;
 
 use crate::signal_bus::{Signal, SignalBus};
 
-use super::{bus::BusVdp, dot::{Dot, Priority}, registers::RegisterSet, DmaMode, RamAccessMode};
+use super::{bus::BusVdp, dot::{Dot, Priority}, registers::{RegisterSet, StatusFlag}, DmaMode, RamAccessMode};
 
 pub struct Vdp<T: BusVdp> {
     screen: Canvas,
@@ -112,48 +112,62 @@ where
         }
 
         if self.register_set.mode_register.display_enabled() {
-            let bg_palette_id = self.register_set.background_color.palette_id();
-            let bg_color_id = self.register_set.background_color.color_id();
-            let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
+            if self.v_counter < 0xE0 {
+                let bg_palette_id = self.register_set.background_color.palette_id();
+                let bg_color_id = self.register_set.background_color.color_id();
+                let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
 
-            let plane_a_base_address = self.register_set.plane_a_table_location.address();
-            let plane_a_dot = self.get_plane_dot(plane_a_base_address);
+                let plane_a_base_address = self.register_set.plane_a_table_location.address();
+                let plane_a_dot = self.get_plane_dot(plane_a_base_address);
 
-            let plane_b_base_address = self.register_set.plane_b_table_location.address();
-            let plane_b_dot = self.get_plane_dot(plane_b_base_address);
+                let plane_b_base_address = self.register_set.plane_b_table_location.address();
+                let plane_b_dot = self.get_plane_dot(plane_b_base_address);
 
-            let dot = {
-                let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
-                if let Some(plane_color) = plane_b_dot.color {
-                    if plane_b_dot.priority == Priority::High {
-                        color = plane_color;
+                let dot = {
+                    let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                    // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                    if let Some(plane_color) = plane_b_dot.color {
+                        if plane_b_dot.priority == Priority::High {
+                            color = plane_color;
+                        }
                     }
-                }
-                if let Some(plane_color) = plane_a_dot.color {
-                    if plane_a_dot.priority == Priority::High {
-                        color = plane_color;
+                    if let Some(plane_color) = plane_a_dot.color {
+                        if plane_a_dot.priority == Priority::High {
+                            color = plane_color;
+                        }
                     }
+                    color
+                };
+                self.screen
+                    .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
+                    .unwrap();
+                self.h_counter += 1;
+                if self.h_counter >= 320 {
+                    self.h_counter = 0;
+                    self.v_counter += 1;
                 }
-                color
-            };
-            self.screen
-                .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
-                .unwrap();
-            self.h_counter += 1;
-            if self.h_counter >= 320 {
-                self.h_counter = 0;
-                self.v_counter += 1;
-            }
-            if self.v_counter >= 224 {
-                self.v_counter = 0;
-                update_screen = true;
-                self.update_vram_table_on_screen();
+                if self.v_counter == 0xE0 {
+                    // self.v_counter = 0;
+                    update_screen = true;
+                    self.update_vram_table_on_screen();
 
-                if self.register_set.mode_register.vinterrupt_enabled() {
-                    self.signal_bus
-                        .borrow_mut()
-                        .push_siganal(Signal::V_INTERRUPT);
-                    debug!("VDP: send vinterrupt signtal");
+                    if self.register_set.mode_register.vinterrupt_enabled() {
+                        self.signal_bus
+                            .borrow_mut()
+                            .push_siganal(Signal::V_INTERRUPT);
+                        debug!("VDP: send vinterrupt signtal");
+                    }
+                    self.register_set.status.set_flag(StatusFlag::V_BLANKING, true);
+                }
+            } else {
+                self.h_counter += 1;
+                if self.h_counter >= 320 {
+                    self.h_counter = 0;
+                    self.v_counter += 1;
+                }
+                if self.v_counter == 0x1FF {
+                    self.v_counter = 0;
+                    self.register_set.status.set_flag(StatusFlag::V_BLANKING, false);
                 }
             }
         }
@@ -184,12 +198,14 @@ where
                 "VDP: clock: dma enabled, dma cycles remined {}",
                 self.dma_length
             );
+            self.register_set.status.set_flag(StatusFlag::DMA_PROGRESS, true);
             match self.dma_mode.as_ref().unwrap() {
                 DmaMode::BusToRam => self.dma_bus_to_ram_copy(),
                 DmaMode::CopyRam => (),
                 DmaMode::FillRam => self.dma_ram_fill(),
             }
             if self.dma_length == 0 {
+                self.register_set.status.set_flag(StatusFlag::DMA_PROGRESS, false);
                 self.register_set.mode_register.clear_dma_enabled();
                 self.dma_mode = None;
                 self.dma_run = false;
@@ -240,10 +256,11 @@ where
                     self.vram[dst_address - 1] = msb;
                 }
             }
-            _ => panic!(
-                "VDP: dma_ram_fill: unexpected RamAccessMode during of the DMA cycles: {}",
-                self.ram_access_mode
-            ),
+            // _ => panic!(
+            //     "VDP: dma_ram_fill: unexpected RamAccessMode during of the DMA cycles: {}",
+            //     self.ram_access_mode
+            // ),
+            _ => (),
         }
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         self.dma_length -= 1;
@@ -251,11 +268,10 @@ where
 
     fn get_plane_dot(&self, plane_attribute_address: usize) -> Dot {
         let hplane_size = self.register_set.plane_size.hplane_size();
-        let plane_b_offset = ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
-        let byte_h = (self.vram[plane_attribute_address + plane_b_offset] as u16) << 8;
-        let byte_l = self.vram[plane_attribute_address + 1 + plane_b_offset] as u16;
-        let attribute_data = byte_h | byte_l;
-
+        let plane_address_offset = ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
+        let attribute_data = unsafe {
+            *(self.vram.as_ptr().offset((plane_attribute_address + plane_address_offset) as isize)  as *const _ as *const u16)
+        }.to_be();
         
         let palette_id = (attribute_data >> 13) & 0x3;
         let sprite_id = (attribute_data & 0x7FF) * 32;
