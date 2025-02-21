@@ -33,6 +33,8 @@ fn main() {
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
+    // m68k.set_breakpoints(vec![]);
+
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
     let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(&mut window, signal_bus.clone())));
 
@@ -88,6 +90,11 @@ fn main() {
                     }
                 }
                 clock_counter += vdp_clocks;
+                if m68k.breakpoint_hit {
+                    info!("CPU hits breakpoint");
+                    auto = false;
+                    break;
+                }
             }
             true
         } else if manual_clock {

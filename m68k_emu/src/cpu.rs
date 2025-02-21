@@ -21,6 +21,9 @@ pub struct M68k<T: 'static + BusM68k> {
 
     operation_set: Vec<Operation<T>>,
     bus: Option<Rc<T>>,
+
+    breakpoints: Option<Vec<u32>>,
+    pub breakpoint_hit: bool,
 }
 
 impl<T> M68k<T>
@@ -41,7 +44,14 @@ where
 
             operation_set: table,
             bus: None,
+
+            breakpoints: None,
+            breakpoint_hit: false,
         }
+    }
+
+    pub fn set_breakpoints(&mut self, breakpoints: Vec<u32>) {
+        self.breakpoints = Some(breakpoints);
     }
 
     pub fn set_bus(&mut self, bus: T) {
@@ -105,6 +115,9 @@ where
                 self.register_set.pc = vector_address;
             }
             self.trap = None;
+        }
+        if let Some(breakpoints) = self.breakpoints.as_ref() {
+            self.breakpoint_hit = breakpoints.iter().any(|b| *b == self.register_set.pc);
         }
         self.cycles_counter
     }
