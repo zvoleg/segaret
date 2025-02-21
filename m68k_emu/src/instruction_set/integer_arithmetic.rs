@@ -394,6 +394,24 @@ impl<T: BusM68k> Instruction<T> for CLR {
     }
 }
 
+fn cmp<T: BusM68k>(src_data: u32, dst_data: u32, size: Size, cpu: &mut M68k<T>) -> Result<(), ()> {
+    let result = dst_data.wrapping_sub(src_data);
+
+    let src_msb = src_data.msb_is_set(size);
+    let dst_msb = dst_data.msb_is_set(size);
+    let res_msb = result.msb_is_set(size);
+
+    let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
+    let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
+
+    let sr = &mut cpu.register_set.sr;
+    sr.set_flag(StatusFlag::Z, result.is_zero(size));
+    sr.set_flag(StatusFlag::N, result.is_negate(size));
+    sr.set_flag(StatusFlag::V, overflow);
+    sr.set_flag(StatusFlag::C, carry);
+    Ok(())
+}
+
 pub(crate) struct CMP {
     pub(crate) size: Size,
 }
@@ -411,21 +429,8 @@ impl<T: BusM68k> Instruction<T> for CMP {
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
-        let result = dst_data.wrapping_sub(src_data);
 
-        let src_msb = src_data.msb_is_set(self.size);
-        let dst_msb = dst_data.msb_is_set(self.size);
-        let res_msb = result.msb_is_set(self.size);
-
-        let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
-        let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
-
-        let sr = &mut cpu.register_set.sr;
-        sr.set_flag(StatusFlag::Z, result.is_zero(self.size));
-        sr.set_flag(StatusFlag::N, result.is_negate(self.size));
-        sr.set_flag(StatusFlag::V, overflow);
-        sr.set_flag(StatusFlag::C, carry);
-        Ok(())
+        cmp(src_data, dst_data, self.size, cpu)
     }
 }
 
@@ -440,8 +445,16 @@ impl Display for CMPA {
 }
 
 impl<T: BusM68k> Instruction<T> for CMPA {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        CMP { size: self.size }.execute(operand_set, cpu)
+    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = operand_set.next();
+        let mut src_data = src_operand.read()?;
+        if self.size == Size::Word {
+            src_data = src_data.sign_extend(self.size)
+        }
+        let dst_operand = operand_set.next();
+        let dst_data = dst_operand.read()?;
+
+        cmp(src_data, dst_data, Size::Long, cpu)
     }
 }
 pub(crate) struct CMPI {

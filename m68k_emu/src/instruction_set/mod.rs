@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::fmt::Display;
+use std::rc::Rc;
 
 use crate::bus::BusM68k;
 use crate::cpu::M68k;
@@ -104,5 +106,36 @@ impl Display for Condition {
             Condition::GT => write!(f, "GT"),
             Condition::LE => write!(f, "LE"),
         }
+    }
+}
+
+pub(crate) struct TestBus {
+    pub(crate) ram: Rc<RefCell<[u8; 0xFF]>>,
+}
+
+impl BusM68k for TestBus {
+    fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
+        let ptr = &self.ram.borrow()[address as usize] as *const u8;
+        unsafe {
+            match amount {
+                1 => Ok(*ptr as u32),
+                2 => Ok((*(ptr as *const u16)).to_be() as u32),
+                4 => Ok((*(ptr as *const u32)).to_be() as u32),
+                _ => panic!("Bus: read: wrong size"),
+            }
+        }
+    }
+
+    fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+        let ptr = &mut self.ram.borrow_mut()[address as usize] as *mut u8;
+        unsafe {
+            match amount {
+                1 => *ptr = data as u8,
+                2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
+                4 => *(ptr as *mut _ as *mut u32) = data.to_be(),
+                _ => panic!("Bus: write: wrong size"),
+            }
+        }
+        Ok(())
     }
 }

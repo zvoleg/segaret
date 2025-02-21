@@ -349,14 +349,7 @@ mod test {
         addressing_mode_set::{
             AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
             AddressingMode, AddressingModeType,
-        },
-        bus::BusM68k,
-        cpu::M68k,
-        instruction_set::{Instruction, MoveDirection},
-        operand::{Operand, OperandSet},
-        primitives::{memory::MemoryPtr, Pointer, Size},
-        register_set::RegisterType,
-        STACK_REGISTER,
+        }, bus::BusM68k, cpu::M68k, instruction_set::{Instruction, MoveDirection, TestBus}, operand::{Operand, OperandSet}, primitives::{memory::MemoryPtr, Pointer, Size}, register_set::RegisterType, STACK_REGISTER
     };
 
     use super::{LINK, MOVEM, UNLK};
@@ -367,38 +360,7 @@ mod test {
     const OFFSET_ADDRESS: usize = 0x00;
     const OFFSET_VALUE: u32 = 0x10;
 
-    struct Bus {
-        ram: Rc<RefCell<[u8; 0xFF]>>,
-    }
-
-    impl BusM68k for Bus {
-        fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
-            let ptr = &self.ram.borrow()[address as usize] as *const u8;
-            unsafe {
-                match amount {
-                    1 => Ok(*ptr as u32),
-                    2 => Ok((*(ptr as *const u16)).to_be() as u32),
-                    4 => Ok((*(ptr as *const u32)).to_be() as u32),
-                    _ => panic!("Bus: read: wrong size"),
-                }
-            }
-        }
-
-        fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
-            let ptr = &mut self.ram.borrow_mut()[address as usize] as *mut u8;
-            unsafe {
-                match amount {
-                    1 => *ptr = data as u8,
-                    2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
-                    4 => *(ptr as *mut _ as *mut u32) = data.to_be(),
-                    _ => panic!("Bus: write: wrong size"),
-                }
-            }
-            Ok(())
-        }
-    }
-
-    fn prepare_link_operands(cpu: &mut M68k<Bus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
+    fn prepare_link_operands(cpu: &mut M68k<TestBus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
         // be cause test runs without opcode, we don't have to prepare properly placed or aranged in the memory the values
         let mut operand_set = OperandSet::new();
 
@@ -416,7 +378,7 @@ mod test {
 
         // and offset value
         // it just value in some place of memory
-        let bus = Rc::new(Bus { ram: ram.clone() });
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let offset_ptr = MemoryPtr::new_boxed(OFFSET_ADDRESS as u32, bus);
         offset_ptr.write(OFFSET_VALUE, Size::Word).unwrap();
         operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
@@ -424,7 +386,7 @@ mod test {
         operand_set
     }
 
-    fn prepare_unlk_operands(cpu: &mut M68k<Bus>) -> OperandSet {
+    fn prepare_unlk_operands(cpu: &mut M68k<TestBus>) -> OperandSet {
         let mut operand_set = OperandSet::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
@@ -444,7 +406,7 @@ mod test {
     #[test]
     fn test_link() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
+        let bus = TestBus { ram: ram.clone() };
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
@@ -453,7 +415,7 @@ mod test {
         link.execute(link_operand_set, &mut cpu).unwrap();
 
         let old_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // stack address should be decremented after pushing data to it
-        let bus_stub = Rc::new(Bus { ram: ram.clone() });
+        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mem_ptr = MemoryPtr::new(old_stack_address, bus_stub); // pointer to memory where data had been to push on the stack
         assert_eq!(mem_ptr.read(Size::Long).unwrap(), ADDRESS_REGISTER_VALUE);
         assert_eq!(
@@ -475,7 +437,7 @@ mod test {
     #[test]
     fn test_unlk() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
+        let bus = TestBus { ram: ram.clone() };
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
@@ -506,8 +468,8 @@ mod test {
     #[test]
     fn test_movem_predecremented() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
-        let bus_stub = Rc::new(Bus { ram: ram.clone() });
+        let bus = TestBus { ram: ram.clone() };
+        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
 
@@ -560,8 +522,8 @@ mod test {
     #[test]
     fn test_movem_postincremented_word() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
-        let bus_stub = Rc::new(Bus { ram: ram.clone() });
+        let bus = TestBus { ram: ram.clone() };
+        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
 
@@ -605,8 +567,8 @@ mod test {
     #[test]
     fn test_movem_postincremented_long() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
-        let bus_stub = Rc::new(Bus { ram: ram.clone() });
+        let bus = TestBus { ram: ram.clone() };
+        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
 
@@ -650,8 +612,8 @@ mod test {
     #[test]
     fn test_movem_memory_to_register() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Bus { ram: ram.clone() };
-        let bus_stub = Rc::new(Bus { ram: ram.clone() });
+        let bus = TestBus { ram: ram.clone() };
+        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
 

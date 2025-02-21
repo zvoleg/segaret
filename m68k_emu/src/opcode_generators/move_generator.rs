@@ -1,3 +1,5 @@
+use log::debug;
+
 use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterDisplacement, AddressingMode, AddressingModeType,
@@ -184,12 +186,12 @@ impl OpcodeMaskGenerator for MOVEP {
         let mut base_mask = 0b0000000100001000;
         base_mask |= match self.size {
             Size::Byte => panic!("MOVEP: generate_mask: unexpected instruction size"),
-            Size::Word => 100,
-            Size::Long => 101,
+            Size::Word => 0b100,
+            Size::Long => 0b101,
         } << 6;
         base_mask |= match self.direction {
-            MoveDirection::RegisterToMemory => 1,
-            MoveDirection::MemoryToRegister => 0,
+            MoveDirection::RegisterToMemory => 0b1,
+            MoveDirection::MemoryToRegister => 0b0,
         } << 7;
         base_mask
     }
