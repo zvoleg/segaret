@@ -60,7 +60,7 @@ impl RamAccessMode {
 }
 
 #[derive(PartialEq)]
-enum DmaMode {
+pub(crate) enum DmaMode {
     BusToRam,
     CopyRam,
     FillRam,

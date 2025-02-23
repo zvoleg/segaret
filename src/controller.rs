@@ -1,3 +1,5 @@
+use spriter::{if_holded, Key};
+
 pub enum Button {
     Up = 0,
     Down = 1,
@@ -20,6 +22,34 @@ impl Controller {
             button_selector: false,
             data: 0xFF,
         }
+    }
+
+    pub(crate) fn clock(&mut self) {
+        self.data = 0xFF;
+        if_holded!(Key::Space, {
+            self.press_button(Button::Start);
+        });
+        if_holded!(Key::Right, {
+            self.press_button(Button::Right);
+        });
+        if_holded!(Key::Left, {
+            self.press_button(Button::Left);
+        });
+        if_holded!(Key::Up, {
+            self.press_button(Button::Up);
+        });
+        if_holded!(Key::Down, {
+            self.press_button(Button::Down);
+        });
+        if_holded!(Key::B, {
+            self.press_button(Button::A);
+        });
+        if_holded!(Key::N, {
+            self.press_button(Button::B);
+        });
+        if_holded!(Key::M, {
+            self.press_button(Button::C);
+        });
     }
 
     pub(crate) fn read(&self) -> u8 {

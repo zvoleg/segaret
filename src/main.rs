@@ -33,7 +33,7 @@ fn main() {
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
-    // m68k.set_breakpoints(vec![]);
+    // m68k.set_breakpoints(vec![0x3966, 0xFFFFCC60, 0x00FFCC60, 0xFFFFCC61, 0x00FFCC61, 0xFFFFCC62, 0x00FFCC62, 0xFFFFCC63, 0x00FFCC63, 0xFFFFCC64, 0x00FFCC64, 0xFFFFCC65, 0x00FFCC65, ]);
 
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
     let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(&mut window, signal_bus.clone())));
@@ -86,7 +86,7 @@ fn main() {
                 for _ in 0..vdp_clocks {
                     let update = vdp.borrow_mut().clock();
                     if !update_screen {
-                        update_screen = update
+                        update_screen = update;
                     }
                 }
                 clock_counter += vdp_clocks;
@@ -96,6 +96,7 @@ fn main() {
                     break;
                 }
             }
+            controller.borrow_mut().clock();
             true
         } else if manual_clock {
             let mut vdp_clocks = 1;
