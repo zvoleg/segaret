@@ -195,7 +195,7 @@ impl<T: BusM68k> Instruction<T> for MOVEP {
         match self.direction {
             MoveDirection::RegisterToMemory => {
                 for i in 0..iterations {
-                    let byte_ = src_data >> self.size as isize - i;
+                    let byte_ = (src_data >> (self.size as isize - i - 1) * 8) & 0xFF;
                     dst_operand
                         .operand_ptr
                         .write_offset(byte_, Size::Byte, 2 * i)?;
@@ -205,7 +205,7 @@ impl<T: BusM68k> Instruction<T> for MOVEP {
                 let mut data = 0;
                 for i in 0..iterations {
                     let byte_ = src_operand.operand_ptr.read_offset(Size::Byte, 2 * i)?;
-                    data |= (byte_ as u32) << i;
+                    data |= (byte_ as u32) << i * 8;
                 }
                 dst_operand.operand_ptr.write(data, self.size)?;
             }
