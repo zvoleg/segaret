@@ -107,18 +107,18 @@ impl AddressingMode for AddressRegisterPostIncrement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: Rc<dyn BusM68k>) -> Result<Operand, ()> {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long)?;
-        let size = if self.reg == STACK_REGISTER && self.size == Size::Byte {
-            Size::Word
+        let increment = if self.reg == STACK_REGISTER && self.size == Size::Byte {
+            Size::Word as u32
         } else {
-            self.size
+            self.size as u32
         };
-        address_register_ptr.write(address.wrapping_add(size as u32), Size::Long).unwrap();
+        address_register_ptr.write(address.wrapping_add(increment), Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,
             Some(address_register_ptr),
             address,
-            size,
+            self.size,
         ))
     }
 
@@ -140,19 +140,19 @@ impl AddressingMode for AddressRegisterPreDecrement {
     fn get_operand(&self, rs: &mut RegisterSet, bus: Rc<dyn BusM68k>) -> Result<Operand, ()> {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let mut address = address_register_ptr.read(Size::Long)?;
-        let size = if self.reg == STACK_REGISTER && self.size == Size::Byte {
-            Size::Word
+        let decrement = if self.reg == STACK_REGISTER && self.size == Size::Byte {
+            Size::Word as u32
         } else {
-            self.size
+            self.size as u32
         };
-        address = address.wrapping_sub(size as u32);
+        address = address.wrapping_sub(decrement);
         address_register_ptr.write(address, Size::Long).unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,
             Some(address_register_ptr),
             address,
-            size,
+            self.size,
         ))
     }
 
