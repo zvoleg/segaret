@@ -126,7 +126,7 @@ fn generate_movea<T: BusM68k>(table: &mut [Operation<T>]) {
         AddressingModeType::AddressRegisterDisplacement,
         AddressingModeType::AddressRegisterIndexed,
         AddressingModeType::ProgramCounterDisplacement,
-        AddressingModeType::ProgramCounterDisplacement,
+        AddressingModeType::ProgramCounterIndexed,
         AddressingModeType::AbsShort,
         AddressingModeType::AbsLong,
         AddressingModeType::Immediate,
