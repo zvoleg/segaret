@@ -111,64 +111,64 @@ where
             self.dma_clock();
         }
 
-        if self.register_set.mode_register.display_enabled() {
-            if self.v_counter < 0xE0 {
-                let bg_palette_id = self.register_set.background_color.palette_id();
-                let bg_color_id = self.register_set.background_color.color_id();
-                let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
+        if self.v_counter < 0xE0 {
+            let bg_palette_id = self.register_set.background_color.palette_id();
+            let bg_color_id = self.register_set.background_color.color_id();
+            let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
 
-                let plane_a_base_address = self.register_set.plane_a_table_location.address();
-                let plane_a_dot = self.get_plane_dot(plane_a_base_address);
+            let plane_a_base_address = self.register_set.plane_a_table_location.address();
+            let plane_a_dot = self.get_plane_dot(plane_a_base_address);
 
-                let plane_b_base_address = self.register_set.plane_b_table_location.address();
-                let plane_b_dot = self.get_plane_dot(plane_b_base_address);
+            let plane_b_base_address = self.register_set.plane_b_table_location.address();
+            let plane_b_dot = self.get_plane_dot(plane_b_base_address);
 
-                let dot = {
-                    let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
-                    // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
-                    if let Some(plane_color) = plane_b_dot.color {
-                        if plane_b_dot.priority == Priority::High {
-                            color = plane_color;
-                        }
+            let dot = if self.register_set.mode_register.display_enabled() {
+                let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                if let Some(plane_color) = plane_b_dot.color {
+                    if plane_b_dot.priority == Priority::High {
+                        color = plane_color;
                     }
-                    if let Some(plane_color) = plane_a_dot.color {
-                        if plane_a_dot.priority == Priority::High {
-                            color = plane_color;
-                        }
-                    }
-                    color
-                };
-                self.screen
-                    .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
-                    .unwrap();
-                self.h_counter += 1;
-                if self.h_counter >= 320 {
-                    self.h_counter = 0;
-                    self.v_counter += 1;
                 }
-                if self.v_counter == 0xE0 {
-                    // self.v_counter = 0;
-                    update_screen = true;
-                    self.update_vram_table_on_screen();
-
-                    if self.register_set.mode_register.vinterrupt_enabled() {
-                        self.signal_bus
-                            .borrow_mut()
-                            .push_siganal(Signal::V_INTERRUPT);
-                        debug!("VDP: send vinterrupt signtal");
+                if let Some(plane_color) = plane_a_dot.color {
+                    if plane_a_dot.priority == Priority::High {
+                        color = plane_color;
                     }
-                    self.register_set.status.set_flag(StatusFlag::V_BLANKING, true);
                 }
+                color
             } else {
-                self.h_counter += 1;
-                if self.h_counter >= 320 {
-                    self.h_counter = 0;
-                    self.v_counter += 1;
+                back_dot_color
+            };
+            self.screen
+                .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
+                .unwrap();
+            self.h_counter += 1;
+            if self.h_counter >= 320 {
+                self.h_counter = 0;
+                self.v_counter += 1;
+            }
+            if self.v_counter == 0xE0 {
+                // self.v_counter = 0;
+                update_screen = true;
+                self.update_vram_table_on_screen();
+
+                if self.register_set.mode_register.vinterrupt_enabled() {
+                    self.signal_bus
+                        .borrow_mut()
+                        .push_siganal(Signal::V_INTERRUPT);
+                    debug!("VDP: send vinterrupt signtal");
                 }
-                if self.v_counter == 0x1FF {
-                    self.v_counter = 0;
-                    self.register_set.status.set_flag(StatusFlag::V_BLANKING, false);
-                }
+                self.register_set.status.set_flag(StatusFlag::V_BLANKING, true);
+            }
+        } else {
+            self.h_counter += 1;
+            if self.h_counter >= 320 {
+                self.h_counter = 0;
+                self.v_counter += 1;
+            }
+            if self.v_counter == 0x1FF {
+                self.v_counter = 0;
+                self.register_set.status.set_flag(StatusFlag::V_BLANKING, false);
             }
         }
 
