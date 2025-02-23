@@ -175,7 +175,7 @@ impl ModeRegister {
             }
         }
     }
-    
+
     pub(crate) fn clear_dma_enabled(&mut self) {
         unsafe {
             let data = *self.data_ii;
@@ -431,9 +431,7 @@ impl DmaLnegth {
     }
 
     pub(crate) fn length(&self) -> u16 {
-        unsafe {
-            ((*self.data_h as u16) << 8) | *self.data_l as u16
-        }
+        unsafe { ((*self.data_h as u16) << 8) | *self.data_l as u16 }
     }
 }
 
@@ -458,7 +456,7 @@ impl DmaSource {
                 0x00 | 0x40 => DmaMode::BusToRam,
                 0x80 => DmaMode::FillRam,
                 0xC0 => DmaMode::CopyRam,
-                _ => panic!("Vdp: DmaSource register: unexpected dma mode bit mask")
+                _ => panic!("Vdp: DmaSource register: unexpected dma mode bit mask"),
             }
         }
     }

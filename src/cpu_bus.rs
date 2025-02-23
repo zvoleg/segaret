@@ -29,7 +29,10 @@ impl<T> CpuBus<T>
 where
     T: VdpPorts,
 {
-    pub fn init(memory_space: Rc<RefCell<MemorySpace>>, controller: Rc<RefCell<Controller>>) -> Self {
+    pub fn init(
+        memory_space: Rc<RefCell<MemorySpace>>,
+        controller: Rc<RefCell<Controller>>,
+    ) -> Self {
         Self {
             memory_space: memory_space,
             vdp_ports: None,
@@ -104,7 +107,11 @@ where
                 Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
             }
         } else if address == 0xC00000 || address == 0xC00002 {
-            self.vdp_ports.as_ref().unwrap().borrow_mut().read_data_port()
+            self.vdp_ports
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .read_data_port()
         } else if address == 0xC00004 || address == 0xC00006 {
             self.vdp_ports
                 .as_ref()
@@ -128,14 +135,18 @@ where
 
     fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
-        debug!("CPU writes address {:08X}\tdata {:08X}\tsize: {}", address, data, amount);
+        debug!(
+            "CPU writes address {:08X}\tdata {:08X}\tsize: {}",
+            address, data, amount
+        );
         if address <= 0x3FFFFF {
             let ptr = &self.memory_space.as_ref().borrow_mut().rom[address as usize] as *const _
                 as *mut u8;
             self.write_ptr(data, amount, ptr);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            let ptr = &self.memory_space.as_ref().borrow_mut().z80_ram[address as usize] as *const _ as *mut u8;
+            let ptr = &self.memory_space.as_ref().borrow_mut().z80_ram[address as usize] as *const _
+                as *mut u8;
             self.write_ptr(data, amount, ptr);
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {

@@ -6,7 +6,12 @@ use log::debug;
 
 use crate::signal_bus::{Signal, SignalBus};
 
-use super::{bus::BusVdp, dot::{Dot, Priority}, registers::{RegisterSet, StatusFlag}, DmaMode, RamAccessMode};
+use super::{
+    bus::BusVdp,
+    dot::{Dot, Priority},
+    registers::{RegisterSet, StatusFlag},
+    DmaMode, RamAccessMode,
+};
 
 pub struct Vdp<T: BusVdp> {
     screen: Canvas,
@@ -123,7 +128,10 @@ where
             let plane_b_dot = self.get_plane_dot(plane_b_base_address);
 
             let dot = if self.register_set.mode_register.display_enabled() {
-                let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
+                let mut color = plane_a_dot
+                    .color
+                    .or_else(|| plane_b_dot.color)
+                    .unwrap_or(back_dot_color);
                 // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
                 if let Some(plane_color) = plane_b_dot.color {
                     if plane_b_dot.priority == Priority::High {
@@ -158,7 +166,9 @@ where
                         .push_siganal(Signal::V_INTERRUPT);
                     debug!("VDP: send vinterrupt signtal");
                 }
-                self.register_set.status.set_flag(StatusFlag::V_BLANKING, true);
+                self.register_set
+                    .status
+                    .set_flag(StatusFlag::V_BLANKING, true);
             }
         } else {
             self.h_counter += 1;
@@ -168,7 +178,9 @@ where
             }
             if self.v_counter == 0x1FF {
                 self.v_counter = 0;
-                self.register_set.status.set_flag(StatusFlag::V_BLANKING, false);
+                self.register_set
+                    .status
+                    .set_flag(StatusFlag::V_BLANKING, false);
             }
         }
 
@@ -198,14 +210,18 @@ where
                 "VDP: clock: dma enabled, dma cycles remined {}",
                 self.dma_length
             );
-            self.register_set.status.set_flag(StatusFlag::DMA_PROGRESS, true);
+            self.register_set
+                .status
+                .set_flag(StatusFlag::DMA_PROGRESS, true);
             match self.dma_mode.as_ref().unwrap() {
                 DmaMode::BusToRam => self.dma_bus_to_ram_copy(),
                 DmaMode::CopyRam => (),
                 DmaMode::FillRam => self.dma_ram_fill(),
             }
             if self.dma_length == 0 {
-                self.register_set.status.set_flag(StatusFlag::DMA_PROGRESS, false);
+                self.register_set
+                    .status
+                    .set_flag(StatusFlag::DMA_PROGRESS, false);
                 self.register_set.mode_register.clear_dma_enabled();
                 self.dma_mode = None;
                 self.dma_run = false;
@@ -268,42 +284,68 @@ where
 
     fn get_plane_dot(&self, plane_attribute_address: usize) -> Dot {
         let hplane_size = self.register_set.plane_size.hplane_size();
-        let plane_address_offset = ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
+        let plane_address_offset =
+            ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
         let attribute_data = unsafe {
-            *(self.vram.as_ptr().offset((plane_attribute_address + plane_address_offset) as isize)  as *const _ as *const u16)
-        }.to_be();
-        
+            *(self
+                .vram
+                .as_ptr()
+                .offset((plane_attribute_address + plane_address_offset) as isize)
+                as *const _ as *const u16)
+        }
+        .to_be();
+
         let palette_id = (attribute_data >> 13) & 0x3;
         let sprite_id = (attribute_data & 0x7FF) * 32;
-        
+
         // each sprite byte contains 2 dots
-        let h_flip = attribute_data & 0x0800!= 0;
+        let h_flip = attribute_data & 0x0800 != 0;
         let h_dot_offset = {
             let offset = (self.h_counter % 8) / 2;
-            if h_flip { 3 - offset } else { offset }
+            if h_flip {
+                3 - offset
+            } else {
+                offset
+            }
         };
         // and each sprite row contains 4 bytes
         let v_dot_offset = {
             let v_flip = attribute_data & 0x1000 != 0;
             let offset: u16 = (self.v_counter % 8) * 4;
-            if v_flip { 28 - offset } else { offset }
+            if v_flip {
+                28 - offset
+            } else {
+                offset
+            }
         };
 
         let sprite_point_address = sprite_id + h_dot_offset + v_dot_offset;
         let sprite_byte = self.vram[sprite_point_address as usize];
         // let color_id = if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF };
         let color_id = if !h_flip {
-            if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF }
+            if self.h_counter % 2 == 0 {
+                sprite_byte.rotate_left(4) & 0xF
+            } else {
+                sprite_byte & 0xF
+            }
         } else {
-            if self.h_counter % 2 == 0 { sprite_byte & 0xF } else { sprite_byte.rotate_left(4) & 0xF }
+            if self.h_counter % 2 == 0 {
+                sprite_byte & 0xF
+            } else {
+                sprite_byte.rotate_left(4) & 0xF
+            }
         };
-        let color  = if color_id != 0 {
+        let color = if color_id != 0 {
             Some(self.get_color(palette_id as usize, color_id as usize))
         } else {
             None
         };
 
-        let priority = if attribute_data & 0x8000 != 0 { Priority:: High} else { Priority::Low };
+        let priority = if attribute_data & 0x8000 != 0 {
+            Priority::High
+        } else {
+            Priority::Low
+        };
         Dot::new(color, priority)
     }
 

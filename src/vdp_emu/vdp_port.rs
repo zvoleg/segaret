@@ -29,25 +29,31 @@ where
     }
 
     fn write_data_port(&mut self, data: u16) -> Result<(), ()> {
-        if let Some(DmaMode::FillRam) = self.dma_mode  {
+        if let Some(DmaMode::FillRam) = self.dma_mode {
             let dma_enabled = self.register_set.mode_register.dma_enabled();
             if dma_enabled {
                 self.dma_run = true;
                 self.dma_data_wait = false;
             }
         } else {
-            debug!("write to data port, mode: '{}', address: {:04X}", self.ram_access_mode, self.vdp_ram_address);
+            debug!(
+                "write to data port, mode: '{}', address: {:04X}",
+                self.ram_access_mode, self.vdp_ram_address
+            );
             match self.ram_access_mode {
                 RamAccessMode::VramW => unsafe {
-                    let ptr = self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *mut u16;
                     *ptr = data.to_be();
                 },
                 RamAccessMode::CramW => unsafe {
-                    let ptr = self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *mut u16;
                     *ptr = data.to_be();
                 },
                 RamAccessMode::VSramW => unsafe {
-                    let ptr = self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *mut u16;
+                    let ptr = self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *mut u16;
                     *ptr = data.to_be();
                 },
                 _ => (), // wron access mode just ignoring (by docks)
@@ -73,11 +79,15 @@ where
     }
 }
 
-impl<T> Vdp<T> where T: BusVdp {
+impl<T> Vdp<T>
+where
+    T: BusVdp,
+{
     fn set_register(&mut self, data: u16) {
         let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as usize;
         let register_data = data as u8;
-        self.register_set.set_register_by_id(register_id, register_data);
+        self.register_set
+            .set_register_by_id(register_id, register_data);
         debug!(
             "VDP: set register {:02X} to value {:02X}",
             register_id, register_data

@@ -83,7 +83,7 @@ where
 
         let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
         debug!("{}", operation.disassembly(operation_ptr).unwrap());
-        
+
         let mut operands = OperandSet::new();
         for am in &operation.addressing_mode_list {
             let operand =
@@ -165,7 +165,9 @@ where
         let read_ptr = MemoryPtr::new(address, self.bus.as_ref().unwrap().clone());
         let data = read_ptr.read(size).unwrap();
 
-        stack_register_ptr.write(address.wrapping_add(size as u32), Size::Long).unwrap(); // postincrement
+        stack_register_ptr
+            .write(address.wrapping_add(size as u32), Size::Long)
+            .unwrap(); // postincrement
         data
     }
 
@@ -180,7 +182,9 @@ where
         let stack_register_ptr = self
             .register_set
             .get_register_ptr(STACK_REGISTER, RegisterType::Address);
-        stack_register_ptr.write(new_stack_address, Size::Long).unwrap();
+        stack_register_ptr
+            .write(new_stack_address, Size::Long)
+            .unwrap();
     }
 
     fn fetch_opcode(&mut self) -> u16 {

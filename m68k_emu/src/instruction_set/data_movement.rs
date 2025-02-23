@@ -349,7 +349,14 @@ mod test {
         addressing_mode_set::{
             AddressRegisterIndirect, AddressRegisterPostIncrement, AddressRegisterPreDecrement,
             AddressingMode, AddressingModeType,
-        }, bus::BusM68k, cpu::M68k, instruction_set::{Instruction, MoveDirection, TestBus}, operand::{Operand, OperandSet}, primitives::{memory::MemoryPtr, Pointer, Size}, register_set::RegisterType, STACK_REGISTER
+        },
+        bus::BusM68k,
+        cpu::M68k,
+        instruction_set::{Instruction, MoveDirection, TestBus},
+        operand::{Operand, OperandSet},
+        primitives::{memory::MemoryPtr, Pointer, Size},
+        register_set::RegisterType,
+        STACK_REGISTER,
     };
 
     use super::{LINK, MOVEM, UNLK};
@@ -368,7 +375,9 @@ mod test {
         let address_reg_ptr = cpu
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
-        address_reg_ptr.write(ADDRESS_REGISTER_VALUE, Size::Long).unwrap();
+        address_reg_ptr
+            .write(ADDRESS_REGISTER_VALUE, Size::Long)
+            .unwrap();
         operand_set.add(Operand::new(
             address_reg_ptr,
             None,

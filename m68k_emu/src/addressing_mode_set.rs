@@ -112,7 +112,9 @@ impl AddressingMode for AddressRegisterPostIncrement {
         } else {
             self.size as u32
         };
-        address_register_ptr.write(address.wrapping_add(increment), Size::Long).unwrap();
+        address_register_ptr
+            .write(address.wrapping_add(increment), Size::Long)
+            .unwrap();
         let operand_ptr = MemoryPtr::new_boxed(address, bus.clone());
         Ok(Operand::new(
             operand_ptr,

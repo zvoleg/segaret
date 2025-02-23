@@ -13,12 +13,12 @@ use spriter::if_pressed;
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 
+mod controller;
 mod cpu_bus;
 mod memory_space;
 mod signal_bus;
 mod vdp_bus;
 mod vdp_emu;
-mod controller;
 // pub mod cartridge;
 
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
@@ -33,10 +33,13 @@ fn main() {
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
-    // m68k.set_breakpoints(vec![0x3966, 0xFFFFCC60, 0x00FFCC60, 0xFFFFCC61, 0x00FFCC61, 0xFFFFCC62, 0x00FFCC62, 0xFFFFCC63, 0x00FFCC63, 0xFFFFCC64, 0x00FFCC64, 0xFFFFCC65, 0x00FFCC65, ]);
+    // m68k.set_breakpoints(vec![]);
 
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
-    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(&mut window, signal_bus.clone())));
+    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(
+        &mut window,
+        signal_bus.clone(),
+    )));
 
     let controller = Rc::new(RefCell::new(Controller::new()));
 
@@ -54,7 +57,7 @@ fn main() {
     let mut vdp_clocks_accum = 0;
     runner.run(window, move |_| {
         let mut manual_clock = false;
-        if_pressed!(spriter::Key::A, { 
+        if_pressed!(spriter::Key::A, {
             auto = !auto;
             info!("Auto Clock mode = {}", auto);
         });
@@ -72,14 +75,18 @@ fn main() {
             let mut clock_counter = 0;
             while !update_screen && clock_counter < 71680 {
                 let mut vdp_clocks = 1;
-                if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
+                if signal_bus
+                    .borrow_mut()
+                    .handle_signal(signal_bus::Signal::V_INTERRUPT)
+                {
                     m68k.interrupt(6);
                 }
                 if !signal_bus
                     .borrow_mut()
                     .handle_signal(signal_bus::Signal::CPU_HALT)
                 {
-                    let vdp_clocks_rational = m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
+                    let vdp_clocks_rational =
+                        m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                     vdp_clocks = vdp_clocks_rational.trunc() as i32;
                     vdp_clocks_remainder = vdp_clocks_rational.fract();
                 }
@@ -100,14 +107,18 @@ fn main() {
             true
         } else if manual_clock {
             let mut vdp_clocks = 1;
-            if signal_bus.borrow_mut().handle_signal(signal_bus::Signal::V_INTERRUPT) {
+            if signal_bus
+                .borrow_mut()
+                .handle_signal(signal_bus::Signal::V_INTERRUPT)
+            {
                 m68k.interrupt(6);
             }
             if !signal_bus
                 .borrow_mut()
                 .handle_signal(signal_bus::Signal::CPU_HALT)
             {
-                let vdp_clocks_rational = m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
+                let vdp_clocks_rational =
+                    m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                 vdp_clocks = vdp_clocks_rational.trunc() as i32;
                 vdp_clocks_remainder = vdp_clocks_rational.fract();
             }
