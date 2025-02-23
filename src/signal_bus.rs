@@ -1,8 +1,8 @@
 #[derive(PartialEq)]
 pub enum Signal {
-    V_INTERRUPT,
-    H_INTERRUPT,
-    CPU_HALT,
+    VInterrupt,
+    HInterrupt,
+    CpuHalt,
 }
 
 pub struct SignalBus {

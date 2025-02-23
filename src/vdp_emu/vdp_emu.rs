@@ -25,12 +25,6 @@ pub struct Vdp<T: BusVdp> {
 
     pub(crate) v_counter: u16,
     pub(crate) h_counter: u16,
-    pub(crate) v_counter_jumped: bool,
-    pub(crate) h_counter_jumped: bool,
-
-    pub(crate) line_intrpt_counter: u8,
-
-    pub(crate) control_port_write_latch: bool,
 
     pub(crate) dma_mode: Option<DmaMode>,
     pub(crate) dma_run: bool,
@@ -49,8 +43,6 @@ pub struct Vdp<T: BusVdp> {
 
     pub(crate) dma_src_address: u32,
     pub(crate) dma_length: u16,
-
-    clock_counter: u64,
 }
 
 impl<T> Vdp<T>
@@ -77,12 +69,6 @@ where
 
             v_counter: 0,
             h_counter: 0,
-            v_counter_jumped: false,
-            h_counter_jumped: false,
-
-            line_intrpt_counter: 0,
-
-            control_port_write_latch: false,
 
             dma_mode: None,
             dma_run: false,
@@ -101,8 +87,6 @@ where
 
             dma_src_address: 0,
             dma_length: 0,
-
-            clock_counter: 0,
         }
     }
 
@@ -163,12 +147,12 @@ where
                 if self.register_set.mode_register.vinterrupt_enabled() {
                     self.signal_bus
                         .borrow_mut()
-                        .push_siganal(Signal::V_INTERRUPT);
+                        .push_siganal(Signal::VInterrupt);
                     debug!("VDP: send vinterrupt signtal");
                 }
                 self.register_set
                     .status
-                    .set_flag(StatusFlag::V_BLANKING, true);
+                    .set_flag(StatusFlag::Blanking, true);
             }
         } else {
             self.h_counter += 1;
@@ -180,7 +164,7 @@ where
                 self.v_counter = 0;
                 self.register_set
                     .status
-                    .set_flag(StatusFlag::V_BLANKING, false);
+                    .set_flag(StatusFlag::Blanking, false);
             }
         }
 
@@ -212,7 +196,7 @@ where
             );
             self.register_set
                 .status
-                .set_flag(StatusFlag::DMA_PROGRESS, true);
+                .set_flag(StatusFlag::DmaProgress, true);
             match self.dma_mode.as_ref().unwrap() {
                 DmaMode::BusToRam => self.dma_bus_to_ram_copy(),
                 DmaMode::CopyRam => (),
@@ -221,7 +205,7 @@ where
             if self.dma_length == 0 {
                 self.register_set
                     .status
-                    .set_flag(StatusFlag::DMA_PROGRESS, false);
+                    .set_flag(StatusFlag::DmaProgress, false);
                 self.register_set.mode_register.clear_dma_enabled();
                 self.dma_mode = None;
                 self.dma_run = false;
@@ -248,7 +232,7 @@ where
         self.dma_src_address += 2;
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         self.dma_length -= 1;
-        self.signal_bus.borrow_mut().push_siganal(Signal::CPU_HALT);
+        self.signal_bus.borrow_mut().push_siganal(Signal::CpuHalt);
     }
 
     fn dma_ram_fill(&mut self) {
@@ -406,48 +390,5 @@ where
                 }
             }
         }
-    }
-
-    fn update_counters(&mut self) {
-        self.h_counter += 1;
-
-        if !self.h_counter_jumped && self.h_counter == 0xEA {
-            self.h_counter = 0x93;
-            self.h_counter_jumped = true;
-        }
-        if self.h_counter == 0x100 {
-            self.h_counter = 0;
-            self.h_counter_jumped = false;
-
-            self.v_counter += 1;
-        }
-
-        if self.h_counter == 0xE4 {
-            // self.set_status(Status::H_BLANKING, true);
-        }
-        if self.h_counter == 0x08 {
-            // self.set_status(Status::H_BLANKING, false);
-        }
-
-        if !self.v_counter_jumped && self.v_counter == 0xEB {
-            self.v_counter = 0xE5;
-            self.v_counter_jumped = true;
-        }
-        if self.v_counter == 0x100 {
-            self.v_counter = 0;
-            self.v_counter_jumped = false;
-
-            // self.line_intrpt_counter = self.line_intrpt_counter_value;
-            // self.set_status(Status::V_INTRPT_PENDING, false);
-        }
-
-        if self.v_counter == 0xE0 && self.h_counter == 0xAA {
-            // self.set_status(Status::V_BLANKING, true);
-        }
-        if self.v_counter == 0xFF && self.h_counter == 0xAA {
-            // self.set_status(Status::V_BLANKING, false);
-        }
-
-        // TODO add update line itrpt countr on lines between 225 and 261
     }
 }

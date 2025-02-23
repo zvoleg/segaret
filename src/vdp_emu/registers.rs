@@ -22,16 +22,16 @@ const DMA_SOURCE_M: usize = 22;
 const DMA_SOURCE_H: usize = 23;
 
 pub(crate) enum StatusFlag {
-    PAL = 0,
-    DMA_PROGRESS = 1,
-    H_BLANKING = 2,
-    V_BLANKING = 3,
-    ODD_FRAME = 4,
-    SPITE_COLLISION = 5,
-    SPRITE_OVERFLOW = 6,
-    V_INTRPT_PENDING = 7,
-    FIFO_FULL = 8,
-    FIFO_EMPTY = 9,
+    Pal = 0,
+    DmaProgress = 1,
+    HBlanking = 2,
+    Blanking = 3,
+    OddFrame = 4,
+    SpriteCollision = 5,
+    SpriteOverflow = 6,
+    VInterruptPending = 7,
+    FifoFull = 8,
+    FifoEmpty = 9,
 }
 
 pub(crate) enum VScrollMode {
@@ -486,7 +486,7 @@ impl Status {
 
     pub(crate) fn set_flag(&mut self, flag: StatusFlag, set: bool) {
         if set {
-            self.data |= (1 << flag as u8);
+            self.data |= 1 << flag as u8;
         } else {
             self.data &= !(1 << flag as u8);
         }

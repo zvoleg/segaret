@@ -22,7 +22,7 @@ impl DisplayMod {
     }
 }
 
-enum RamAccessMode {
+pub(crate) enum RamAccessMode {
     VramR,
     VramW,
     CramR,

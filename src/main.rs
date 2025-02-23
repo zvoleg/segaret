@@ -8,7 +8,7 @@ use m68k_emu::cpu::M68k;
 
 use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
-use signal_bus::SignalBus;
+use signal_bus::{Signal, SignalBus};
 use spriter::if_pressed;
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
@@ -54,7 +54,6 @@ fn main() {
 
     let mut auto = false;
     let mut vdp_clocks_remainder = 0.0f32;
-    let mut vdp_clocks_accum = 0;
     runner.run(window, move |_| {
         let mut manual_clock = false;
         if_pressed!(spriter::Key::A, {
@@ -77,13 +76,13 @@ fn main() {
                 let mut vdp_clocks = 1;
                 if signal_bus
                     .borrow_mut()
-                    .handle_signal(signal_bus::Signal::V_INTERRUPT)
+                    .handle_signal(Signal::VInterrupt)
                 {
                     m68k.interrupt(6);
                 }
                 if !signal_bus
                     .borrow_mut()
-                    .handle_signal(signal_bus::Signal::CPU_HALT)
+                    .handle_signal(Signal::CpuHalt)
                 {
                     let vdp_clocks_rational =
                         m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
@@ -109,13 +108,13 @@ fn main() {
             let mut vdp_clocks = 1;
             if signal_bus
                 .borrow_mut()
-                .handle_signal(signal_bus::Signal::V_INTERRUPT)
+                .handle_signal(Signal::VInterrupt)
             {
                 m68k.interrupt(6);
             }
             if !signal_bus
                 .borrow_mut()
-                .handle_signal(signal_bus::Signal::CPU_HALT)
+                .handle_signal(Signal::CpuHalt)
             {
                 let vdp_clocks_rational =
                     m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
@@ -125,7 +124,6 @@ fn main() {
             for _ in 0..vdp_clocks {
                 vdp.borrow_mut().clock();
             }
-            vdp_clocks_accum += vdp_clocks;
             true
         } else {
             false
