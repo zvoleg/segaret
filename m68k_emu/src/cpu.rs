@@ -94,6 +94,9 @@ where
                         return 1;
                     }
                 };
+            if let Some(breakpoints) = self.breakpoints.as_ref() {
+                self.breakpoint_hit = breakpoints.iter().any(|b| *b == operand.operand_address);
+            }
             operands.add(operand);
         }
         let instruction = &operation.instruction;
