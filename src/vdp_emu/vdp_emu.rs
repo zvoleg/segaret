@@ -111,9 +111,12 @@ where
             let plane_b_base_address = self.register_set.plane_b_table_location.address();
             let plane_b_dot = self.get_plane_dot(plane_b_base_address);
 
+            let window_dot = self.get_window_dot();
+
             let dot = if self.register_set.mode_register.display_enabled() {
                 let mut color = plane_a_dot
                     .color
+                    // .or_else(|| plane_a_dot.color)
                     .or_else(|| plane_b_dot.color)
                     .unwrap_or(back_dot_color);
                 // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
@@ -333,6 +336,73 @@ where
         Dot::new(color, priority)
     }
 
+    fn get_window_dot(&self) -> Dot {
+        let window_attribute_address = self.register_set.window_table_location.address();
+        let plane_address_offset =
+            ((self.h_counter / 8 + (self.v_counter / 8) * 40 as u16) as usize) * 2;
+        let attribute_data = unsafe {
+            *(self
+                .vram
+                .as_ptr()
+                .offset((window_attribute_address + plane_address_offset) as isize)
+                as *const _ as *const u16)
+        }
+        .to_be();
+
+        let palette_id = (attribute_data >> 13) & 0x3;
+        let sprite_id = (attribute_data & 0x7FF) * 32;
+
+        // each sprite byte contains 2 dots
+        let h_flip = attribute_data & 0x0800 != 0;
+        let h_dot_offset = {
+            let offset = (self.h_counter % 8) / 2;
+            if h_flip {
+                3 - offset
+            } else {
+                offset
+            }
+        };
+        // and each sprite row contains 4 bytes
+        let v_dot_offset = {
+            let v_flip = attribute_data & 0x1000 != 0;
+            let offset: u16 = (self.v_counter % 8) * 4;
+            if v_flip {
+                28 - offset
+            } else {
+                offset
+            }
+        };
+
+        let sprite_point_address = sprite_id + h_dot_offset + v_dot_offset;
+        let sprite_byte = self.vram[sprite_point_address as usize];
+        // let color_id = if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF };
+        let color_id = if !h_flip {
+            if self.h_counter % 2 == 0 {
+                sprite_byte.rotate_left(4) & 0xF
+            } else {
+                sprite_byte & 0xF
+            }
+        } else {
+            if self.h_counter % 2 == 0 {
+                sprite_byte & 0xF
+            } else {
+                sprite_byte.rotate_left(4) & 0xF
+            }
+        };
+        let color = if color_id != 0 {
+            Some(self.get_color(palette_id as usize, color_id as usize))
+        } else {
+            None
+        };
+
+        let priority = if attribute_data & 0x8000 != 0 {
+            Priority::High
+        } else {
+            Priority::Low
+        };
+        Dot::new(color, priority)
+    }
+
     fn get_color(&self, palette_id: usize, color_id: usize) -> Color {
         let converter = |b: u16| -> u32 {
             match b {
@@ -357,7 +427,7 @@ where
         Color::from_u32(color_code)
     }
 
-    fn update_vram_table_on_screen(&mut self) {
+    pub fn update_vram_table_on_screen(&mut self) {
         let color_table = [
             Color::from_u32(0xCCCCFF),
             Color::from_u32(0xAAAAAA),
