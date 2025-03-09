@@ -29,7 +29,7 @@ impl AddressRegisterPtr {
         unsafe {
             match size {
                 Size::Byte => panic!(
-                    "AddressRegisterPtr: read: address register can't be to addressed by Byte size"
+                    "AddressRegisterPtr: write: address register can't be to addressed by Byte size"
                 ),
                 Size::Word => *(ptr as *mut u32) = data.sign_extend(size),
                 Size::Long => *(ptr as *mut u32) = data,

@@ -50,8 +50,8 @@ where
         }
     }
 
-    pub fn set_breakpoints(&mut self, breakpoints: Vec<u32>) {
-        self.breakpoints = Some(breakpoints);
+    pub fn set_breakpoints(&mut self, breakpoints: &Vec<u32>) {
+        self.breakpoints = Some(breakpoints.clone());
     }
 
     pub fn set_bus(&mut self, bus: T) {
