@@ -1,6 +1,6 @@
 extern crate spriter;
 
-use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
+use std::{cell::RefCell, fs::File, io::{stdin, Read}, rc::Rc};
 
 use controller::Controller;
 use log::info;
@@ -9,7 +9,7 @@ use m68k_emu::cpu::M68k;
 use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
 use signal_bus::{Signal, SignalBus};
-use spriter::if_pressed;
+use spriter::{if_pressed, Key};
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 
@@ -33,7 +33,9 @@ fn main() {
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
-    // m68k.set_breakpoints(vec![]);
+    let mut break_points: Vec<u32> = vec![];
+    // let mut break_points = vec![0x4b8, 0x4f0, 0x1F9A8];
+    m68k.set_breakpoints(&break_points);
 
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
     let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(
@@ -41,9 +43,10 @@ fn main() {
         signal_bus.clone(),
     )));
 
-    let controller = Rc::new(RefCell::new(Controller::new()));
+    let controller_a = Rc::new(RefCell::new(Controller::new()));
+    let controller_b = Rc::new(RefCell::new(Controller::new()));
 
-    let mut cpu_bus = CpuBus::init(memory_space.clone(), controller.clone());
+    let mut cpu_bus = CpuBus::init(memory_space.clone(), controller_a.clone(), controller_b.clone());
     cpu_bus.set_vdp_ports(vdp.clone());
 
     m68k.set_bus(cpu_bus);
@@ -53,19 +56,51 @@ fn main() {
     vdp.borrow_mut().set_bus(vdp_bus);
 
     let mut auto = false;
+    let mut by_frame = false;
     let mut vdp_clocks_remainder = 0.0f32;
     runner.run(window, move |_| {
         let mut manual_clock = false;
-        if_pressed!(spriter::Key::A, {
+        if_pressed!(Key::A, {
             auto = !auto;
             info!("Auto Clock mode = {}", auto);
         });
-        if_pressed!(spriter::Key::C, {
+        if_pressed!(Key::F, {
+            auto = !auto;
+            by_frame = true;
+        });
+        if_pressed!(Key::U, {
+            vdp.borrow_mut().update_vram_table_on_screen();
+        });
+        if_pressed!(Key::V, {
+            let mut buf = String::new();
+            stdin().read_line(&mut buf).unwrap();
+            let parts = buf.split(" ").collect::<Vec<&str>>();
+            if parts.len() == 2 {
+                let break_point = u32::from_str_radix(parts[0], 16).unwrap();
+                let oparation = parts[1].trim();
+                match oparation {
+                    "a" | "A" => {
+                        break_points.push(break_point);
+                        info!("break point set: {:08X}", break_point)
+                    },
+                    "d" | "D" | "r" | "R" => {
+                        if let Some(position) = break_points.iter().position(|b| *b == break_point) {
+                            break_points.swap_remove(position);
+                            info!("break point remove: {:08X}", break_point);
+                        }
+                    },
+                    _ => (),
+                }
+                m68k.set_breakpoints(&break_points);
+                info!("break points list: {:08X?}", break_points);
+            }
+        });
+        if_pressed!(Key::C, {
             auto = false;
             manual_clock = true;
             info!("Manual clock");
         });
-        if_pressed!(spriter::Key::Escape, {
+        if_pressed!(Key::Escape, {
             spriter::program_stop();
             info!("Exit from segaret");
         });
@@ -102,7 +137,12 @@ fn main() {
                     break;
                 }
             }
-            controller.borrow_mut().clock();
+            if by_frame {
+                auto = !auto;
+                by_frame = false;
+                info!("Frame done")
+            }
+            controller_a.borrow_mut().clock();
             true
         } else if manual_clock {
             let mut vdp_clocks = 1;

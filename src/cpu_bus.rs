@@ -9,9 +9,9 @@ use crate::{controller::Controller, memory_space::MemorySpace};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
-// const CONTROLLER_B_DATA: u32 = 0xA10004;
+const CONTROLLER_B_DATA: u32 = 0xA10004;
 const CONTROLLER_A_CONTROL: u32 = 0xA10008;
-// const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
+const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
 // const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
 // const Z80_RESET: u32 = 0xA11200;
@@ -23,6 +23,7 @@ pub struct CpuBus<T: VdpPorts> {
     z80_bus_request_reg: RefCell<u32>,
 
     controller_1: Rc<RefCell<Controller>>,
+    controller_2: Rc<RefCell<Controller>>,
 }
 
 impl<T> CpuBus<T>
@@ -31,14 +32,16 @@ where
 {
     pub fn init(
         memory_space: Rc<RefCell<MemorySpace>>,
-        controller: Rc<RefCell<Controller>>,
+        controller_1: Rc<RefCell<Controller>>,
+        controller_2: Rc<RefCell<Controller>>,
     ) -> Self {
         Self {
             memory_space: memory_space,
             vdp_ports: None,
             z80_bus_request_reg: RefCell::new(0),
 
-            controller_1: controller,
+            controller_1: controller_1,
+            controller_2: controller_2,
         }
     }
 
@@ -102,6 +105,8 @@ where
                 }
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 Ok(self.controller_1.borrow().read() as u32)
+            } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {
+                Ok(self.controller_2.borrow().read() as u32)
             } else {
                 let address = (address & 0x3f) as usize;
                 Ok(self.read_ptr(amount, &self.memory_space.borrow().io_area_read[address]))
@@ -153,6 +158,8 @@ where
                 *self.z80_bus_request_reg.borrow_mut() = data;
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 self.controller_1.borrow_mut().write(data as u8);
+            } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {
+                self.controller_2.borrow_mut().write(data as u8);
             } else {
                 let address = (address & 0x3f) as usize;
                 self.write_ptr(
