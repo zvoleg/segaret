@@ -95,49 +95,49 @@ where
     }
 
     fn set_ram_access(&mut self, data: u16) {
-        if !self.address_setting_latch {
+        debug!("VDP: set_ram_access: receiving data: {:04X}", data);
+        let is_first_word = (data & 0xFF00) != 0;
+        if is_first_word {
             // first word
-            self.address_setting_raw_word &= 0xFFFF; // clear msb
+            self.address_setting_raw_word = 0; // clear msb
             self.address_setting_raw_word |= (data as u32) << 16;
         } else {
             // second word
             self.address_setting_raw_word &= 0xFFFF0000; // clear lsb
             self.address_setting_raw_word |= data as u32;
-
-            let ram_access_mode_mask = (((self.address_setting_raw_word >> 4) & 0xF) << 2)
-                | (self.address_setting_raw_word >> 30) & 0b11;
-            let address = ((self.address_setting_raw_word & 0b11) << 14)
-                | (self.address_setting_raw_word >> 16) & 0x3FFF;
-            if self.address_setting_raw_word & 0x00000080 != 0 {
-                // it is dma transfer mode
-                let dma_mode_mask = ram_access_mode_mask >> 4;
-                let reg_dma_mode = self.register_set.dma_source.dma_mode();
-                let dma_enabled = self.register_set.mode_register.dma_enabled();
-                if (dma_mode_mask == 0b10) && reg_dma_mode == DmaMode::BusToRam {
-                    self.dma_mode = Some(DmaMode::BusToRam);
-                    self.dma_run = dma_enabled;
-                } else if (dma_mode_mask == 0b10) && (reg_dma_mode == DmaMode::FillRam) {
-                    self.dma_mode = Some(DmaMode::FillRam);
-                    self.dma_data_wait = true;
-                } else if (dma_mode_mask == 0b11) && reg_dma_mode == DmaMode::CopyRam {
-                    self.dma_mode = Some(DmaMode::CopyRam);
-                    self.dma_run = dma_enabled;
-                } else {
-                    panic!("VDP: write_control_port: unexpected dma mode bits sequence. dma_mode_mask = '{:02b}'\treg_dma_mod = '{}'", dma_mode_mask, reg_dma_mode);
-                }
-                self.dma_src_address = self.register_set.dma_source.src_address();
-                self.dma_length = self.register_set.dma_lnegth.length();
-                debug!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
-            }
-            // it is address set mode
-            self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
-            self.vdp_ram_address = address;
-
-            debug!(
-                "VDP: set ram access mode '{}' and address {:04X}",
-                self.ram_access_mode, self.vdp_ram_address
-            );
         }
-        self.address_setting_latch = !self.address_setting_latch
+        let ram_access_mode_mask = (((self.address_setting_raw_word >> 4) & 0xF) << 2)
+            | (self.address_setting_raw_word >> 30) & 0b11;
+        let address = ((self.address_setting_raw_word & 0b11) << 14)
+            | (self.address_setting_raw_word >> 16) & 0x3FFF;
+        if self.address_setting_raw_word & 0x00000080 != 0 {
+            // it is dma transfer mode
+            let dma_mode_mask = ram_access_mode_mask >> 4;
+            let reg_dma_mode = self.register_set.dma_source.dma_mode();
+            let dma_enabled = self.register_set.mode_register.dma_enabled();
+            if (dma_mode_mask == 0b10) && reg_dma_mode == DmaMode::BusToRam {
+                self.dma_mode = Some(DmaMode::BusToRam);
+                self.dma_run = dma_enabled;
+            } else if (dma_mode_mask == 0b10) && (reg_dma_mode == DmaMode::FillRam) {
+                self.dma_mode = Some(DmaMode::FillRam);
+                self.dma_data_wait = true;
+            } else if (dma_mode_mask == 0b11) && reg_dma_mode == DmaMode::CopyRam {
+                self.dma_mode = Some(DmaMode::CopyRam);
+                self.dma_run = dma_enabled;
+            } else {
+                panic!("VDP: write_control_port: unexpected dma mode bits sequence. dma_mode_mask = '{:02b}'\treg_dma_mod = '{}'", dma_mode_mask, reg_dma_mode);
+            }
+            self.dma_src_address = self.register_set.dma_source.src_address();
+            self.dma_length = self.register_set.dma_lnegth.length();
+            debug!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
+        }
+        // it is address set mode
+        self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
+        self.vdp_ram_address = address;
+
+        debug!(
+            "VDP: set ram access mode '{}' and address {:04X}",
+            self.ram_access_mode, self.vdp_ram_address
+        );
     }
 }
