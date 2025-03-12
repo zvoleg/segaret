@@ -1,6 +1,6 @@
 use spriter::Color;
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Copy)]
 pub(crate) enum Priority {
     High,
     Low,

@@ -252,7 +252,7 @@ impl SpriteTableLocation {
         }
     }
 
-    pub(crate) fn sprite_attribute_address(&self) -> u32 {
+    pub(crate) fn address(&self) -> u32 {
         unsafe {
             let mask = *self.data as u32 & 0x7F;
             mask << 9

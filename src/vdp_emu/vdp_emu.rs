@@ -10,6 +10,8 @@ use super::{
     bus::BusVdp,
     dot::{Dot, Priority},
     registers::{RegisterSet, StatusFlag},
+    sprite::Sprite,
+    tile::{Tile, TileDot},
     DmaMode, RamAccessMode,
 };
 
@@ -36,13 +38,14 @@ pub struct Vdp<T: BusVdp> {
     pub(crate) data_port_reg: u16, // The register that holds the last write data into data port
 
     pub(crate) address_setting_raw_word: u32,
-    pub(crate) address_setting_latch: bool,
 
     pub(crate) bus: Option<T>,
     pub(crate) signal_bus: Rc<RefCell<SignalBus>>,
 
     pub(crate) dma_src_address: u32,
     pub(crate) dma_length: u16,
+
+    sprites: Vec<Sprite>,
 }
 
 impl<T> Vdp<T>
@@ -80,13 +83,14 @@ where
             data_port_reg: 0,
 
             address_setting_raw_word: 0,
-            address_setting_latch: false,
 
             bus: None,
             signal_bus: signal_bus,
 
             dma_src_address: 0,
             dma_length: 0,
+
+            sprites: vec![],
         }
     }
 
@@ -105,6 +109,8 @@ where
             let bg_color_id = self.register_set.background_color.color_id();
             let back_dot_color = self.get_color(bg_palette_id, bg_color_id);
 
+            let sprite_dot = self.get_sprite_dot();
+
             let plane_a_base_address = self.register_set.plane_a_table_location.address();
             let plane_a_dot = self.get_plane_dot(plane_a_base_address);
 
@@ -114,9 +120,9 @@ where
             let window_dot = self.get_window_dot();
 
             let dot = if self.register_set.mode_register.display_enabled() {
-                let mut color = plane_a_dot
+                let mut color = sprite_dot
                     .color
-                    // .or_else(|| plane_a_dot.color)
+                    .or_else(|| plane_a_dot.color)
                     .or_else(|| plane_b_dot.color)
                     .unwrap_or(back_dot_color);
                 // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
@@ -130,6 +136,11 @@ where
                         color = plane_color;
                     }
                 }
+                if let Some(sprite_color) = sprite_dot.color {
+                    if sprite_dot.priority == Priority::High {
+                        color = sprite_color;
+                    }
+                }
                 color
             } else {
                 back_dot_color
@@ -141,6 +152,12 @@ where
             if self.h_counter >= 320 {
                 self.h_counter = 0;
                 self.v_counter += 1;
+
+                let sprite_table_location = self.register_set.sprite_table_location.address() as usize;
+                self.sprites = (sprite_table_location..sprite_table_location + 0x280)
+                    .step_by(4)
+                    .map(|i| Sprite::new(&self.vram[i..i + 8]))
+                    .collect::<Vec<Sprite>>();
             }
             if self.v_counter == 0xE0 {
                 // self.v_counter = 0;
@@ -170,25 +187,7 @@ where
                     .set_flag(StatusFlag::Blanking, false);
             }
         }
-
         update_screen
-        // if self.h_interrupt_enable && self.line_intrpt_counter == 0 {
-        //     self.interrupt_line.borrow_mut().send(4);
-        //     self.line_intrpt_counter = self.line_intrpt_counter_value;
-        // }
-        // if self.v_interrupt_enable && self.v_counter == 0xE0 && self.h_counter == 0x08 {
-        //     unsafe {
-        //         (*self.bus).send_interrupt(6);
-        //     }
-        //     self.set_status(Status::V_INTRPT_PENDING, true);
-        // }
-        // self.update_counters();
-        // for x in 0..320 {
-        //     for y in 0..224 {
-        //         let pixel_color = rand::random::<u32>() % 2;
-        //         self.screen.set_pixel(x, y, Color::from_u32(0xFFFFFF * pixel_color)).unwrap();
-        //     }
-        // }
     }
 
     fn dma_clock(&mut self) {
@@ -283,45 +282,14 @@ where
         .to_be();
 
         let palette_id = (attribute_data >> 13) & 0x3;
-        let sprite_id = (attribute_data & 0x7FF) * 32;
-
-        // each sprite byte contains 2 dots
+        let tile_id = attribute_data & 0x7FF;
         let h_flip = attribute_data & 0x0800 != 0;
-        let h_dot_offset = {
-            let offset = (self.h_counter % 8) / 2;
-            if h_flip {
-                3 - offset
-            } else {
-                offset
-            }
-        };
-        // and each sprite row contains 4 bytes
-        let v_dot_offset = {
-            let v_flip = attribute_data & 0x1000 != 0;
-            let offset: u16 = (self.v_counter % 8) * 4;
-            if v_flip {
-                28 - offset
-            } else {
-                offset
-            }
-        };
+        let v_flip = attribute_data & 0x1000 != 0;
 
-        let sprite_point_address = sprite_id + h_dot_offset + v_dot_offset;
-        let sprite_byte = self.vram[sprite_point_address as usize];
-        // let color_id = if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF };
-        let color_id = if !h_flip {
-            if self.h_counter % 2 == 0 {
-                sprite_byte.rotate_left(4) & 0xF
-            } else {
-                sprite_byte & 0xF
-            }
-        } else {
-            if self.h_counter % 2 == 0 {
-                sprite_byte & 0xF
-            } else {
-                sprite_byte.rotate_left(4) & 0xF
-            }
-        };
+        let tile = Tile::new(tile_id.into(), h_flip, v_flip);
+        let tile_dot = TileDot::new(tile, (self.h_counter % 8).into(), (self.v_counter % 8).into());
+
+        let color_id = self.get_tile_dot_byte(tile_dot);
         let color = if color_id != 0 {
             Some(self.get_color(palette_id as usize, color_id as usize))
         } else {
@@ -350,45 +318,14 @@ where
         .to_be();
 
         let palette_id = (attribute_data >> 13) & 0x3;
-        let sprite_id = (attribute_data & 0x7FF) * 32;
-
-        // each sprite byte contains 2 dots
+        let tile_id = attribute_data & 0x7FF;
         let h_flip = attribute_data & 0x0800 != 0;
-        let h_dot_offset = {
-            let offset = (self.h_counter % 8) / 2;
-            if h_flip {
-                3 - offset
-            } else {
-                offset
-            }
-        };
-        // and each sprite row contains 4 bytes
-        let v_dot_offset = {
-            let v_flip = attribute_data & 0x1000 != 0;
-            let offset: u16 = (self.v_counter % 8) * 4;
-            if v_flip {
-                28 - offset
-            } else {
-                offset
-            }
-        };
+        let v_flip = attribute_data & 0x1000 != 0;
 
-        let sprite_point_address = sprite_id + h_dot_offset + v_dot_offset;
-        let sprite_byte = self.vram[sprite_point_address as usize];
-        // let color_id = if self.h_counter % 2 == 0 { sprite_byte.rotate_left(4) & 0xF } else { sprite_byte & 0xF };
-        let color_id = if !h_flip {
-            if self.h_counter % 2 == 0 {
-                sprite_byte.rotate_left(4) & 0xF
-            } else {
-                sprite_byte & 0xF
-            }
-        } else {
-            if self.h_counter % 2 == 0 {
-                sprite_byte & 0xF
-            } else {
-                sprite_byte.rotate_left(4) & 0xF
-            }
-        };
+        let tile = Tile::new(tile_id.into(), h_flip, v_flip);
+        let tile_dot = TileDot::new(tile, (self.h_counter % 8).into(), (self.v_counter % 8).into());
+
+        let color_id = self.get_tile_dot_byte(tile_dot);
         let color = if color_id != 0 {
             Some(self.get_color(palette_id as usize, color_id as usize))
         } else {
@@ -401,6 +338,27 @@ where
             Priority::Low
         };
         Dot::new(color, priority)
+    }
+
+    // sprite attribute table store 80 sprites
+    // each sprite has 8 byte size
+    fn get_sprite_dot(&self) -> Dot {
+        let hited_sprites = self.sprites
+            .iter()
+            .filter(|s| s.sprite_hit(self.v_counter, self.h_counter))
+            .collect::<Vec<&Sprite>>();
+        let mut dot = Dot::new(None, Priority::Low);
+        for sprite in hited_sprites {
+            let tile_dot = sprite.get_tile_dot(self.v_counter, self.h_counter).unwrap();
+            let dot_byte = self.get_tile_dot_byte(tile_dot);
+            if dot_byte == 0 {
+                continue;
+            }
+            let color = Some(self.get_color(sprite.palette_id() as usize, dot_byte as usize));
+            dot = Dot::new(color, sprite.priority());
+            break;
+        }
+        dot
     }
 
     fn get_color(&self, palette_id: usize, color_id: usize) -> Color {
@@ -460,5 +418,40 @@ where
                 }
             }
         }
+    }
+
+    fn get_tile_dot_byte(&self, tile_dot: TileDot) -> u8 {
+        let tile_offset = tile_dot.tile.tile_id * 0x20;
+        // each tile byte contains 2 dots
+        let h_dot_offset = {
+            let offset = tile_dot.x_position / 2;
+            if tile_dot.tile.h_flip {
+                3 - offset
+            } else {
+                offset
+            }
+        };
+        // and each tile row contains 4 bytes
+        let v_dot_offset = {
+            let offset = tile_dot.y_position * 4;
+            if tile_dot.tile.v_flip {
+                28 - offset
+            } else {
+                offset
+            }
+        };
+        let tile_point_offset = tile_offset + h_dot_offset + v_dot_offset;
+        let tile_byte = self.vram[tile_point_offset];
+        let mut rotate_position = 0;
+        if tile_dot.tile.h_flip {
+            if self.h_counter % 2 != 0 {
+                rotate_position = 4;
+            }
+        } else {
+            if self.h_counter % 2 == 0 {
+                rotate_position = 4;
+            } 
+        };
+        tile_byte.rotate_left(rotate_position) & 0xF
     }
 }

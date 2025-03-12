@@ -4,6 +4,8 @@ pub mod bus;
 pub mod dot;
 pub mod vdp_emu;
 pub mod vdp_port;
+mod tile;
+mod sprite;
 
 mod registers;
 
