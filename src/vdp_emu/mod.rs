@@ -2,10 +2,10 @@ use std::fmt::Display;
 
 pub mod bus;
 pub mod dot;
+mod sprite;
+mod tile;
 pub mod vdp_emu;
 pub mod vdp_port;
-mod tile;
-mod sprite;
 
 mod registers;
 

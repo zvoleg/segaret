@@ -81,7 +81,9 @@ impl Sprite {
         if self.h_position < 128 || self.v_position < 128 {
             return false;
         }
-        if h_position < (self.h_position - 128) as u16 || v_position < (self.v_position - 128) as u16 {
+        if h_position < (self.h_position - 128) as u16
+            || v_position < (self.v_position - 128) as u16
+        {
             return false;
         }
         let h_right_point = (self.h_position - 128) as u16 + self.size_x * 8;

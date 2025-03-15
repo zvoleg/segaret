@@ -38,6 +38,7 @@ pub struct Vdp<T: BusVdp> {
     pub(crate) data_port_reg: u16, // The register that holds the last write data into data port
 
     pub(crate) address_setting_raw_word: u32,
+    pub(crate) address_setting_latch: bool,
 
     pub(crate) bus: Option<T>,
     pub(crate) signal_bus: Rc<RefCell<SignalBus>>,
@@ -83,6 +84,7 @@ where
             data_port_reg: 0,
 
             address_setting_raw_word: 0,
+            address_setting_latch: false,
 
             bus: None,
             signal_bus: signal_bus,
@@ -153,7 +155,8 @@ where
                 self.h_counter = 0;
                 self.v_counter += 1;
 
-                let sprite_table_location = self.register_set.sprite_table_location.address() as usize;
+                let sprite_table_location =
+                    self.register_set.sprite_table_location.address() as usize;
                 self.sprites = (sprite_table_location..sprite_table_location + 0x280)
                     .step_by(4)
                     .map(|i| Sprite::new(&self.vram[i..i + 8]))
@@ -287,7 +290,11 @@ where
         let v_flip = attribute_data & 0x1000 != 0;
 
         let tile = Tile::new(tile_id.into(), h_flip, v_flip);
-        let tile_dot = TileDot::new(tile, (self.h_counter % 8).into(), (self.v_counter % 8).into());
+        let tile_dot = TileDot::new(
+            tile,
+            (self.h_counter % 8).into(),
+            (self.v_counter % 8).into(),
+        );
 
         let color_id = self.get_tile_dot_byte(tile_dot);
         let color = if color_id != 0 {
@@ -323,7 +330,11 @@ where
         let v_flip = attribute_data & 0x1000 != 0;
 
         let tile = Tile::new(tile_id.into(), h_flip, v_flip);
-        let tile_dot = TileDot::new(tile, (self.h_counter % 8).into(), (self.v_counter % 8).into());
+        let tile_dot = TileDot::new(
+            tile,
+            (self.h_counter % 8).into(),
+            (self.v_counter % 8).into(),
+        );
 
         let color_id = self.get_tile_dot_byte(tile_dot);
         let color = if color_id != 0 {
@@ -343,7 +354,8 @@ where
     // sprite attribute table store 80 sprites
     // each sprite has 8 byte size
     fn get_sprite_dot(&self) -> Dot {
-        let hited_sprites = self.sprites
+        let hited_sprites = self
+            .sprites
             .iter()
             .filter(|s| s.sprite_hit(self.v_counter, self.h_counter))
             .collect::<Vec<&Sprite>>();
@@ -450,7 +462,7 @@ where
         } else {
             if self.h_counter % 2 == 0 {
                 rotate_position = 4;
-            } 
+            }
         };
         tile_byte.rotate_left(rotate_position) & 0xF
     }
