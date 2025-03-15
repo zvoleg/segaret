@@ -1,6 +1,13 @@
 extern crate spriter;
 
-use std::{cell::RefCell, fs::File, io::{stdin, Read}, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    fs::File,
+    io::{stdin, Read},
+    rc::Rc,
+    str,
+};
 
 use controller::Controller;
 use log::info;
@@ -34,7 +41,7 @@ fn main() {
 
     let mut m68k = M68k::new();
     let mut break_points: Vec<u32> = vec![];
-    // let mut break_points = vec![0x4b8, 0x4f0, 0x1F9A8];
+    // let mut break_points = vec![0x4236];
     m68k.set_breakpoints(&break_points);
 
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
@@ -46,7 +53,11 @@ fn main() {
     let controller_a = Rc::new(RefCell::new(Controller::new()));
     let controller_b = Rc::new(RefCell::new(Controller::new()));
 
-    let mut cpu_bus = CpuBus::init(memory_space.clone(), controller_a.clone(), controller_b.clone());
+    let mut cpu_bus = CpuBus::init(
+        memory_space.clone(),
+        controller_a.clone(),
+        controller_b.clone(),
+    );
     cpu_bus.set_vdp_ports(vdp.clone());
 
     m68k.set_bus(cpu_bus);
@@ -58,6 +69,10 @@ fn main() {
     let mut auto = false;
     let mut by_frame = false;
     let mut vdp_clocks_remainder = 0.0f32;
+
+    let mut values_map: HashMap<u8, Vec<u32>> = HashMap::new();
+    let mut downgraded_values: Vec<u8> = vec![];
+
     runner.run(window, move |_| {
         let mut manual_clock = false;
         if_pressed!(Key::A, {
@@ -72,6 +87,7 @@ fn main() {
             vdp.borrow_mut().update_vram_table_on_screen();
         });
         if_pressed!(Key::V, {
+            info!("Break point manage command ('<address> a' - add break point, '<address> d - delete break point'");
             let mut buf = String::new();
             stdin().read_line(&mut buf).unwrap();
             let parts = buf.split(" ").collect::<Vec<&str>>();
@@ -82,17 +98,69 @@ fn main() {
                     "a" | "A" => {
                         break_points.push(break_point);
                         info!("break point set: {:08X}", break_point)
-                    },
-                    "d" | "D" | "r" | "R" => {
-                        if let Some(position) = break_points.iter().position(|b| *b == break_point) {
+                    }
+                    "d" | "D" => {
+                        if let Some(position) = break_points.iter().position(|b| *b == break_point)
+                        {
                             break_points.swap_remove(position);
                             info!("break point remove: {:08X}", break_point);
                         }
-                    },
+                    }
                     _ => (),
                 }
                 m68k.set_breakpoints(&break_points);
                 info!("break points list: {:08X?}", break_points);
+            }
+        });
+        if_pressed!(Key::S, {
+            info!("Search value address ('<value>' - init searching addresses, '<first value> <new value>' - search changes)");
+            let mut buf = String::new();
+            stdin().read_line(&mut buf).unwrap();
+            let parts = buf.split(" ").map(|p| p.trim()).collect::<Vec<&str>>();
+            match parts.len() {
+                1 => {
+                    let byte = u8::from_str_radix(parts[0], 16).unwrap();
+                    let addresses = memory_space
+                        .borrow()
+                        .m68k_ram
+                        .iter()
+                        .enumerate()
+                        .filter(|b| *b.1 == byte)
+                        .map(|a| a.0 as u32)
+                        .collect::<Vec<u32>>();
+                    values_map.insert(byte, addresses);
+                }
+                2 => {
+                    let last_value = u8::from_str_radix(parts[0], 16).unwrap();
+                    let new_value = u8::from_str_radix(parts[1], 16).unwrap();
+                    let addresses = values_map
+                        .get(&last_value)
+                        .unwrap()
+                        .iter()
+                        .filter(|a| memory_space.borrow().m68k_ram[(**a) as usize] == new_value)
+                        .map(|a| *a)
+                        .collect::<Vec<u32>>();
+                    values_map.insert(last_value, addresses);
+                }
+                _ => (),
+            }
+            for (key, val) in values_map.iter() {
+                info!("value {:02X}: {:08X?}", key, val);
+            }
+        });
+        if_pressed!(Key::D, {
+            info!("Searching values downgraded by one");
+            if downgraded_values.len() == 0 {
+                downgraded_values = memory_space.borrow().m68k_ram.clone();
+            } else {
+                let addresses = downgraded_values
+                    .iter()
+                    .enumerate()
+                    .filter(|v| (*v.1 - 1) == memory_space.borrow().m68k_ram[v.0])
+                    .map(|v| v.0 as u32)
+                    .collect::<Vec<u32>>();
+                info!("downgraded addresses {:08X?}", addresses);
+                downgraded_values = memory_space.borrow().m68k_ram.clone();
             }
         });
         if_pressed!(Key::C, {
@@ -109,16 +177,10 @@ fn main() {
             let mut clock_counter = 0;
             while !update_screen && clock_counter < 71680 {
                 let mut vdp_clocks = 1;
-                if signal_bus
-                    .borrow_mut()
-                    .handle_signal(Signal::VInterrupt)
-                {
+                if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
                     m68k.interrupt(6);
                 }
-                if !signal_bus
-                    .borrow_mut()
-                    .handle_signal(Signal::CpuHalt)
-                {
+                if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
                     let vdp_clocks_rational =
                         m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                     vdp_clocks = vdp_clocks_rational.trunc() as i32;
@@ -146,16 +208,10 @@ fn main() {
             true
         } else if manual_clock {
             let mut vdp_clocks = 1;
-            if signal_bus
-                .borrow_mut()
-                .handle_signal(Signal::VInterrupt)
-            {
+            if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
                 m68k.interrupt(6);
             }
-            if !signal_bus
-                .borrow_mut()
-                .handle_signal(Signal::CpuHalt)
-            {
+            if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
                 let vdp_clocks_rational =
                     m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                 vdp_clocks = vdp_clocks_rational.trunc() as i32;
