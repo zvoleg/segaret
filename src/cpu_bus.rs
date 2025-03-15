@@ -121,7 +121,7 @@ where
             self.vdp_ports
                 .as_ref()
                 .unwrap()
-                .borrow()
+                .borrow_mut()
                 .read_control_port()
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;

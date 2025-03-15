@@ -9,7 +9,7 @@ const VDP_CTRL_REGISTER_ID_MASK: u16 = 0x1F00;
 pub trait VdpPorts {
     fn read_data_port(&mut self) -> Result<u32, ()>;
     fn write_data_port(&mut self, data: u16) -> Result<(), ()>;
-    fn read_control_port(&self) -> Result<u32, ()>;
+    fn read_control_port(&mut self) -> Result<u32, ()>;
     fn write_control_port(&mut self, data: u16) -> Result<(), ()>;
 }
 
@@ -18,17 +18,21 @@ where
     T: BusVdp,
 {
     fn read_data_port(&mut self) -> Result<u32, ()> {
-        match self.ram_access_mode {
-            RamAccessMode::VramR => (),
-            RamAccessMode::CramR => (),
-            RamAccessMode::VSramR => (),
-            _ => (), // wron access mode just ignoring (by docks)
-        }
+        self.address_setting_latch = false;
+        let data = unsafe {
+            match self.ram_access_mode {
+                RamAccessMode::VramR => *(self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
+                RamAccessMode::CramR => *(self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
+                RamAccessMode::VSramR => *(self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
+                _ => 0, // wron access mode just ignoring (by docks)
+            }
+        }.to_be();
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
-        Ok(0)
+        Ok(data as u32)
     }
 
     fn write_data_port(&mut self, data: u16) -> Result<(), ()> {
+        self.address_setting_latch = false;
         if let Some(DmaMode::FillRam) = self.dma_mode {
             let dma_enabled = self.register_set.mode_register.dma_enabled();
             if dma_enabled {
@@ -64,7 +68,8 @@ where
         Ok(())
     }
 
-    fn read_control_port(&self) -> Result<u32, ()> {
+    fn read_control_port(&mut self) -> Result<u32, ()> {
+        self.address_setting_latch = false;
         let status = self.register_set.status.read();
         Ok(status as u32)
     }
@@ -96,18 +101,20 @@ where
 
     fn set_ram_access(&mut self, data: u16) {
         debug!("VDP: set_ram_access: receiving data: {:04X}", data);
-        let is_first_word = (data & 0xFF00) != 0;
-        if is_first_word {
+        if !self.address_setting_latch {
             // first word
             self.address_setting_raw_word = 0; // clear msb
             self.address_setting_raw_word |= (data as u32) << 16;
+            self.address_setting_latch = !self.address_setting_latch
         } else {
             // second word
             self.address_setting_raw_word &= 0xFFFF0000; // clear lsb
             self.address_setting_raw_word |= data as u32;
+            self.address_setting_latch = !self.address_setting_latch
         }
         let ram_access_mode_mask = (((self.address_setting_raw_word >> 4) & 0xF) << 2)
-            | (self.address_setting_raw_word >> 30) & 0b11;
+            | ((self.address_setting_raw_word >> 30) & 0b11);
+        debug!("VDP: ram_access_mode_mask: {:06b}", ram_access_mode_mask);
         let address = ((self.address_setting_raw_word & 0b11) << 14)
             | (self.address_setting_raw_word >> 16) & 0x3FFF;
         if self.address_setting_raw_word & 0x00000080 != 0 {
@@ -132,7 +139,7 @@ where
             debug!("VDP: set dma mode '{}'", self.dma_mode.as_ref().unwrap());
         }
         // it is address set mode
-        self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0x7) as u16);
+        self.ram_access_mode = RamAccessMode::new((ram_access_mode_mask & 0xF) as u16);
         self.vdp_ram_address = address;
 
         debug!(
