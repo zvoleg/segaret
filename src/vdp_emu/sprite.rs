@@ -28,7 +28,7 @@ impl Sprite {
         let h_position = unsafe {
             let ptr = data.as_ptr().offset(6) as *const _ as *const u16;
             let data = (*ptr).to_be();
-            (data & 0x03FF) as i16
+            (data & 0x01FF) as i16
         };
         let hs_vs_data = data[2];
         let size_x = (((hs_vs_data >> 2) & 0x3) + 1) as u16;
@@ -61,9 +61,15 @@ impl Sprite {
 
     pub(crate) fn get_tile_dot(&self, v_position: u16, h_position: u16) -> Option<TileDot> {
         if self.sprite_hit(v_position, h_position) {
-            let x_tile = (h_position - (self.h_position - 128) as u16) / 8;
-            let y_tile = (v_position - (self.v_position - 128) as u16) / 8;
-            let tile_offset = y_tile + (x_tile * self.size_y);
+            let mut x_tile = (h_position - (self.h_position - 128) as u16) / 8;
+            if self.h_flip {
+                x_tile = self.size_x - x_tile - 1;
+            }
+            let mut y_tile = (v_position - (self.v_position - 128) as u16) / 8;
+            if self.v_flip {
+                y_tile = self.size_y - y_tile - 1;
+            }
+            let tile_offset: u16 = y_tile + (x_tile * self.size_y);
             let tile_id = (self.tile_id + tile_offset) as usize;
             let tile = Tile::new(tile_id, self.h_flip, self.v_flip);
             let tile_dot = TileDot::new(
@@ -88,7 +94,7 @@ impl Sprite {
         }
         let h_right_point = (self.h_position - 128) as u16 + self.size_x * 8;
         let v_down_point = (self.v_position - 128) as u16 + self.size_y * 8;
-        if h_position > h_right_point || v_position > v_down_point {
+        if h_position >= h_right_point || v_position >= v_down_point {
             return false;
         }
         true
