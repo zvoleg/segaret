@@ -7,7 +7,7 @@ use crate::{
     operand::OperandSet,
     primitives::Size,
     status_flag::StatusFlag,
-    vectors::{CHK_INSTRUCTION, ILLEGAL_INSTRUCTION, RESET_SP},
+    vectors::{CHK_INSTRUCTION, ILLEGAL_INSTRUCTION, RESET_SP, TRAPV_INSTRUCTION, TRAP_0_15},
     IsNegate,
 };
 
@@ -269,8 +269,10 @@ impl Display for TRAP {
 }
 
 impl<T: BusM68k> Instruction<T> for TRAP {
-    fn execute(&self, _: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        todo!()
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let vector_address_offset = self.vector * 4;
+        cpu.trap = Some(TRAP_0_15 + vector_address_offset);
+        Ok(())
     }
 }
 
@@ -283,8 +285,12 @@ impl Display for TRAPV {
 }
 
 impl<T: BusM68k> Instruction<T> for TRAPV {
-    fn execute(&self, _: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        todo!()
+    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let overflow = cpu.register_set.sr.get_flag(StatusFlag::V);
+        if overflow {
+            cpu.trap = Some(TRAPV_INSTRUCTION);
+        }
+        Ok(())
     }
 }
 

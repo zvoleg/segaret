@@ -42,7 +42,7 @@ fn generate_divs<T: BusM68k>(table: &mut [Operation<T>]) {
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Word);
                 let dst_am = Box::new(DataRegister {
                     reg: data_reg_idx,
-                    size: Size::Word,
+                    size: Size::Long,
                 });
 
                 let base_mask = instruction.generate_mask();
@@ -85,7 +85,7 @@ fn generate_divu<T: BusM68k>(table: &mut [Operation<T>]) {
                 let src_am = am_type.addressing_mode_by_type(idx, Size::Word);
                 let dst_am = Box::new(DataRegister {
                     reg: data_reg_idx,
-                    size: Size::Word,
+                    size: Size::Long,
                 });
 
                 let base_mask = instruction.generate_mask();

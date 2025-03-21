@@ -12,7 +12,7 @@ use crate::{
         MoveDirection,
     },
     operation::Operation,
-    range, Size, STACK_REGISTER,
+    range, Size, STACK_REGISTER, USP_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;
@@ -385,7 +385,7 @@ fn generate_move_usp<T: BusM68k>(table: &mut [Operation<T>]) {
             match direction {
                 MoveDirection::RegisterToMemory => {
                     src_am = Box::new(AddressRegister {
-                        reg: STACK_REGISTER,
+                        reg: USP_REGISTER,
                         size: Size::Long,
                     });
                     dst_am = Box::new(AddressRegister {
@@ -399,7 +399,7 @@ fn generate_move_usp<T: BusM68k>(table: &mut [Operation<T>]) {
                         size: Size::Long,
                     });
                     dst_am = Box::new(AddressRegister {
-                        reg: STACK_REGISTER,
+                        reg: USP_REGISTER,
                         size: Size::Long,
                     });
                 }

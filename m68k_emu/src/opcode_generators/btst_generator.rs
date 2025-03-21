@@ -30,6 +30,9 @@ fn generate_btst_reg<T: BusM68k>(table: &mut [Operation<T>]) {
         AddressingModeType::AddressRegisterIndexed,
         AddressingModeType::AbsShort,
         AddressingModeType::AbsLong,
+        AddressingModeType::Immediate,
+        AddressingModeType::ProgramCounterDisplacement,
+        AddressingModeType::ProgramCounterIndexed,
     ];
 
     for data_reg_idx in 0..8 {
@@ -75,6 +78,8 @@ fn generate_btst_i<T: BusM68k>(table: &mut [Operation<T>]) {
         AddressingModeType::AddressRegisterIndexed,
         AddressingModeType::AbsShort,
         AddressingModeType::AbsLong,
+        AddressingModeType::ProgramCounterDisplacement,
+        AddressingModeType::ProgramCounterIndexed,
     ];
 
     for am_type in am_types {

@@ -181,10 +181,9 @@ impl<T: BusM68k> Instruction<T> for ADDX {
         sr.set_flag(StatusFlag::V, overflow);
         sr.set_flag(StatusFlag::C, carry);
 
+        let zero_flag = sr.get_flag(StatusFlag::Z);
         let is_zero = result.is_zero(self.size);
-        if !is_zero {
-            sr.set_flag(StatusFlag::Z, is_zero);
-        }
+        sr.set_flag(StatusFlag::Z, zero_flag & is_zero);
         Ok(())
     }
 }
@@ -362,10 +361,9 @@ impl<T: BusM68k> Instruction<T> for SUBX {
         sr.set_flag(StatusFlag::V, overflow);
         sr.set_flag(StatusFlag::C, carry);
 
+        let zero_flag = sr.get_flag(StatusFlag::Z);
         let is_zero = result.is_zero(self.size);
-        if !is_zero {
-            sr.set_flag(StatusFlag::Z, is_zero);
-        }
+        sr.set_flag(StatusFlag::Z, zero_flag & is_zero);
         Ok(())
     }
 }
@@ -533,11 +531,11 @@ impl<T: BusM68k> Instruction<T> for NEG {
 
         let negate = result.is_negate(self.size);
         let zero = result.is_zero(self.size);
-        let carry = !zero; // instruction description sais '!zero' but the flag calculation table sais dm || rm
 
         let src_msb = data.msb_is_set(self.size);
         let res_msb = result.msb_is_set(self.size);
-        let overflow = src_msb & res_msb;
+        let overflow = src_msb && res_msb;
+        let carry = src_msb || res_msb; // instruction description sais '!zero' but the flag calculation table sais dm || rm
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
@@ -570,8 +568,8 @@ impl<T: BusM68k> Instruction<T> for NEGX {
 
         let dst_msb = data.msb_is_set(self.size);
         let res_msb = result.msb_is_set(self.size);
-        let overflow = dst_msb & res_msb;
-        let carry = dst_msb | res_msb;
+        let overflow = dst_msb && res_msb;
+        let carry = dst_msb || res_msb;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::X, carry);
@@ -599,17 +597,17 @@ impl<T: BusM68k> Instruction<T> for MULS {
     fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
-        let src_data = src_operand.read()?;
-        let dst_data = dst_operand.read()?;
+        let src_data = src_operand.read()?.sign_extend(Size::Word) as i32;
+        let dst_data = dst_operand.read()?.sign_extend(Size::Word) as i32;
 
-        let (result, overflow) = (src_data as i32).overflowing_mul(dst_data as i32); // TODO may be there is needs use casting to i16 for correct calculation of the overflow status
+        let (result, _) = (src_data).overflowing_mul(dst_data); // TODO may be there is needs use casting to i16 for correct calculation of the overflow status
         let result = result as u32;
         dst_operand.write_sized(result, Size::Long)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
-        sr.set_flag(StatusFlag::V, overflow);
+        sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
         Ok(())
     }
@@ -630,13 +628,13 @@ impl<T: BusM68k> Instruction<T> for MULU {
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
-        let (result, overflow) = src_data.overflowing_mul(dst_data); // TODO may be there is needs use casting to u16 for correct calculation of the overflow status
+        let (result, _) = src_data.overflowing_mul(dst_data); // TODO may be there is needs use casting to u16 for correct calculation of the overflow status
         dst_operand.write_sized(result, Size::Long)?;
 
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, result.is_negate(Size::Long));
         sr.set_flag(StatusFlag::Z, result.is_zero(Size::Long));
-        sr.set_flag(StatusFlag::V, overflow);
+        sr.set_flag(StatusFlag::V, false);
         sr.set_flag(StatusFlag::C, false);
         Ok(())
     }
@@ -655,20 +653,25 @@ impl<T: BusM68k> Instruction<T> for DIVS {
         let src_operand = operand_set.next();
         let dst_operand = operand_set.next();
 
-        let src_data = src_operand.read()? as i32;
+        let src_data = src_operand.read()?.sign_extend(Size::Word) as i32;
         let dst_data = dst_operand.read()? as i32;
 
         if src_data == 0 {
             cpu.trap = Some(DIVISION_BY_ZERO);
             return Ok(());
         }
-        let (quotient, overflow) = dst_data.overflowing_div(src_data);
+
+        let quotient = dst_data.wrapping_div(src_data);
+
+        let overflow = quotient <= i16::MIN as i32 || quotient > i16::MAX as i32;
+
         if overflow {
             cpu.register_set.sr.set_flag(StatusFlag::V, overflow);
             return Ok(());
         }
-        let remainder = dst_data % src_data;
-        let result = remainder << 16 | (quotient & 0xFFFF);
+
+        let remainder = dst_data.wrapping_rem(src_data);
+        let result = (remainder as u32) << 16 | ((quotient as u32) & 0xFFFF);
 
         dst_operand.write_sized(result as u32, Size::Long)?;
 
@@ -705,7 +708,9 @@ impl<T: BusM68k> Instruction<T> for DIVU {
             cpu.trap = Some(DIVISION_BY_ZERO);
             return Ok(());
         }
-        let (quotient, overflow) = dst_data.overflowing_div(src_data);
+        let (quotient, _) = dst_data.overflowing_div(src_data);
+        let dst_msw = dst_data >> 16;
+        let overflow = dst_msw >= src_data;
         if overflow {
             cpu.register_set.sr.set_flag(StatusFlag::V, overflow);
             return Ok(());

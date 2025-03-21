@@ -2,6 +2,7 @@
 /.vscode
 *.md
 *.gen
+*.bin
 !README.md
 Cargo.lock
 /notes

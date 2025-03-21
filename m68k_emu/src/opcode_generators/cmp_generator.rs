@@ -204,11 +204,11 @@ fn generate_cmpm<T: BusM68k>(table: &mut [Operation<T>]) {
             for size in [Size::Byte, Size::Word, Size::Long] {
                 let instruction = Box::new(CMPM { size: size });
                 let src_am = Box::new(AddressRegisterPostIncrement {
-                    reg: reg_y,
+                    reg: reg_x,
                     size: size,
                 });
                 let dst_am = Box::new(AddressRegisterPostIncrement {
-                    reg: reg_x,
+                    reg: reg_y,
                     size: size,
                 });
 

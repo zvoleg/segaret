@@ -12,7 +12,7 @@ pub(crate) enum RegisterType {
 
 #[derive(Clone, Copy)]
 pub(crate) struct RegisterSet {
-    registers: [u32; 16],
+    registers: [u32; 17],
     pub(crate) pc: u32,
     pub(crate) sr: StatusRegister,
 }
@@ -20,7 +20,7 @@ pub(crate) struct RegisterSet {
 impl RegisterSet {
     pub(crate) fn new() -> Self {
         Self {
-            registers: [0; 16],
+            registers: [0; 17],
             pc: 0,
             sr: StatusRegister::new(),
         }

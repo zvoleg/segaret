@@ -16,6 +16,7 @@ mod vectors;
 use primitives::Size;
 
 const STACK_REGISTER: usize = 7;
+const USP_REGISTER: usize = 8;
 
 trait IsNegate {
     fn is_negate(&self, size: Size) -> bool;
