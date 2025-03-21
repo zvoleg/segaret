@@ -294,6 +294,7 @@ where
             tile,
             (self.h_counter % 8).into(),
             (self.v_counter % 8).into(),
+            self.h_counter % 2 == 0,
         );
 
         let color_id = self.get_tile_dot_byte(tile_dot);
@@ -334,6 +335,7 @@ where
             tile,
             (self.h_counter % 8).into(),
             (self.v_counter % 8).into(),
+            self.h_counter % 2 == 0,
         );
 
         let color_id = self.get_tile_dot_byte(tile_dot);
@@ -438,14 +440,14 @@ where
         };
         let tile_point_offset = tile_offset + h_dot_offset + v_dot_offset;
         let tile_byte = self.vram[tile_point_offset];
-        let mut rotate_position = 0;
+        let mut rotate_position = 8;
         if tile_dot.tile.h_flip {
-            if self.h_counter % 2 != 0 {
-                rotate_position = 4;
+            if !tile_dot.even {
+                rotate_position -= 4;
             }
         } else {
-            if self.h_counter % 2 == 0 {
-                rotate_position = 4;
+            if tile_dot.even {
+                rotate_position -= 4;
             }
         };
         tile_byte.rotate_left(rotate_position) & 0xF

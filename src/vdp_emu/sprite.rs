@@ -72,10 +72,12 @@ impl Sprite {
             let tile_offset: u16 = y_tile + (x_tile * self.size_y);
             let tile_id = (self.tile_id + tile_offset) as usize;
             let tile = Tile::new(tile_id, self.h_flip, self.v_flip);
+            let x_position = ((h_position - (self.h_position - 128) as u16) % 8) as usize;
             let tile_dot = TileDot::new(
                 tile,
-                ((h_position - (self.h_position - 128) as u16) % 8) as usize,
+                x_position,
                 ((v_position - (self.v_position - 128) as u16) % 8) as usize,
+                x_position % 2 == 0
             );
             Some(tile_dot)
         } else {

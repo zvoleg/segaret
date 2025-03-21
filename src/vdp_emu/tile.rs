@@ -18,14 +18,16 @@ pub(crate) struct TileDot {
     pub(crate) tile: Tile,
     pub(crate) x_position: usize,
     pub(crate) y_position: usize,
+    pub(crate) even: bool,
 }
 
 impl TileDot {
-    pub(crate) fn new(tile: Tile, x_position: usize, y_position: usize) -> Self {
+    pub(crate) fn new(tile: Tile, x_position: usize, y_position: usize, even: bool) -> Self {
         Self {
             tile,
             x_position,
             y_position,
+            even,
         }
     }
 }
