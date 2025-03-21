@@ -398,24 +398,7 @@ where
     }
 
     pub fn update_vram_table_on_screen(&mut self) {
-        let color_table = [
-            Color::from_u32(0xCCCCFF),
-            Color::from_u32(0xAAAAAA),
-            Color::from_u32(0x9999CC),
-            Color::from_u32(0xCC9999),
-            Color::from_u32(0x99CC99),
-            Color::from_u32(0x883333),
-            Color::from_u32(0x333388),
-            Color::from_u32(0x338833),
-            Color::from_u32(0xAAAA33),
-            Color::from_u32(0x999999),
-            Color::from_u32(0xCCCCCC),
-            Color::from_u32(0x888888),
-            Color::from_u32(0x333377),
-            Color::from_u32(0x228888),
-            Color::from_u32(0x555555),
-            Color::from_u32(0x000000),
-        ];
+        let palette_id = 0;
         for tile_idx in 0..2048 {
             for byte_idx in 0..32 {
                 let idx = tile_idx * 32 + byte_idx;
@@ -424,8 +407,9 @@ where
                     let x = (tile_idx % 32) * 8 + (byte_idx % 4) * 2 + pixel_num;
                     let y = (tile_idx / 32) * 8 + byte_idx / 4;
                     let dot = ((data_byte >> (4 * pixel_num)) & 0xF) as usize;
+                    let color = self.get_color(palette_id, dot);
                     self.vram_table
-                        .set_pixel(x as i32, y as i32, color_table[dot])
+                        .set_pixel(x as i32, y as i32, color)
                         .unwrap();
                 }
             }
