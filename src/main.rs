@@ -3,6 +3,7 @@ extern crate spriter;
 use std::{
     cell::RefCell,
     collections::HashMap,
+    env,
     fs::File,
     io::{stdin, Read},
     rc::Rc,
@@ -32,16 +33,22 @@ const VDP_CLOCK_PER_CPU: f32 = 1.75;
 
 fn main() {
     env_logger::init();
+    let args = env::args().collect::<Vec<String>>();
+    if args.len() < 2 {
+        info!("no file to run");
+        return;
+    }
+
     let (runner, mut window) = spriter::init("segaret", 916 + 256, 1024);
 
-    let mut file = File::open("pop.md").unwrap();
+    let mut file = File::open(&args[1]).unwrap();
     let mut rom = Vec::new();
     let _ = file.read_to_end(&mut rom);
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
     let mut break_points: Vec<u32> = vec![];
-    // let mut break_points = vec![0x4236];
+    // let mut break_points = vec![0xB74, 0x1006, 0x1854];
     m68k.set_breakpoints(&break_points);
 
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
