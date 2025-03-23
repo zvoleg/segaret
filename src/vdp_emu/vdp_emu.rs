@@ -366,14 +366,14 @@ where
         let hited_sprites = self
             .sprites
             .iter()
-            .filter(|s| s.sprite_hit(self.v_counter, self.h_counter))
+            .filter(|s| s.sprite_hit(self.h_counter, self.v_counter))
             .collect::<Vec<&Sprite>>();
 
         let tile_dots = hited_sprites
             .iter()
-            .map(|s| (s, s.get_tile_dot(self.v_counter, self.h_counter)))
+            .map(|s| (*s, s.get_tile_dot(self.h_counter, self.v_counter)))
             .filter(|s_td_opt| s_td_opt.1.is_some())
-            .map(|s_td_opt| (*s_td_opt.0, self.get_tile_dot_byte(s_td_opt.1.unwrap())))
+            .map(|s_td_opt| (s_td_opt.0, self.get_tile_dot_byte(s_td_opt.1.unwrap())))
             .filter(|s_tb| s_tb.1 != 0)
             .collect::<Vec<(&Sprite, u8)>>();
 

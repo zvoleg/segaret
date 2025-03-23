@@ -1,13 +1,11 @@
-use std::num::NonZeroU8;
-
 use super::{
     dot::Priority,
     tile::{Tile, TileDot},
 };
 
 pub(crate) struct Sprite {
-    h_position: i16,
-    v_position: i16,
+    h_position: u16,
+    v_position: u16,
     size_x: u16,
     size_y: u16,
     priority: Priority,
@@ -23,12 +21,12 @@ impl Sprite {
         let v_position = unsafe {
             let ptr = data as *const _ as *const u16;
             let data = (*ptr).to_be();
-            (data & 0x03FF) as i16
+            data & 0x03FF
         };
         let h_position = unsafe {
             let ptr = data.as_ptr().offset(6) as *const _ as *const u16;
             let data = (*ptr).to_be();
-            (data & 0x01FF) as i16
+            data & 0x01FF
         };
         let hs_vs_data = data[2];
         let size_x = (((hs_vs_data >> 2) & 0x3) + 1) as u16;
@@ -59,27 +57,28 @@ impl Sprite {
         }
     }
 
-    pub(crate) fn get_tile_dot(&self, v_position: u16, h_position: u16) -> Option<TileDot> {
-        let x_screen_pos = 128 - self.h_position;
-        let y_screen_pos = 128 - self.v_position;
-        if (x_screen_pos + h_position as i16) >= 0 && (y_screen_pos + v_position as i16) >= 0 {
-            let mut x_tile = (h_position - (self.h_position - 128) as u16) / 8;
+    pub(crate) fn get_tile_dot(&self, h_position: u16, v_position: u16) -> Option<TileDot> {
+        let v_pos_to_sprite_plane = v_position + 128;
+        let h_pos_to_sprite_plane = h_position + 128;
+        if self.in_sprite(h_pos_to_sprite_plane, v_pos_to_sprite_plane) {
+            let mut x_tile = (h_pos_to_sprite_plane - self.h_position) / 8;
             if self.h_flip {
                 x_tile = self.size_x - x_tile - 1;
             }
-            let mut y_tile = (v_position - (self.v_position - 128) as u16) / 8;
+            let mut y_tile = (v_pos_to_sprite_plane - self.v_position) / 8;
             if self.v_flip {
                 y_tile = self.size_y - y_tile - 1;
             }
             let tile_offset: u16 = y_tile + (x_tile * self.size_y);
             let tile_id = (self.tile_id + tile_offset) as usize;
             let tile = Tile::new(tile_id, self.h_flip, self.v_flip);
-            let x_position = ((h_position - (self.h_position - 128) as u16) % 8) as usize;
+            let x_point = (h_pos_to_sprite_plane - self.h_position) % 8;
+            let y_point = (v_pos_to_sprite_plane - self.v_position) % 8;
             let tile_dot = TileDot::new(
                 tile,
-                x_position,
-                ((v_position - (self.v_position - 128) as u16) % 8) as usize,
-                x_position % 2 == 0,
+                x_point.into(),
+                y_point.into(),
+                x_point % 2 == 0,
             );
             Some(tile_dot)
         } else {
@@ -87,29 +86,23 @@ impl Sprite {
         }
     }
 
-    pub(crate) fn sprite_hit(&self, v_position: u16, h_position: u16) -> bool {
-        if self.h_position < (128 - self.size_x as i16 * 8)
-            || self.v_position < (128 - self.size_y as i16 * 8)
-        {
-            return false;
-        }
-        if (h_position as i16) < (self.h_position as i16 - 128 - self.size_x as i16 * 8)
-            || (v_position as i16) < (self.v_position as i16 - 128 - self.size_y as i16 * 8)
-        {
-            return false;
-        }
-        let h_right_point = (self.h_position - 128) as u16 + self.size_x * 8;
-        let v_down_point = (self.v_position - 128) as u16 + self.size_y * 8;
-        if h_position >= h_right_point || v_position >= v_down_point {
-            return false;
-        }
-        true
+    fn in_sprite(&self, h_position: u16, v_position: u16) -> bool {
+        let h_hit = self.h_position <= h_position && h_position < (self.h_position + self.size_x * 8);
+        let v_hit = self.v_position <= v_position && v_position < (self.v_position + self.size_y * 8);
+        h_hit && v_hit
+    }
+
+    pub(crate) fn sprite_hit(&self, h_position: u16, v_position: u16) -> bool {
+        let h_pos_to_sprite_plane = h_position + 128;
+        let v_pos_to_sprite_plane = v_position + 128;
+        self.in_sprite(h_pos_to_sprite_plane, v_pos_to_sprite_plane)
     }
 
     pub(crate) fn in_current_line(&self, v_position: u16) -> bool {
-        let upper_bound = self.v_position - 128;
-        let lower_bound = self.v_position - 128 + (self.size_y * 8) as i16;
-        upper_bound <= v_position as i16 && (v_position as i16) < lower_bound
+        let upper_bound = self.v_position;
+        let lower_bound = self.v_position + self.size_y * 8;
+        let v_pos_to_sprite_plane = v_position + 128;
+        upper_bound <= v_pos_to_sprite_plane && v_pos_to_sprite_plane < lower_bound
     }
 
     pub(crate) fn palette_id(&self) -> u16 {
@@ -120,7 +113,7 @@ impl Sprite {
         self.priority
     }
 
-    pub(crate) fn h_position(&self) -> i16 {
+    pub(crate) fn h_position(&self) -> u16 {
         self.h_position
     }
 }
