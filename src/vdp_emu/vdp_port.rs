@@ -11,6 +11,7 @@ pub trait VdpPorts {
     fn write_data_port(&mut self, data: u16) -> Result<(), ()>;
     fn read_control_port(&mut self) -> Result<u32, ()>;
     fn write_control_port(&mut self, data: u16) -> Result<(), ()>;
+    fn read_hv_counters_port(&mut self) -> Result<u32, ()>;
 }
 
 impl<T> VdpPorts for Vdp<T>
@@ -21,12 +22,22 @@ where
         self.address_setting_latch = false;
         let data = unsafe {
             match self.ram_access_mode {
-                RamAccessMode::VramR => *(self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
-                RamAccessMode::CramR => *(self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
-                RamAccessMode::VSramR => *(self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _ as *const u16),
+                RamAccessMode::VramR => {
+                    *(self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *const u16)
+                }
+                RamAccessMode::CramR => {
+                    *(self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *const u16)
+                }
+                RamAccessMode::VSramR => {
+                    *(self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                        as *const u16)
+                }
                 _ => 0, // wron access mode just ignoring (by docks)
             }
-        }.to_be();
+        }
+        .to_be();
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         Ok(data as u32)
     }
@@ -71,6 +82,7 @@ where
     fn read_control_port(&mut self) -> Result<u32, ()> {
         self.address_setting_latch = false;
         let status = self.register_set.status.read();
+        self.register_set.status.reset();
         Ok(status as u32)
     }
 
@@ -81,6 +93,10 @@ where
             self.set_ram_access(data);
         }
         Ok(())
+    }
+
+    fn read_hv_counters_port(&mut self) -> Result<u32, ()> {
+        Ok((self.v_counter << 8 | self.h_counter & 0xFF) as u32)
     }
 }
 

@@ -472,24 +472,28 @@ impl DmaSource {
 }
 
 pub(crate) struct Status {
-    data: u8,
+    data: u16,
 }
 
 impl Status {
     pub(crate) fn new() -> Self {
-        Self { data: 0 }
+        Self { data: 0x0200 }
     }
 
-    pub(crate) fn read(&self) -> u8 {
+    pub(crate) fn read(&self) -> u16 {
         self.data
     }
 
     pub(crate) fn set_flag(&mut self, flag: StatusFlag, set: bool) {
         if set {
-            self.data |= 1 << flag as u8;
+            self.data |= 1 << flag as u16;
         } else {
-            self.data &= !(1 << flag as u8);
+            self.data &= !(1 << flag as u16);
         }
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.data = 0x0200;
     }
 }
 
