@@ -218,7 +218,6 @@ where
                 self.register_set
                     .status
                     .set_flag(StatusFlag::DmaProgress, false);
-                self.register_set.mode_register.clear_dma_enabled();
                 self.dma_mode = None;
                 self.dma_run = false;
                 return;
