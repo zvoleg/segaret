@@ -60,7 +60,9 @@ impl Sprite {
     }
 
     pub(crate) fn get_tile_dot(&self, v_position: u16, h_position: u16) -> Option<TileDot> {
-        if self.sprite_hit(v_position, h_position) {
+        let x_screen_pos = 128 - self.h_position;
+        let y_screen_pos = 128 - self.v_position;
+        if (x_screen_pos + h_position as i16) >= 0 && (y_screen_pos + v_position as i16) >= 0 {
             let mut x_tile = (h_position - (self.h_position - 128) as u16) / 8;
             if self.h_flip {
                 x_tile = self.size_x - x_tile - 1;
@@ -77,7 +79,7 @@ impl Sprite {
                 tile,
                 x_position,
                 ((v_position - (self.v_position - 128) as u16) % 8) as usize,
-                x_position % 2 == 0
+                x_position % 2 == 0,
             );
             Some(tile_dot)
         } else {
@@ -86,11 +88,13 @@ impl Sprite {
     }
 
     pub(crate) fn sprite_hit(&self, v_position: u16, h_position: u16) -> bool {
-        if self.h_position < 128 || self.v_position < 128 {
+        if self.h_position < (128 - self.size_x as i16 * 8)
+            || self.v_position < (128 - self.size_y as i16 * 8)
+        {
             return false;
         }
-        if h_position < (self.h_position - 128) as u16
-            || v_position < (self.v_position - 128) as u16
+        if (h_position as i16) < (self.h_position as i16 - 128 - self.size_x as i16 * 8)
+            || (v_position as i16) < (self.v_position as i16 - 128 - self.size_y as i16 * 8)
         {
             return false;
         }
@@ -102,11 +106,21 @@ impl Sprite {
         true
     }
 
+    pub(crate) fn in_current_line(&self, v_position: u16) -> bool {
+        let upper_bound = self.v_position - 128;
+        let lower_bound = self.v_position - 128 + (self.size_y * 8) as i16;
+        upper_bound <= v_position as i16 && (v_position as i16) < lower_bound
+    }
+
     pub(crate) fn palette_id(&self) -> u16 {
         self.palette_id
     }
 
     pub(crate) fn priority(&self) -> Priority {
         self.priority
+    }
+
+    pub(crate) fn h_position(&self) -> i16 {
+        self.h_position
     }
 }

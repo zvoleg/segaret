@@ -160,7 +160,11 @@ where
                 self.sprites = (sprite_table_location..sprite_table_location + 0x280)
                     .step_by(4)
                     .map(|i| Sprite::new(&self.vram[i..i + 8]))
+                    .filter(|s| s.in_current_line(self.v_counter))
                     .collect::<Vec<Sprite>>();
+                if self.sprites.iter().any(|s| s.h_position() == 0) {
+                    self.sprites.clear();
+                }
             }
             if self.v_counter == 0xE0 {
                 // self.v_counter = 0;
@@ -171,6 +175,9 @@ where
                     self.signal_bus
                         .borrow_mut()
                         .push_siganal(Signal::VInterrupt);
+                    self.register_set
+                        .status
+                        .set_flag(StatusFlag::VInterruptPending, true);
                     debug!("VDP: send vinterrupt signtal");
                 }
                 self.register_set
@@ -355,24 +362,34 @@ where
 
     // sprite attribute table store 80 sprites
     // each sprite has 8 byte size
-    fn get_sprite_dot(&self) -> Dot {
+    fn get_sprite_dot(&mut self) -> Dot {
         let hited_sprites = self
             .sprites
             .iter()
             .filter(|s| s.sprite_hit(self.v_counter, self.h_counter))
             .collect::<Vec<&Sprite>>();
-        let mut dot = Dot::new(None, Priority::Low);
-        for sprite in hited_sprites {
-            let tile_dot = sprite.get_tile_dot(self.v_counter, self.h_counter).unwrap();
-            let dot_byte = self.get_tile_dot_byte(tile_dot);
-            if dot_byte == 0 {
-                continue;
-            }
-            let color = Some(self.get_color(sprite.palette_id() as usize, dot_byte as usize));
-            dot = Dot::new(color, sprite.priority());
-            break;
+
+        let tile_dots = hited_sprites
+            .iter()
+            .map(|s| (s, s.get_tile_dot(self.v_counter, self.h_counter)))
+            .filter(|s_td_opt| s_td_opt.1.is_some())
+            .map(|s_td_opt| (*s_td_opt.0, self.get_tile_dot_byte(s_td_opt.1.unwrap())))
+            .filter(|s_tb| s_tb.1 != 0)
+            .collect::<Vec<(&Sprite, u8)>>();
+
+        if tile_dots.len() > 1 {
+            self.register_set
+                .status
+                .set_flag(StatusFlag::SpriteCollision, true);
         }
-        dot
+
+        for tile_dot in tile_dots {
+            return Dot::new(
+                Some(self.get_color(tile_dot.0.palette_id() as usize, tile_dot.1 as usize)),
+                tile_dot.0.priority(),
+            );
+        }
+        Dot::new(None, Priority::Low)
     }
 
     fn get_color(&self, palette_id: usize, color_id: usize) -> Color {
