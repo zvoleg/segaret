@@ -74,13 +74,13 @@ pub(crate) enum InterlaceMode {
 }
 
 pub(crate) enum WindowVPosition {
-    Up,
-    Down,
+    TopToVal,
+    ValToDown,
 }
 
 pub(crate) enum WindowHPostion {
-    Left,
-    Right,
+    LeftToVal,
+    ValToRight,
 }
 
 pub(crate) struct ModeRegister {
@@ -379,15 +379,16 @@ impl WindowPlaneHPostion {
     pub(crate) fn window_hpostion(&self) -> WindowHPostion {
         unsafe {
             if *self.data & 0x80 != 0 {
-                WindowHPostion::Right
+                WindowHPostion::ValToRight
             } else {
-                WindowHPostion::Left
+                WindowHPostion::LeftToVal
             }
         }
     }
 
-    pub(crate) fn window_hoffset(&self) -> u8 {
-        unsafe { *self.data & 0x1F }
+    pub(crate) fn window_hoffset(&self) -> u16 {
+        // h_offset is store as divided by two value
+        (unsafe { (*self.data & 0x1F) * 2 }) as u16
     }
 }
 
@@ -405,15 +406,15 @@ impl WindowPlaneVPostion {
     pub(crate) fn window_vpostion(&self) -> WindowVPosition {
         unsafe {
             if *self.data & 0x80 != 0 {
-                WindowVPosition::Down
+                WindowVPosition::ValToDown
             } else {
-                WindowVPosition::Up
+                WindowVPosition::TopToVal
             }
         }
     }
 
-    pub(crate) fn window_voffset(&self) -> u8 {
-        unsafe { *self.data & 0x1F }
+    pub(crate) fn window_voffset(&self) -> u16 {
+        (unsafe { *self.data & 0x1F }) as u16
     }
 }
 
