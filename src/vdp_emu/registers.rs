@@ -175,13 +175,6 @@ impl ModeRegister {
             }
         }
     }
-
-    pub(crate) fn clear_dma_enabled(&mut self) {
-        unsafe {
-            let data = *self.data_ii;
-            *(self.data_ii as *const _ as *mut u8) = data & !0x10;
-        }
-    }
 }
 
 pub(crate) struct PlaneATableLocation {
@@ -307,7 +300,7 @@ impl HScrollDataLocation {
         }
     }
 
-    pub(crate) fn hscroll_address(&self) -> u32 {
+    pub(crate) fn address(&self) -> u32 {
         unsafe {
             let mask = *self.data as u32 & 0x3F;
             mask << 10

@@ -9,7 +9,7 @@ use crate::signal_bus::{Signal, SignalBus};
 use super::{
     bus::BusVdp,
     dot::{Dot, Priority},
-    registers::{RegisterSet, StatusFlag, WindowHPostion, WindowVPosition},
+    registers::{HScrollMode, RegisterSet, StatusFlag, VScrollMode, WindowHPostion, WindowVPosition},
     sprite::Sprite,
     tile::{Tile, TileDot},
     DmaMode, RamAccessMode,
@@ -114,10 +114,10 @@ where
             let sprite_dot = self.get_sprite_dot();
 
             let plane_a_base_address = self.register_set.plane_a_table_location.address();
-            let plane_a_dot = self.get_plane_dot(plane_a_base_address);
+            let plane_a_dot = self.get_plane_dot(plane_a_base_address, 0);
 
             let plane_b_base_address = self.register_set.plane_b_table_location.address();
-            let plane_b_dot = self.get_plane_dot(plane_b_base_address);
+            let plane_b_dot = self.get_plane_dot(plane_b_base_address, 2);
 
             let window_dot = self.get_window_dot();
 
@@ -128,7 +128,6 @@ where
                     .or_else(|| plane_a_dot.color)
                     .or_else(|| plane_b_dot.color)
                     .unwrap_or(back_dot_color);
-                // let mut color = plane_a_dot.color.or_else(|| plane_b_dot.color).unwrap_or(back_dot_color);
                 if let Some(plane_color) = plane_b_dot.color {
                     if plane_b_dot.priority == Priority::High {
                         color = plane_color;
@@ -136,7 +135,7 @@ where
                 }
                 if let Some(plane_color) = plane_a_dot.color {
                     if plane_a_dot.priority == Priority::High {
-                        color = plane_color;
+                        color = window_dot.color.unwrap_or(plane_color);
                     }
                 }
                 if let Some(sprite_color) = sprite_dot.color {
@@ -163,6 +162,7 @@ where
                     .map(|i| Sprite::new(&self.vram[i..i + 8]))
                     .filter(|s| s.in_current_line(self.v_counter))
                     .collect::<Vec<Sprite>>();
+                // TODO sort sprites by priority (by its linked sprite) and after it, sprite 0 masks only sprites with lower priority
                 if self.sprites.iter().any(|s| s.h_position() == 0) {
                     self.sprites.clear();
                 }
@@ -278,10 +278,48 @@ where
         self.dma_length -= 1;
     }
 
-    fn get_plane_dot(&self, plane_attribute_address: usize) -> Dot {
-        let hplane_size = self.register_set.plane_size.hplane_size();
-        let plane_address_offset =
-            ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size as u16) as usize) * 2;
+    fn get_plane_dot(&self, plane_attribute_address: usize, plane_num: isize) -> Dot {
+        let hplane_size = self.register_set.plane_size.hplane_size() as u16;
+        let vplane_size = self.register_set.plane_size.vplane_size() as u16;
+        // let mut plane_address_offset =
+        //     ((self.h_counter / 8 + (self.v_counter / 8) * hplane_size) as usize) * 2; // each tile attribute has 2 byte
+
+        let h_scroll_mode = self.register_set.mode_register.hscroll_mode();
+        let h_scroll_table_address = self.register_set.hscroll_data_location.address() as isize;
+        let h_scroll_offset = match h_scroll_mode {
+            HScrollMode::Full => unsafe {
+                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num) as *const _ as *const u16;
+                (*ptr).to_be() & 0x3FF
+            },
+            HScrollMode::Each1Cell => unsafe {
+                let v_cell = (self.v_counter / 8) as isize;
+                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num + v_cell * 32) as *const _ as *const u16;
+                (*ptr).to_be() & 0x3FF
+            },
+            HScrollMode::Each1Line => unsafe {
+                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num + (self.v_counter as isize) * 4) as *const _ as *const u16;
+                (*ptr).to_be() & 0x3FF
+            },
+            HScrollMode::Prohibited => 0,
+        };
+
+        let v_scroll_mode = self.register_set.mode_register.vscroll_mode();
+        let v_scroll_offset = match v_scroll_mode {
+            VScrollMode::Full => unsafe {
+                let ptr = self.vsram.as_ptr().offset(plane_num) as *const _ as *const u16;
+                (*ptr).to_be() & 0x3FF
+            },
+            VScrollMode::Each2Cell => unsafe {
+                let h_2cell = (self.h_counter / 16) as isize;
+                let ptr = self.vsram.as_ptr().offset(plane_num + h_2cell * 4) as *const _ as *const u16;
+                (*ptr).to_be() & 0xFF
+            },
+        };
+        let h_tile_offset = (self.h_counter.wrapping_sub(h_scroll_offset) % (hplane_size * 8)) / 8;
+        let v_tile_offset = (self.v_counter.wrapping_add(v_scroll_offset) % (vplane_size * 8)) / 8;
+
+        let plane_address_offset = (h_tile_offset.wrapping_add(v_tile_offset * hplane_size) as usize) * 2; // each tile attribute has 2 byte
+
         let attribute_data = unsafe {
             *(self
                 .vram
@@ -299,9 +337,9 @@ where
         let tile = Tile::new(tile_id.into(), h_flip, v_flip);
         let tile_dot = TileDot::new(
             tile,
-            (self.h_counter % 8).into(),
-            (self.v_counter % 8).into(),
-            self.h_counter % 2 == 0,
+            (self.h_counter.wrapping_sub(h_scroll_offset) % 8).into(),
+            (self.v_counter.wrapping_add(v_scroll_offset) % 8).into(),
+            self.h_counter.wrapping_sub(h_scroll_offset) % 2 == 0,
         );
 
         let color_id = self.get_tile_dot_byte(tile_dot);
