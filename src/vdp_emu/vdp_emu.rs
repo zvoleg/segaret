@@ -157,14 +157,20 @@ where
 
                 let sprite_table_location =
                     self.register_set.sprite_table_location.address() as usize;
-                self.sprites = (sprite_table_location..sprite_table_location + 0x280)
-                    .step_by(4)
-                    .map(|i| Sprite::new(&self.vram[i..i + 8]))
-                    .filter(|s| s.in_current_line(self.v_counter))
-                    .collect::<Vec<Sprite>>();
-                // TODO sort sprites by priority (by its linked sprite) and after it, sprite 0 masks only sprites with lower priority
-                if self.sprites.iter().any(|s| s.h_position() == 0) {
-                    self.sprites.clear();
+                let sprite = Sprite::new(&self.vram[sprite_table_location..sprite_table_location + 8]);
+                let mut sprite_link = sprite.sprite_link();
+                self.sprites.clear();
+                self.sprites.push(sprite);
+                while sprite_link != 0 && self.sprites.len() <= 80 {
+                    let sprite_location = sprite_table_location + (sprite_link * 8) as usize;
+                    let sprite = Sprite::new(&self.vram[sprite_location..sprite_location + 8]);
+                    sprite_link = sprite.sprite_link();
+                    if sprite.in_current_line(self.v_counter) {
+                        if sprite.h_position() == 0 {
+                            break;
+                        }
+                        self.sprites.push(sprite);
+                    }
                 }
             }
             if self.v_counter == 0xE0 {

@@ -116,4 +116,8 @@ impl Sprite {
     pub(crate) fn h_position(&self) -> u16 {
         self.h_position
     }
+
+    pub(crate) fn sprite_link(&self) -> u16 {
+        self.sprite_link
+    }
 }
