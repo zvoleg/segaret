@@ -1,5 +1,3 @@
-use log::debug;
-
 use crate::{
     addressing_mode_set::{
         AddressRegister, AddressRegisterDisplacement, AddressingMode, AddressingModeType,
@@ -12,7 +10,7 @@ use crate::{
         MoveDirection,
     },
     operation::Operation,
-    range, Size, STACK_REGISTER, USP_REGISTER,
+    range, Size, USP_REGISTER,
 };
 
 use super::OpcodeMaskGenerator;

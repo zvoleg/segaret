@@ -70,7 +70,6 @@ pub(crate) struct MOVEM {
     pub(crate) size: Size,
     pub(crate) direction: MoveDirection,
     pub(crate) addressing_mode_type: AddressingModeType,
-    pub(crate) am_register_idx: isize, // needs to determine the writes into the source register of addressing mode
 }
 
 impl Display for MOVEM {
@@ -512,7 +511,6 @@ mod test {
             size: Size::Word,
             direction: MoveDirection::RegisterToMemory,
             addressing_mode_type: AddressingModeType::AddressRegisterPreDecrement,
-            am_register_idx: 5,
         };
         movem.execute(operand_set, &mut cpu).unwrap();
 
@@ -566,7 +564,6 @@ mod test {
             size: Size::Word,
             direction: MoveDirection::MemoryToRegister,
             addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
-            am_register_idx: 5,
         };
         movem.execute(operand_set, &mut cpu).unwrap();
         assert_eq!(
@@ -611,7 +608,6 @@ mod test {
             size: Size::Long,
             direction: MoveDirection::MemoryToRegister,
             addressing_mode_type: AddressingModeType::AddressRegisterPostIncrement,
-            am_register_idx: 5,
         };
         movem.execute(operand_set, &mut cpu).unwrap();
         assert_eq!(
@@ -656,7 +652,6 @@ mod test {
             size: Size::Word,
             direction: MoveDirection::MemoryToRegister,
             addressing_mode_type: AddressingModeType::AddressRegisterIndirect,
-            am_register_idx: 5,
         };
         movem.execute(operand_set, &mut cpu).unwrap();
 

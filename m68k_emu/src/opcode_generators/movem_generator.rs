@@ -42,7 +42,6 @@ fn generate_movem_reg_to_mem<T: BusM68k>(table: &mut [Operation<T>]) {
                     direction: MoveDirection::RegisterToMemory,
                     size: size,
                     addressing_mode_type: am_type,
-                    am_register_idx: idx as isize,
                 });
                 let am = am_type.addressing_mode_by_type(idx, size);
                 let base_mask = instruction.generate_mask();
@@ -80,7 +79,6 @@ fn generate_movem_mem_to_reg<T: BusM68k>(table: &mut [Operation<T>]) {
                     direction: MoveDirection::MemoryToRegister,
                     size: size,
                     addressing_mode_type: am_type,
-                    am_register_idx: idx as isize,
                 });
                 let am = am_type.addressing_mode_by_type(idx, size);
                 let base_mask = instruction.generate_mask();
