@@ -74,12 +74,7 @@ impl Sprite {
             let tile = Tile::new(tile_id, self.h_flip, self.v_flip);
             let x_point = (h_pos_to_sprite_plane - self.h_position) % 8;
             let y_point = (v_pos_to_sprite_plane - self.v_position) % 8;
-            let tile_dot = TileDot::new(
-                tile,
-                x_point.into(),
-                y_point.into(),
-                x_point % 2 == 0,
-            );
+            let tile_dot = TileDot::new(tile, x_point.into(), y_point.into(), x_point % 2 == 0);
             Some(tile_dot)
         } else {
             None
@@ -87,8 +82,10 @@ impl Sprite {
     }
 
     fn in_sprite(&self, h_position: u16, v_position: u16) -> bool {
-        let h_hit = self.h_position <= h_position && h_position < (self.h_position + self.size_x * 8);
-        let v_hit = self.v_position <= v_position && v_position < (self.v_position + self.size_y * 8);
+        let h_hit =
+            self.h_position <= h_position && h_position < (self.h_position + self.size_x * 8);
+        let v_hit =
+            self.v_position <= v_position && v_position < (self.v_position + self.size_y * 8);
         h_hit && v_hit
     }
 

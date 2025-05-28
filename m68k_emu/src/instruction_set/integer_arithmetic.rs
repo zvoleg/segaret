@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::Operand, primitives::Size,
     status_flag::StatusFlag, vectors::DIVISION_BY_ZERO, IsNegate, IsZero, MsbIsSet, SignExtending,
 };
 
@@ -18,9 +18,9 @@ impl Display for ADD {
 }
 
 impl<T: BusM68k> Instruction<T> for ADD {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
@@ -55,9 +55,9 @@ impl Display for ADDA {
 }
 
 impl<T: BusM68k> Instruction<T> for ADDA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?.sign_extend(self.size);
         let dst_data = dst_operand.read()?;
@@ -79,9 +79,9 @@ impl Display for ADDI {
 }
 
 impl<T: BusM68k> Instruction<T> for ADDI {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
@@ -119,8 +119,8 @@ impl Display for ADDQ {
 }
 
 impl<T: BusM68k> Instruction<T> for ADDQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let dst_operand = &operand_set[0];
         let dst_data = dst_operand.read()?;
         let result = self.data.wrapping_add(dst_data);
         dst_operand.write(result)?;
@@ -157,9 +157,9 @@ impl Display for ADDX {
 }
 
 impl<T: BusM68k> Instruction<T> for ADDX {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
 
@@ -199,9 +199,9 @@ impl Display for SUB {
 }
 
 impl<T: BusM68k> Instruction<T> for SUB {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
         let result = dst_data.wrapping_sub(src_data);
@@ -235,9 +235,9 @@ impl Display for SUBA {
 }
 
 impl<T: BusM68k> Instruction<T> for SUBA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?.sign_extend(self.size);
         let dst_data = dst_operand.read()?;
@@ -259,9 +259,9 @@ impl Display for SUBI {
 }
 
 impl<T: BusM68k> Instruction<T> for SUBI {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
@@ -299,8 +299,8 @@ impl Display for SUBQ {
 }
 
 impl<T: BusM68k> Instruction<T> for SUBQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let dst_operand = &operand_set[0];
         let dst_data = dst_operand.read()?;
         let result = dst_data.wrapping_sub(self.data);
         dst_operand.write(result)?;
@@ -337,9 +337,9 @@ impl Display for SUBX {
 }
 
 impl<T: BusM68k> Instruction<T> for SUBX {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
 
@@ -379,8 +379,8 @@ impl Display for CLR {
 }
 
 impl<T: BusM68k> Instruction<T> for CLR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         operand.write(0)?;
 
         let sr = &mut cpu.register_set.sr;
@@ -421,9 +421,9 @@ impl Display for CMP {
 }
 
 impl<T: BusM68k> Instruction<T> for CMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
@@ -443,13 +443,13 @@ impl Display for CMPA {
 }
 
 impl<T: BusM68k> Instruction<T> for CMPA {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
         let mut src_data = src_operand.read()?;
         if self.size == Size::Word {
             src_data = src_data.sign_extend(self.size)
         }
-        let dst_operand = operand_set.next();
+        let dst_operand = &operand_set[1];
         let dst_data = dst_operand.read()?;
 
         cmp(src_data, dst_data, Size::Long, cpu)
@@ -466,7 +466,7 @@ impl Display for CMPI {
 }
 
 impl<T: BusM68k> Instruction<T> for CMPI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         CMP { size: self.size }.execute(operand_set, cpu)
     }
 }
@@ -481,7 +481,7 @@ impl Display for CMPM {
 }
 
 impl<T: BusM68k> Instruction<T> for CMPM {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         CMP { size: self.size }.execute(operand_set, cpu)
     }
 }
@@ -497,8 +497,8 @@ impl Display for EXT {
 }
 
 impl<T: BusM68k> Instruction<T> for EXT {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read_sized(self.src_size)?;
         let result = data.sign_extend(self.src_size);
         operand.write(result)?;
@@ -523,8 +523,8 @@ impl Display for NEG {
 }
 
 impl<T: BusM68k> Instruction<T> for NEG {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let result = 0u32.wrapping_sub(data);
         operand.write(result)?;
@@ -558,8 +558,8 @@ impl Display for NEGX {
 }
 
 impl<T: BusM68k> Instruction<T> for NEGX {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let x_bit = cpu.register_set.sr.get_bit(StatusFlag::X);
 
@@ -594,9 +594,9 @@ impl Display for MULS {
 }
 
 impl<T: BusM68k> Instruction<T> for MULS {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?.sign_extend(Size::Word) as i32;
         let dst_data = dst_operand.read()?.sign_extend(Size::Word) as i32;
 
@@ -622,9 +622,9 @@ impl Display for MULU {
 }
 
 impl<T: BusM68k> Instruction<T> for MULU {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
@@ -649,9 +649,9 @@ impl Display for DIVS {
 }
 
 impl<T: BusM68k> Instruction<T> for DIVS {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?.sign_extend(Size::Word) as i32;
         let dst_data = dst_operand.read()? as i32;
@@ -697,9 +697,9 @@ impl Display for DIVU {
 }
 
 impl<T: BusM68k> Instruction<T> for DIVU {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
 
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;

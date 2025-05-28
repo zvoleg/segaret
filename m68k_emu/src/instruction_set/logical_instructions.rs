@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::Operand, primitives::Size,
     status_flag::StatusFlag, IsNegate, IsZero,
 };
 
@@ -16,9 +16,9 @@ impl Display for AND {
 }
 
 impl<T: BusM68k> Instruction<T> for AND {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
 
@@ -45,7 +45,7 @@ impl Display for ANDI {
 }
 
 impl<T: BusM68k> Instruction<T> for ANDI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         AND { size: self.size }.execute(operand_set, cpu)
     }
 }
@@ -61,9 +61,9 @@ impl Display for EOR {
 }
 
 impl<T: BusM68k> Instruction<T> for EOR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
 
@@ -90,7 +90,7 @@ impl Display for EORI {
 }
 
 impl<T: BusM68k> Instruction<T> for EORI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         EOR { size: self.size }.execute(operand_set, cpu)
     }
 }
@@ -106,9 +106,9 @@ impl Display for OR {
 }
 
 impl<T: BusM68k> Instruction<T> for OR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let dst_data = dst_operand.read()?;
 
@@ -135,7 +135,7 @@ impl Display for ORI {
 }
 
 impl<T: BusM68k> Instruction<T> for ORI {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         OR { size: self.size }.execute(operand_set, cpu)
     }
 }
@@ -151,8 +151,8 @@ impl Display for NOT {
 }
 
 impl<T: BusM68k> Instruction<T> for NOT {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
 
         let result = !data;

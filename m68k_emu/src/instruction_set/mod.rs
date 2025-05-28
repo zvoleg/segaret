@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::bus::BusM68k;
 use crate::cpu::M68k;
-use crate::operand::OperandSet;
+use crate::operand::Operand;
 
 pub(crate) mod bit_manipulation;
 pub(crate) mod data_movement;
@@ -21,7 +21,7 @@ pub(crate) trait Instruction<T>: Display
 where
     T: BusM68k,
 {
-    fn execute(&self, operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()>;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()>;
 }
 
 /// It is used for MOVEM, MOVE_USP and MOVEP instructions

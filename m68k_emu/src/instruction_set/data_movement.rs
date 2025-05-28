@@ -5,7 +5,7 @@ use crate::{
     bus::BusM68k,
     cpu::M68k,
     instruction_set::Instruction,
-    operand::OperandSet,
+    operand::Operand,
     primitives::{Pointer, Size},
     register_set::RegisterType,
     status_flag::StatusFlag,
@@ -25,10 +25,10 @@ impl Display for MOVE {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVE {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
         let src_data = src_operand.read()?;
-        let dst_operand = operand_set.next();
+        let dst_operand = &operand_set[1];
         dst_operand.write(src_data)?;
 
         let sr = &mut cpu.register_set.sr;
@@ -52,9 +52,9 @@ impl Display for MOVEA {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let src_data = operand_set.next().read()?;
-        operand_set.next().write(src_data)?;
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let src_data = operand_set[0].read()?;
+        operand_set[1].write(src_data)?;
         Ok(())
     }
 }
@@ -80,13 +80,14 @@ impl Display for MOVEM {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEM {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let extension_word = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut operand_set_iter = operand_set.into_iter();
+        let extension_word = operand_set_iter.next().unwrap().read()?;
         let register_offsets = self.collect_affected_register_offsets(extension_word as u16);
 
         // TODO additional cycles
 
-        let operand = operand_set.next();
+        let operand = operand_set_iter.next().unwrap();
         let register_ptr = cpu.register_set.get_register_ptr(0, RegisterType::Data);
 
         let mut memory_offsets = Vec::new();
@@ -187,9 +188,9 @@ impl Display for MOVEP {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEP {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         let iterations = self.size as isize;
         match self.direction {
@@ -226,9 +227,9 @@ impl Display for MOVEQ {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEQ {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let data = self.data.sign_extend(Size::Byte);
-        operand_set.next().operand_ptr.write(data, Size::Long)?;
+        operand_set[0].operand_ptr.write(data, Size::Long)?;
 
         cpu.register_set
             .sr
@@ -251,9 +252,9 @@ impl Display for EXG {
 }
 
 impl<T: BusM68k> Instruction<T> for EXG {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let first_operand = operand_set.next();
-        let second_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let first_operand = &operand_set[0];
+        let second_operand = &operand_set[1];
         let first_data = first_operand.read()?;
         let second_data = second_operand.read()?;
         first_operand.write(second_data)?;
@@ -271,9 +272,9 @@ impl Display for LEA {
 }
 
 impl<T: BusM68k> Instruction<T> for LEA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let address = operand_set.next().operand_address;
-        let dst_reg = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let address = operand_set[0].operand_address;
+        let dst_reg = &operand_set[1];
         dst_reg.write(address)?;
         Ok(())
     }
@@ -287,9 +288,9 @@ impl Display for PEA {
 }
 
 impl<T: BusM68k> Instruction<T> for PEA {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let address = operand_set.next().operand_address;
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let address = operand_set[0].operand_address;
+        let dst_operand = &operand_set[1];
         dst_operand.write(address)?;
         Ok(())
     }
@@ -303,11 +304,10 @@ impl Display for LINK {
 }
 
 impl<T: BusM68k> Instruction<T> for LINK {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         // SP - 4 → SP; An → (SP); SP → An; SP + dn → SP
-        // let stack_ptr = operand_set.next();
-        let address_register_ptr = operand_set.next();
-        let displacement_ptr = operand_set.next();
+        let address_register_ptr = &operand_set[0];
+        let displacement_ptr = &operand_set[1];
 
         let address = address_register_ptr.read()?;
         cpu.stack_push(address, Size::Long);
@@ -330,9 +330,9 @@ impl Display for UNLK {
 }
 
 impl<T: BusM68k> Instruction<T> for UNLK {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         // An → SP; (SP) → An; SP + 4 → SP
-        let address_register_ptr = operand_set.next();
+        let address_register_ptr = &operand_set[0];
 
         let new_stack_address = address_register_ptr.read()?;
         cpu.set_stack_address(new_stack_address);
@@ -354,7 +354,7 @@ mod test {
         bus::BusM68k,
         cpu::M68k,
         instruction_set::{Instruction, MoveDirection, TestBus},
-        operand::{Operand, OperandSet},
+        operand::Operand,
         primitives::{memory::MemoryPtr, Pointer, Size},
         register_set::RegisterType,
         STACK_REGISTER,
@@ -368,9 +368,12 @@ mod test {
     const OFFSET_ADDRESS: usize = 0x00;
     const OFFSET_VALUE: u32 = 0x10;
 
-    fn prepare_link_operands(cpu: &mut M68k<TestBus>, ram: Rc<RefCell<[u8; 0xFF]>>) -> OperandSet {
+    fn prepare_link_operands(
+        cpu: &mut M68k<TestBus>,
+        ram: Rc<RefCell<[u8; 0xFF]>>,
+    ) -> Vec<Operand> {
         // be cause test runs without opcode, we don't have to prepare properly placed or aranged in the memory the values
-        let mut operand_set = OperandSet::new();
+        let mut operand_set = Vec::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
@@ -379,7 +382,7 @@ mod test {
         address_reg_ptr
             .write(ADDRESS_REGISTER_VALUE, Size::Long)
             .unwrap();
-        operand_set.add(Operand::new(
+        operand_set.push(Operand::new(
             address_reg_ptr,
             None,
             ADDRESS_REGISTER_IDX as u32,
@@ -391,19 +394,19 @@ mod test {
         let bus = Rc::new(TestBus { ram: ram.clone() });
         let offset_ptr = MemoryPtr::new_boxed(OFFSET_ADDRESS as u32, bus);
         offset_ptr.write(OFFSET_VALUE, Size::Word).unwrap();
-        operand_set.add(Operand::new(offset_ptr, None, 0, Size::Word));
+        operand_set.push(Operand::new(offset_ptr, None, 0, Size::Word));
 
         operand_set
     }
 
-    fn prepare_unlk_operands(cpu: &mut M68k<TestBus>) -> OperandSet {
-        let mut operand_set = OperandSet::new();
+    fn prepare_unlk_operands(cpu: &mut M68k<TestBus>) -> Vec<Operand> {
+        let mut operand_set = Vec::new();
 
         // setup address register ptr which holds a value that will be pushed on to the stack
         let address_reg_ptr = cpu
             .register_set
             .get_register_ptr(ADDRESS_REGISTER_IDX, RegisterType::Address);
-        operand_set.add(Operand::new(
+        operand_set.push(Operand::new(
             address_reg_ptr,
             None,
             ADDRESS_REGISTER_IDX as u32,
@@ -490,11 +493,11 @@ mod test {
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
-        let mut operand_set = OperandSet::new();
+        let mut operand_set = Vec::new();
         bus_stub.write(0x2010, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let am = AddressRegisterPreDecrement {
             reg: 5,
@@ -503,7 +506,7 @@ mod test {
         let operand = am
             .get_operand(&mut cpu.register_set, bus_stub.clone())
             .unwrap();
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let movem = MOVEM {
             size: Size::Word,
@@ -544,11 +547,11 @@ mod test {
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
-        let mut operand_set = OperandSet::new();
+        let mut operand_set = Vec::new();
         bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let am = AddressRegisterPostIncrement {
             reg: 5,
@@ -557,7 +560,7 @@ mod test {
         let operand = am
             .get_operand(&mut cpu.register_set, bus_stub.clone())
             .unwrap();
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let movem = MOVEM {
             size: Size::Word,
@@ -589,11 +592,11 @@ mod test {
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
-        let mut operand_set = OperandSet::new();
+        let mut operand_set = Vec::new();
         bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let am = AddressRegisterPostIncrement {
             reg: 5,
@@ -602,7 +605,7 @@ mod test {
         let operand = am
             .get_operand(&mut cpu.register_set, bus_stub.clone())
             .unwrap();
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let movem = MOVEM {
             size: Size::Long,
@@ -634,11 +637,11 @@ mod test {
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
-        let mut operand_set = OperandSet::new();
+        let mut operand_set = Vec::new();
         bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let am = AddressRegisterIndirect {
             reg: 5,
@@ -647,7 +650,7 @@ mod test {
         let operand = am
             .get_operand(&mut cpu.register_set, bus_stub.clone())
             .unwrap();
-        operand_set.add(operand);
+        operand_set.push(operand);
 
         let movem = MOVEM {
             size: Size::Word,

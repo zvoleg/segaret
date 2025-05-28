@@ -19,6 +19,9 @@ impl Dot {
 
 impl Default for Dot {
     fn default() -> Self {
-        Self { color: Default::default(), priority: Priority::Low }
+        Self {
+            color: Default::default(),
+            priority: Priority::Low,
+        }
     }
 }

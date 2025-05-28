@@ -6,7 +6,6 @@ use crate::{
     bus::BusM68k,
     instruction_set::system_control::ILLEAGL,
     opcode_generators::generate_opcode_list,
-    operand::OperandSet,
     operation::Operation,
     primitives::{memory::MemoryPtr, Pointer, Size},
     register_set::{RegisterSet, RegisterType},
@@ -84,7 +83,7 @@ where
         let operation_ptr = MemoryPtr::new(opcode_address, self.bus.as_ref().unwrap().clone());
         debug!("{}", operation.disassembly(operation_ptr).unwrap());
 
-        let mut operands = OperandSet::new();
+        let mut operands = Vec::new();
         for am in &operation.addressing_mode_list {
             let operand =
                 match am.get_operand(&mut self.register_set, self.bus.as_ref().unwrap().clone()) {
@@ -97,7 +96,7 @@ where
             if let Some(breakpoints) = self.breakpoints.as_ref() {
                 self.breakpoint_hit = breakpoints.iter().any(|b| *b == operand.operand_address);
             }
-            operands.add(operand);
+            operands.push(operand);
         }
         let instruction = &operation.instruction;
         match instruction.execute(operands, self) {

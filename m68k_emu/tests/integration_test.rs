@@ -60,7 +60,7 @@ fn cpu_running() {
     let mut cpu: M68k<Bus> = M68k::new();
     cpu.set_bus(bus);
     cpu.reset();
-    let mut break_points = vec![0x0B74, 0x1006, 0x1854, 0xF000];
+    let mut break_points = vec![0xF000];
     cpu.set_breakpoints(&mut break_points);
     while !cpu.breakpoint_hit {
         cpu.clock();

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::Operand, primitives::Size,
     status_flag::StatusFlag,
 };
 
@@ -16,14 +16,14 @@ impl Display for BCHG {
 }
 
 impl<T: BusM68k> Instruction<T> for BCHG {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let mut bit_number = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set[0].read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("BCHG: execute: wrong instruction size"),
         }
-        let operand = operand_set.next();
+        let operand = &operand_set[1];
 
         let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
@@ -46,14 +46,14 @@ impl Display for BCLR {
 }
 
 impl<T: BusM68k> Instruction<T> for BCLR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let mut bit_number = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set[0].read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("BCLR: execute: wrong instruction size"),
         }
-        let operand = operand_set.next();
+        let operand = &operand_set[1];
 
         let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
@@ -76,14 +76,14 @@ impl Display for BSET {
 }
 
 impl<T: BusM68k> Instruction<T> for BSET {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let mut bit_number = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set[0].read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("BSET: execute: wrong instruction size"),
         }
-        let operand = operand_set.next();
+        let operand = &operand_set[1];
 
         let data = operand.read()?;
         let bit = (data >> bit_number) & 1;
@@ -106,14 +106,14 @@ impl Display for BTST {
 }
 
 impl<T: BusM68k> Instruction<T> for BTST {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let mut bit_number = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let mut bit_number = operand_set[0].read()?;
         match self.size {
             Size::Byte => bit_number %= 8,
             Size::Long => bit_number %= 32,
             Size::Word => panic!("BTST: execute: wrong instruction size"),
         }
-        let operand = operand_set.next();
+        let operand = &operand_set[1];
 
         let data = operand.read()?;
         let bit = (data >> bit_number) & 1;

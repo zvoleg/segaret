@@ -4,7 +4,7 @@ use crate::{
     bus::BusM68k,
     cpu::M68k,
     instruction_set::Instruction,
-    operand::OperandSet,
+    operand::Operand,
     primitives::Size,
     status_flag::StatusFlag,
     vectors::{CHK_INSTRUCTION, ILLEGAL_INSTRUCTION, RESET_SP, TRAPV_INSTRUCTION, TRAP_0_15},
@@ -22,8 +22,8 @@ impl Display for MOVEtoSR {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEtoSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         cpu.register_set.sr.set_sr(data);
         Ok(())
@@ -39,8 +39,8 @@ impl Display for MOVEfromSR {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEfromSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         operand.write(cpu.register_set.sr.get_sr() as u32)?;
         Ok(())
     }
@@ -57,9 +57,9 @@ impl Display for MOVEUSP {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEUSP {
-    fn execute(&self, mut operand_set: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
-        let src_operand = operand_set.next();
-        let dst_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
+        let src_operand = &operand_set[0];
+        let dst_operand = &operand_set[1];
         let src_data = src_operand.read()?;
         dst_operand.write(src_data)?;
         Ok(())
@@ -75,8 +75,8 @@ impl Display for MOVEtoCCR {
 }
 
 impl<T: BusM68k> Instruction<T> for MOVEtoCCR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()? & 0xFF; // operand size is word but used only low order byte
         cpu.register_set.sr.set_ccr(data);
         Ok(())
@@ -92,7 +92,7 @@ impl Display for RTE {
 }
 
 impl<T: BusM68k> Instruction<T> for RTE {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let sr_data = cpu.stack_pop(Size::Word);
         cpu.register_set.sr.set_sr(sr_data);
         cpu.register_set.pc = cpu.stack_pop(Size::Long);
@@ -109,8 +109,8 @@ impl Display for ANDItoCCR {
 }
 
 impl<T: BusM68k> Instruction<T> for ANDItoCCR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut ccr = cpu.register_set.sr.get_ccr();
         ccr &= data as u16;
@@ -128,8 +128,8 @@ impl Display for ANDItoSR {
 }
 
 impl<T: BusM68k> Instruction<T> for ANDItoSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut sr = cpu.register_set.sr.get_sr();
         sr &= data as u16;
@@ -147,8 +147,8 @@ impl Display for EORItoCCR {
 }
 
 impl<T: BusM68k> Instruction<T> for EORItoCCR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut ccr = cpu.register_set.sr.get_ccr();
         ccr ^= data as u16;
@@ -166,8 +166,8 @@ impl Display for EORItoSR {
 }
 
 impl<T: BusM68k> Instruction<T> for EORItoSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut sr = cpu.register_set.sr.get_sr();
         sr ^= data as u16;
@@ -185,8 +185,8 @@ impl Display for ORItoCCR {
 }
 
 impl<T: BusM68k> Instruction<T> for ORItoCCR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut ccr = cpu.register_set.sr.get_ccr();
         ccr |= data as u16;
@@ -204,8 +204,8 @@ impl Display for ORItoSR {
 }
 
 impl<T: BusM68k> Instruction<T> for ORItoSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let data = operand.read()?;
         let mut sr = cpu.register_set.sr.get_sr();
         sr |= data as u16;
@@ -223,9 +223,9 @@ impl Display for CHK {
 }
 
 impl<T: BusM68k> Instruction<T> for CHK {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let data_reg_operand = operand_set.next();
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let data_reg_operand = &operand_set[0];
+        let operand = &operand_set[0];
         let chk_data = data_reg_operand.read()?;
         let upper_bound = operand.read()?;
 
@@ -249,7 +249,7 @@ impl Display for ILLEAGL {
 }
 
 impl<T: BusM68k> Instruction<T> for ILLEAGL {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         cpu.stack_push(cpu.register_set.pc, Size::Long);
         cpu.stack_push(cpu.register_set.sr.get_sr() as u32, Size::Word);
 
@@ -269,7 +269,7 @@ impl Display for TRAP {
 }
 
 impl<T: BusM68k> Instruction<T> for TRAP {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let vector_address_offset = self.vector * 4;
         cpu.trap = Some(TRAP_0_15 + vector_address_offset);
         Ok(())
@@ -285,7 +285,7 @@ impl Display for TRAPV {
 }
 
 impl<T: BusM68k> Instruction<T> for TRAPV {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let overflow = cpu.register_set.sr.get_flag(StatusFlag::V);
         if overflow {
             cpu.trap = Some(TRAPV_INSTRUCTION);
@@ -303,7 +303,7 @@ impl Display for RESET {
 }
 
 impl<T: BusM68k> Instruction<T> for RESET {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         cpu.trap = Some(RESET_SP);
         Ok(())
     }

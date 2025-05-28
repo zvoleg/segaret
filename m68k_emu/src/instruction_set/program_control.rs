@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use crate::{
-    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::OperandSet, primitives::Size,
+    bus::BusM68k, cpu::M68k, instruction_set::Instruction, operand::Operand, primitives::Size,
     status_flag::StatusFlag, status_register::StatusRegister, IsNegate, IsZero, SignExtending,
 };
 
@@ -18,8 +18,8 @@ impl Display for TST {
 }
 
 impl<T: BusM68k> Instruction<T> for TST {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let data = operand_set.next().read()?;
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let data = operand_set[0].read()?;
         let sr = &mut cpu.register_set.sr;
         sr.set_flag(StatusFlag::N, data.is_negate(self.size));
         sr.set_flag(StatusFlag::Z, data.is_zero(self.size));
@@ -45,9 +45,9 @@ impl Display for Bcc {
 }
 
 impl<T: BusM68k> Instruction<T> for Bcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let displacement = if self.displacement == 0 {
-            operand_set.next().read()?.sign_extend(Size::Word)
+            operand_set[0].read()?.sign_extend(Size::Word)
         } else {
             self.displacement.sign_extend(Size::Byte)
         };
@@ -76,9 +76,9 @@ impl Display for DBcc {
 }
 
 impl<T: BusM68k> Instruction<T> for DBcc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let data_reg_operand = operand_set.next();
-        let displacement_operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let data_reg_operand = &operand_set[0];
+        let displacement_operand = &operand_set[1];
         let displacement = displacement_operand.read()?.sign_extend(Size::Word);
 
         if !check_condition(self.condition, &cpu.register_set.sr) {
@@ -111,8 +111,8 @@ impl Display for Scc {
 }
 
 impl<T: BusM68k> Instruction<T> for Scc {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         let condition = check_condition(self.condition, &cpu.register_set.sr);
         let result = if condition { 0xFF } else { 0x00 };
         operand.write(result)?;
@@ -135,10 +135,10 @@ impl Display for BRA {
 }
 
 impl<T: BusM68k> Instruction<T> for BRA {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let target: u32;
         let displacement = if self.displacement == 0 {
-            let operand = operand_set.next();
+            let operand = &operand_set[0];
             target = operand.operand_address;
             operand.read()?.sign_extend(Size::Word)
         } else {
@@ -166,10 +166,10 @@ impl Display for BSR {
 }
 
 impl<T: BusM68k> Instruction<T> for BSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let target: u32;
         let displacement = if self.displacement == 0 {
-            let operand = operand_set.next();
+            let operand = &operand_set[0];
             target = operand.operand_address;
             operand.read()?.sign_extend(Size::Word)
         } else {
@@ -193,8 +193,8 @@ impl Display for JMP {
 }
 
 impl<T: BusM68k> Instruction<T> for JMP {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
         cpu.register_set.pc = operand.operand_address;
         Ok(())
     }
@@ -209,8 +209,8 @@ impl Display for JSR {
 }
 
 impl<T: BusM68k> Instruction<T> for JSR {
-    fn execute(&self, mut operand_set: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
-        let operand = operand_set.next();
+    fn execute(&self, operand_set: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
+        let operand = &operand_set[0];
 
         cpu.stack_push(cpu.register_set.pc, Size::Long);
         cpu.register_set.pc = operand.operand_address;
@@ -227,7 +227,7 @@ impl Display for NOP {
 }
 
 impl<T: BusM68k> Instruction<T> for NOP {
-    fn execute(&self, _: OperandSet, _: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, _: &mut M68k<T>) -> Result<(), ()> {
         Ok(())
     }
 }
@@ -241,7 +241,7 @@ impl Display for RTR {
 }
 
 impl<T: BusM68k> Instruction<T> for RTR {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let ccr = cpu.stack_pop(Size::Word);
         cpu.register_set.sr.set_ccr(ccr);
 
@@ -260,7 +260,7 @@ impl Display for RTS {
 }
 
 impl<T: BusM68k> Instruction<T> for RTS {
-    fn execute(&self, _: OperandSet, cpu: &mut M68k<T>) -> Result<(), ()> {
+    fn execute(&self, _: Vec<Operand>, cpu: &mut M68k<T>) -> Result<(), ()> {
         let pc = cpu.stack_pop(Size::Long);
         cpu.register_set.pc = pc;
         Ok(())

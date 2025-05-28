@@ -9,7 +9,9 @@ use crate::signal_bus::{Signal, SignalBus};
 use super::{
     bus::BusVdp,
     dot::{Dot, Priority},
-    registers::{HScrollMode, RegisterSet, StatusFlag, VScrollMode, WindowHPostion, WindowVPosition},
+    registers::{
+        HScrollMode, RegisterSet, StatusFlag, VScrollMode, WindowHPostion, WindowVPosition,
+    },
     sprite::Sprite,
     tile::{Tile, TileDot},
     DmaMode, RamAccessMode,
@@ -155,23 +157,7 @@ where
                 self.h_counter = 0;
                 self.v_counter += 1;
 
-                let sprite_table_location =
-                    self.register_set.sprite_table_location.address() as usize;
-                let sprite = Sprite::new(&self.vram[sprite_table_location..sprite_table_location + 8]);
-                let mut sprite_link = sprite.sprite_link();
-                self.sprites.clear();
-                self.sprites.push(sprite);
-                while sprite_link != 0 && self.sprites.len() <= 80 {
-                    let sprite_location = sprite_table_location + (sprite_link * 8) as usize;
-                    let sprite = Sprite::new(&self.vram[sprite_location..sprite_location + 8]);
-                    sprite_link = sprite.sprite_link();
-                    if sprite.in_current_line(self.v_counter) {
-                        if sprite.h_position() == 0 {
-                            break;
-                        }
-                        self.sprites.push(sprite);
-                    }
-                }
+                self.collect_sprites();
             }
             if self.v_counter == 0xE0 {
                 // self.v_counter = 0;
@@ -284,6 +270,25 @@ where
         self.dma_length -= 1;
     }
 
+    fn collect_sprites(&mut self) {
+        let sprite_table_location = self.register_set.sprite_table_location.address() as usize;
+        let sprite = Sprite::new(&self.vram[sprite_table_location..sprite_table_location + 8]);
+        let mut sprite_link = sprite.sprite_link();
+        self.sprites.clear();
+        self.sprites.push(sprite);
+        while sprite_link != 0 && self.sprites.len() <= 80 {
+            let sprite_location = sprite_table_location + (sprite_link * 8) as usize;
+            let sprite = Sprite::new(&self.vram[sprite_location..sprite_location + 8]);
+            sprite_link = sprite.sprite_link();
+            if sprite.in_current_line(self.v_counter) {
+                if sprite.h_position() == 0 {
+                    break;
+                }
+                self.sprites.push(sprite);
+            }
+        }
+    }
+
     fn get_plane_dot(&self, plane_attribute_address: usize, plane_num: isize) -> Dot {
         let hplane_size = self.register_set.plane_size.hplane_size() as u16;
         let vplane_size = self.register_set.plane_size.vplane_size() as u16;
@@ -294,16 +299,28 @@ where
         let h_scroll_table_address = self.register_set.hscroll_data_location.address() as isize;
         let h_scroll_offset = match h_scroll_mode {
             HScrollMode::Full => unsafe {
-                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num) as *const _ as *const u16;
+                let ptr = self
+                    .vram
+                    .as_ptr()
+                    .offset(h_scroll_table_address + plane_num)
+                    as *const _ as *const u16;
                 (*ptr).to_be() & 0x3FF
             },
             HScrollMode::Each1Cell => unsafe {
                 let v_cell = (self.v_counter / 8) as isize;
-                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num + v_cell * 32) as *const _ as *const u16;
+                let ptr = self
+                    .vram
+                    .as_ptr()
+                    .offset(h_scroll_table_address + plane_num + v_cell * 32)
+                    as *const _ as *const u16;
                 (*ptr).to_be() & 0x3FF
             },
             HScrollMode::Each1Line => unsafe {
-                let ptr = self.vram.as_ptr().offset(h_scroll_table_address + plane_num + (self.v_counter as isize) * 4) as *const _ as *const u16;
+                let ptr = self
+                    .vram
+                    .as_ptr()
+                    .offset(h_scroll_table_address + plane_num + (self.v_counter as isize) * 4)
+                    as *const _ as *const u16;
                 (*ptr).to_be() & 0x3FF
             },
             HScrollMode::Prohibited => 0,
@@ -317,14 +334,16 @@ where
             },
             VScrollMode::Each2Cell => unsafe {
                 let h_2cell = (self.h_counter / 16) as isize;
-                let ptr = self.vsram.as_ptr().offset(plane_num + h_2cell * 4) as *const _ as *const u16;
+                let ptr =
+                    self.vsram.as_ptr().offset(plane_num + h_2cell * 4) as *const _ as *const u16;
                 (*ptr).to_be() & 0xFF
             },
         };
         let h_tile_offset = (self.h_counter.wrapping_sub(h_scroll_offset) % (hplane_size * 8)) / 8;
         let v_tile_offset = (self.v_counter.wrapping_add(v_scroll_offset) % (vplane_size * 8)) / 8;
 
-        let plane_address_offset = (h_tile_offset.wrapping_add(v_tile_offset * hplane_size) as usize) * 2; // each tile attribute has 2 byte
+        let plane_address_offset =
+            (h_tile_offset.wrapping_add(v_tile_offset * hplane_size) as usize) * 2; // each tile attribute has 2 byte
 
         let attribute_data = unsafe {
             *(self

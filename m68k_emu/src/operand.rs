@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::{primitives::Pointer, Size};
 
 /// The Operand is representation of data which handled by an instruction
@@ -45,25 +43,5 @@ impl Operand {
 
     pub(crate) fn write_sized(&self, data: u32, size: Size) -> Result<(), ()> {
         self.operand_ptr.write(data, size)
-    }
-}
-
-pub(crate) struct OperandSet {
-    operands: VecDeque<Operand>,
-}
-
-impl OperandSet {
-    pub(crate) fn new() -> Self {
-        Self {
-            operands: VecDeque::new(),
-        }
-    }
-
-    pub(crate) fn add(&mut self, operand: Operand) {
-        self.operands.push_front(operand);
-    }
-
-    pub(crate) fn next(&mut self) -> Operand {
-        self.operands.pop_back().unwrap()
     }
 }
