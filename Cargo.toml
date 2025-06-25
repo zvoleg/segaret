@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["m68k_emu"] #, "z80_emu"]
+members = ["m68k_emu", "z80_emu"]
 
 resolver = "2"
 
@@ -14,6 +14,9 @@ debug-assertions = false
 
 [dependencies.m68k_emu]
 path = "./m68k_emu"
+
+[dependencies.z80_emu]
+path = "./z80_emu"
 
 [dependencies]
 spriter = { git="https://github.com/zvoleg/spriter" }
