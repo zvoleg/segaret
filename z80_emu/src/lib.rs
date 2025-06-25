@@ -1,98 +1,60 @@
-pub mod z80_emu;
-#[macro_use]
-pub(crate) mod macros;
+pub mod bus;
+pub mod cpu;
 
-pub trait Z80Bus {
-    fn read(&self, address: u16, size: Size) -> u16;
-    fn write(&mut self, address: u16, data: u16, size: Size);
-}
-
-#[derive(Clone, Copy)]
-pub(crate) enum Register {
-    A,
-    A_,
-    B,
-    B_,
-    C,
-    C_,
-    D,
-    D_,
-    E,
-    E_,
-    H,
-    H_,
-    L,
-    L_,
-    AF,
-    AF_,
-    BC,
-    BC_,
-    DE,
-    DE_,
-    HL,
-    HL_,
-    I,
-    R,
-    IX,
-    IY,
-    SP,
-}
-
-pub(crate) enum AmType {
-    Imm,
-    ImmExt,
-    PageZero(u16),
-    Relative,
-    Extended,
-    Indexed(Register),
-    Register(Register),
-    Implied,
-    RegIndirect(Register),
-    BitAddr(u16),
-}
+mod addressing_mode;
+mod instruction_set;
+mod opcode_table_generator;
+mod operation;
+mod primitives;
+mod register_set;
 
 #[derive(Clone, Copy)]
-pub(crate) enum Location {
-    Memory(u16),
-    Register(Register),
-    Const,
+pub(crate) enum Size {
+    Byte = 1,
+    Word = 2,
 }
 
-pub(crate) struct Operand {
-    pub(crate) location: Location,
-    pub(crate) data: u16,
+enum InterruptMode {
+    Mode0,
+    Mode1,
+    Mode2,
 }
 
-impl Operand {
-    pub(crate) fn new(location: Location, data: u16) -> Self {
-        Self { location, data }
-    }
+trait SignExtending {
+    fn sign_extend(&self, size: Size) -> Self;
+}
 
-    pub(crate) fn memory_operand(address: u16, data: u16) -> Self {
-        Self::new(
-            Location::Memory(address),
-            data,
-        )
-    }
-
-    pub(crate) fn register_operand(register: Register, data: u16) -> Self {
-        Self::new(
-            Location::Register(register),
-            data,
-        )
-    }
-
-    pub(crate) fn constant_operand(data: u16) -> Self {
-        Self::new(
-            Location::Const,
-            data,
-        )
+impl SignExtending for u16 {
+    fn sign_extend(&self, size: Size) -> Self {
+        match size {
+            Size::Byte => *self as u8 as i8 as i16 as u16,
+            Size::Word => *self,
+        }
     }
 }
 
-pub(crate) struct Instruction {
-    pub(crate) src_am: Option<AmType>,
-    pub(crate) dst_am: Option<AmType>,
-    pub(crate) size: Size,
-    pub(crate) handler: fn(&mut z80_emu::Z80Emu),
+trait IsNegate {
+    fn is_negate(&self, size: Size) -> bool;
+}
+
+impl IsNegate for u16 {
+    fn is_negate(&self, size: Size) -> bool {
+        match size {
+            Size::Byte => self & 0x80 != 0,
+            Size::Word => self & 0x8000 != 0,
+        }
+    }
+}
+
+trait MostSignificantBit {
+    fn get_msb(&self, size: Size) -> bool;
+}
+
+impl MostSignificantBit for u16 {
+    fn get_msb(&self, size: Size) -> bool {
+        match size {
+            Size::Byte => self & 0x80 != 0,
+            Size::Word => self & 0x8000 != 0,
+        }
+    }
 }
