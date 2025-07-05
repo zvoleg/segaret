@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     bus::BusZ80,
     cpu::Z80,
@@ -6,7 +8,7 @@ use crate::{
     SignExtending, Size,
 };
 
-pub(crate) trait AddressingMode<T>
+pub(crate) trait AddressingMode<T>: Display
 where
     T: BusZ80,
 {
@@ -30,6 +32,12 @@ where
     }
 }
 
+impl Display for Immediate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "n")
+    }
+}
+
 pub(crate) struct ImmediateExt();
 
 impl<T> AddressingMode<T> for ImmediateExt
@@ -44,6 +52,12 @@ where
             Size::Word,
             Some(address),
         )
+    }
+}
+
+impl Display for ImmediateExt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "nn")
     }
 }
 
@@ -64,6 +78,12 @@ where
     }
 }
 
+impl Display for ModifiedPageZero {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:04X}", self.address)
+    }
+}
+
 pub(crate) struct Relative();
 
 impl<T> AddressingMode<T> for Relative
@@ -78,6 +98,12 @@ where
             Size::Byte,
             Some(address),
         )
+    }
+}
+
+impl Display for Relative {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(n)")
     }
 }
 
@@ -96,6 +122,12 @@ where
             self.size,
             Some(address),
         )
+    }
+}
+
+impl Display for Extended {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "(nn)")
     }
 }
 
@@ -122,6 +154,12 @@ where
     }
 }
 
+impl Display for Indexed {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.index_reg)
+    }
+}
+
 pub(crate) struct RegisterAddressing {
     pub(crate) register: Register,
     pub(crate) size: Size,
@@ -140,6 +178,12 @@ where
     }
 }
 
+impl Display for RegisterAddressing {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.register)
+    }
+}
+
 pub(crate) struct Implied();
 
 impl<T> AddressingMode<T> for Implied
@@ -148,6 +192,12 @@ where
 {
     fn fetch(&self, cpu: &mut Z80<T>) -> Operand {
         Operand::new(Box::new(MemPtr::new(0, cpu.bus_share())), Size::Byte, None)
+    }
+}
+
+impl Display for Implied {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "")
     }
 }
 
@@ -167,5 +217,11 @@ where
             self.size,
             Some(address),
         )
+    }
+}
+
+impl Display for RegisterIndirect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({})", self.register)
     }
 }

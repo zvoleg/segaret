@@ -30,6 +30,16 @@ where
 
 impl<T: BusZ80> Display for Operation<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.instruction)
+        let dst_am_str = if let Some(am) = &self.dst_am {
+            am.to_string()
+        } else {
+            String::new()
+        };
+        let src_am_str = if let Some(am) = &self.src_am {
+            am.to_string()
+        } else {
+            String::new()
+        };
+        write!(f, "{} {} {}", self.instruction, dst_am_str, src_am_str)
     }
 }

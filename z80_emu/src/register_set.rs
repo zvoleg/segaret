@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{primitives::RegisterPtr, Size};
 
 #[derive(Clone, Copy)]
@@ -27,6 +29,38 @@ pub(crate) enum RegisterType {
     H_,
     L_,
     HL_,
+}
+
+impl Display for RegisterType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            RegisterType::A => "a",
+            RegisterType::F => "f",
+            RegisterType::AF => "af",
+            RegisterType::B => "b",
+            RegisterType::C => "c",
+            RegisterType::BC => "bc",
+            RegisterType::D => "d",
+            RegisterType::E => "e",
+            RegisterType::DE => "de",
+            RegisterType::H => "h",
+            RegisterType::L => "l",
+            RegisterType::HL => "hl",
+            RegisterType::A_ => "a_",
+            RegisterType::F_ => "f_",
+            RegisterType::AF_ => "af_",
+            RegisterType::B_ => "b_",
+            RegisterType::C_ => "c_",
+            RegisterType::BC_ => "bc_",
+            RegisterType::D_ => "d_",
+            RegisterType::E_ => "e_",
+            RegisterType::DE_ => "de_",
+            RegisterType::H_ => "h_",
+            RegisterType::L_ => "l_",
+            RegisterType::HL_ => "hl_",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl RegisterType {
@@ -59,6 +93,16 @@ pub(crate) enum IndexRegister {
     Y = 1,
 }
 
+impl Display for IndexRegister {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            IndexRegister::X => "x",
+            IndexRegister::Y => "y",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 #[derive(Clone, Copy)]
 pub(crate) enum Register {
     General(RegisterType),
@@ -66,6 +110,19 @@ pub(crate) enum Register {
     StackPointer,
     InterruptVector,
     MemoryRefresh,
+}
+
+impl Display for Register {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Register::General(register_type) => &format!("{}", register_type),
+            Register::Index(index_register) => &format!("{}", index_register),
+            Register::StackPointer => "sp",
+            Register::InterruptVector => "i",
+            Register::MemoryRefresh => "r",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl Register {
@@ -118,9 +175,22 @@ pub(crate) struct RegisterSet {
     registers: [u8; 16],
     index_register: [u16; 2],
     stack_pointer: u16,
-    program_counter: u16,
     interrupt_vector: u8,
     memory_refresh: u8,
+}
+
+impl Display for RegisterSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        unsafe {
+            write!(f, 
+                "\nAF: {:04X}\tAF_: {:04X}\nBC: {:04X}\tBC_: {:04X}\nDE: {:04X}\tDE_: {:04X}\nHL: {:04X}\tHL_: {:04X}\n",
+                *(&self.registers[0] as *const _ as *const u16), *(&self.registers[8] as *const _ as *const u16),
+                *(&self.registers[2] as *const _ as *const u16), *(&self.registers[10] as *const _ as *const u16),
+                *(&self.registers[4] as *const _ as *const u16), *(&self.registers[12] as *const _ as *const u16),
+                *(&self.registers[6] as *const _ as *const u16), *(&self.registers[14] as *const _ as *const u16),
+            )
+        }
+    }
 }
 
 impl RegisterSet {
@@ -129,7 +199,6 @@ impl RegisterSet {
             registers: [0; 16],
             index_register: [0; 2],
             stack_pointer: 0,
-            program_counter: 0,
             interrupt_vector: 0,
             memory_refresh: 0,
         }

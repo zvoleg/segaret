@@ -38,9 +38,11 @@ where
 
     pub fn restart(&mut self) {
          self.program_counter = 0;
+         debug!("Z80: restart")
     }
 
     pub fn clock(&mut self) {
+        let pc = self.program_counter;
         let mut opcode = self.read_pc(Size::Byte);
         let opcodes = match opcode {
             0xED => {
@@ -84,7 +86,8 @@ where
             operands.push(operand);
         }
         operation.instruction.execute(self, operands);
-        debug!("{}", operation);
+        debug!("{:04X}: {}", pc, operation);
+        debug!("{}", self.register_set);
     }
 
     fn write_interrupt_vector(&mut self, data: u8) {
