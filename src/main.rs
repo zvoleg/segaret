@@ -5,7 +5,7 @@ use std::{
     collections::HashMap,
     env,
     fs::File,
-    io::{stdin, Read},
+    io::{stdin, Read, Write},
     rc::Rc,
     str,
 };
@@ -20,6 +20,9 @@ use signal_bus::{Signal, SignalBus};
 use spriter::{if_pressed, Key};
 use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
+use z80_emu::cpu::Z80;
+
+use crate::z80_bus::Z80Bus;
 
 mod controller;
 mod cpu_bus;
@@ -27,7 +30,7 @@ mod memory_space;
 mod signal_bus;
 mod vdp_bus;
 mod vdp_emu;
-// pub mod cartridge;
+mod z80_bus;
 
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
 
@@ -64,11 +67,16 @@ fn main() {
         memory_space.clone(),
         controller_a.clone(),
         controller_b.clone(),
+        signal_bus.clone(),
     );
     cpu_bus.set_vdp_ports(vdp.clone());
 
     m68k.set_bus(cpu_bus);
     m68k.reset();
+
+    let z80_bus = Rc::new(Z80Bus::new(memory_space.clone()));
+    let mut z80 = Z80::new();
+    z80.set_bus(z80_bus.clone());
 
     let vdp_bus = VdpBus::new(memory_space.clone());
     vdp.borrow_mut().set_bus(vdp_bus);
@@ -76,10 +84,12 @@ fn main() {
     let mut auto = false;
     let mut by_frame = false;
     let mut vdp_clocks_remainder = 0.0f32;
+    let mut manual_clock_counter = 0;
 
     let mut values_map: HashMap<u8, Vec<u32>> = HashMap::new();
     let mut downgraded_values: Vec<u8> = vec![];
 
+    let mut z80_bus_request = false;
     runner.run(window, move |_| {
         let mut manual_clock = false;
         if_pressed!(Key::A, {
@@ -175,6 +185,10 @@ fn main() {
             manual_clock = true;
             info!("Manual clock");
         });
+        if_pressed!(Key::Z, {
+            let mut dump_file = File::create("z80_dump").unwrap();
+            dump_file.write_all(&memory_space.borrow().z80_ram).unwrap();
+        });
         if_pressed!(Key::Escape, {
             spriter::program_stop();
             info!("Exit from segaret");
@@ -187,11 +201,26 @@ fn main() {
                 if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
                     m68k.interrupt(6);
                 }
+                if signal_bus.borrow_mut().handle_signal(Signal::Z80BusRequest) {
+                    z80_bus_request = true;
+                }
+                if signal_bus.borrow_mut().handle_signal(Signal::Z80BusFree) {
+                    z80_bus_request = false;
+                }
+                if signal_bus.borrow_mut().handle_signal(Signal::Z80Reset) {
+                    z80.restart();
+                }
                 if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
                     let vdp_clocks_rational =
                         m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                     vdp_clocks = vdp_clocks_rational.trunc() as i32;
                     vdp_clocks_remainder = vdp_clocks_rational.fract();
+
+                    if clock_counter % 15 == 0 {
+                        if !z80_bus_request {
+                            z80.clock();
+                        }
+                    }
                 }
                 for _ in 0..vdp_clocks {
                     let update = vdp.borrow_mut().clock();
@@ -223,10 +252,17 @@ fn main() {
                     m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
                 vdp_clocks = vdp_clocks_rational.trunc() as i32;
                 vdp_clocks_remainder = vdp_clocks_rational.fract();
+
+                if manual_clock_counter % 15 == 0 {
+                    if !z80_bus_request {
+                        z80.clock();
+                    }
+                }
             }
             for _ in 0..vdp_clocks {
                 vdp.borrow_mut().clock();
             }
+            manual_clock_counter += 1;
             true
         } else {
             false

@@ -1,6 +1,8 @@
 use std::rc::Rc;
 
-use crate::{bus::BusZ80, opcode_table_generator::tables::opcode_table, register_set::RegisterSet, Size};
+use log::debug;
+
+use crate::{bus::BusZ80, opcode_table_generator::tables::{cb_opcode_table, dd_opcode_table, ddcb_opcode_table, ed_opcode_table, fd_opcode_table, fdcb_opcode_table, opcode_table}, register_set::RegisterSet, Size};
 
 pub struct Z80<T: BusZ80> {
     pub(crate) register_set: RegisterSet,
@@ -34,11 +36,43 @@ where
         self.bus = Some(bus)
     }
 
-    pub fn restart(&mut self) {}
+    pub fn restart(&mut self) {
+         self.program_counter = 0;
+    }
 
     pub fn clock(&mut self) {
-        let opcode = self.read_pc(Size::Byte);
-        let opcodes = opcode_table();
+        let mut opcode = self.read_pc(Size::Byte);
+        let opcodes = match opcode {
+            0xED => {
+                opcode = self.read_pc(Size::Byte);
+                ed_opcode_table()
+            },
+            0xCB => {
+                opcode = self.read_pc(Size::Byte);
+                cb_opcode_table()
+            },
+            0xDD => {
+                opcode = self.read_pc(Size::Byte);
+                match opcode {
+                    0xCB => {
+                        opcode = self.read_pc(Size::Byte);
+                        ddcb_opcode_table()
+                    }
+                    _ => dd_opcode_table(),
+                }
+            },
+            0xFD => {
+                opcode = self.read_pc(Size::Byte);
+                match opcode {
+                    0xCB => {
+                        opcode = self.read_pc(Size::Byte);
+                        fdcb_opcode_table()
+                    }
+                    _ => fd_opcode_table(),
+                }
+            }
+            _ => opcode_table()
+        };
         let operation = &opcodes[opcode as usize];
         let mut operands = Vec::new();
         if let Some(am) = &operation.dst_am {
@@ -50,6 +84,7 @@ where
             operands.push(operand);
         }
         operation.instruction.execute(self, operands);
+        debug!("{}", operation);
     }
 
     fn write_interrupt_vector(&mut self, data: u8) {
@@ -65,14 +100,14 @@ where
         self.bus
             .as_ref()
             .unwrap()
-            .write(data, self.stack_pointer, size)?;
+            .write(data, self.stack_pointer, size as u32)?;
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
         Ok(())
     }
 
     pub(crate) fn pop(&mut self, size: Size) -> Result<u16, ()> {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        self.bus.as_ref().unwrap().read(self.stack_pointer, size)
+        self.bus.as_ref().unwrap().read(self.stack_pointer, size as u32)
     }
 
     pub(crate) fn increment_pc(&mut self, size: Size) {
@@ -84,7 +119,7 @@ where
             .bus
             .as_ref()
             .unwrap()
-            .read(self.program_counter, size)
+            .read(self.program_counter, size as u32)
             .unwrap();
         self.increment_pc(size);
         data

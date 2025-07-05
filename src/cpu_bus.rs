@@ -5,7 +5,7 @@ use log::debug;
 use super::vdp_emu::vdp_port::VdpPorts;
 use m68k_emu::bus::BusM68k;
 
-use crate::{controller::Controller, memory_space::MemorySpace};
+use crate::{controller::Controller, memory_space::MemorySpace, signal_bus::{self, Signal, SignalBus}};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -14,7 +14,7 @@ const CONTROLLER_A_CONTROL: u32 = 0xA10008;
 const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
 // const EXPANSION_PORT_CONTROL: u32 = 0xA1000C;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
-// const Z80_RESET: u32 = 0xA11200;
+const Z80_RESET: u32 = 0xA11200;
 
 pub struct CpuBus<T: VdpPorts> {
     memory_space: Rc<RefCell<MemorySpace>>,
@@ -24,6 +24,8 @@ pub struct CpuBus<T: VdpPorts> {
 
     controller_1: Rc<RefCell<Controller>>,
     controller_2: Rc<RefCell<Controller>>,
+
+    signal_bus: Rc<RefCell<SignalBus>>,
 }
 
 impl<T> CpuBus<T>
@@ -34,6 +36,7 @@ where
         memory_space: Rc<RefCell<MemorySpace>>,
         controller_1: Rc<RefCell<Controller>>,
         controller_2: Rc<RefCell<Controller>>,
+        signal_bus: Rc<RefCell<SignalBus>>,
     ) -> Self {
         Self {
             memory_space: memory_space,
@@ -42,6 +45,8 @@ where
 
             controller_1: controller_1,
             controller_2: controller_2,
+
+            signal_bus: signal_bus,
         }
     }
 
@@ -156,6 +161,14 @@ where
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_request_reg.borrow_mut() = data;
+                if data == 0x100 {
+                    self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusRequest);
+                } else {
+                    self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusFree);
+                }
+            } else if address == Z80_RESET {
+                self.signal_bus.borrow_mut().push_siganal(Signal::Z80Reset);
+                self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusFree);
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 self.controller_1.borrow_mut().write(data as u8);
             } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {
@@ -199,34 +212,3 @@ where
         Ok(())
     }
 }
-
-// impl Z80Bus for Bus {
-//     fn read(&self, address: u16, size: Size) -> u16 {
-//         let address = (address & 0xFFFF) as usize;
-//         match size {
-//             Size::Byte => self.z80_ram[address] as u16,
-//             Size::Word => unsafe {
-//                 let mut ram_ptr = self.z80_ram.as_ptr();
-//                 ram_ptr = ram_ptr.offset(address as isize);
-//                 let data = ram_ptr as *const _ as *const u16;
-//                 let data = *data;
-//                 data as u16
-//             },
-//             Size::Long => panic!("Z80Bus::Bus::read: unsuported size"),
-//         }
-//     }
-
-//     fn write(&mut self, address: u16, data: u16, size: Size) {
-//         let address = (address & 0xFFFF) as usize;
-//         match size {
-//             Size::Byte => self.z80_ram[address] = data as u8,
-//             Size::Word => unsafe {
-//                 let mut ram_ptr = self.z80_ram.as_mut_ptr();
-//                 ram_ptr = ram_ptr.offset(address as isize);
-//                 let ram_ptr_casted = ram_ptr as *mut _ as *mut u16;
-//                 *ram_ptr_casted = data;
-//             },
-//             Size::Long => panic!("Z80Bus::Bus::write: unsuported size"),
-//         }
-//     }
-// }

@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     bus::BusZ80,
     cpu::Z80,
@@ -6,7 +8,7 @@ use crate::{
     IsNegate, MostSignificantBit, SignExtending, Size,
 };
 
-pub(crate) trait Instruction<T>
+pub(crate) trait Instruction<T>: Display
 where
     T: BusZ80,
 {
@@ -40,6 +42,12 @@ where
     }
 }
 
+impl Display for LD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LD")
+    }
+}
+
 pub(crate) struct PUSH();
 
 impl<T> Instruction<T> for PUSH
@@ -53,6 +61,12 @@ where
     }
 }
 
+impl Display for PUSH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PUSH")
+    }
+}
+
 pub(crate) struct POP();
 
 impl<T> Instruction<T> for POP
@@ -63,6 +77,12 @@ where
         let dst_ptr = &operands[0];
         let data = cpu.pop(dst_ptr.size).unwrap();
         dst_ptr.write(data).unwrap();
+    }
+}
+
+impl Display for POP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "POP")
     }
 }
 
@@ -85,6 +105,12 @@ where
     }
 }
 
+impl Display for EX {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EX")
+    }
+}
+
 pub(crate) struct EXX();
 
 impl<T> Instruction<T> for EXX
@@ -93,6 +119,12 @@ where
 {
     fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
         cpu.register_set.exchange_general_registers();
+    }
+}
+
+impl Display for EXX {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EXX")
     }
 }
 
@@ -141,6 +173,12 @@ where
     }
 }
 
+impl Display for LDI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LDI")
+    }
+}
+
 pub(crate) struct LDIR();
 
 impl<T> Instruction<T> for LDIR
@@ -156,6 +194,12 @@ where
         if bc.wrapping_sub(1) != 0 {
             cpu.program_counter = cpu.program_counter.wrapping_sub(2);
         }
+    }
+}
+
+impl Display for LDIR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LDIR")
     }
 }
 
@@ -203,6 +247,12 @@ where
     }
 }
 
+impl Display for LDD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LDD")
+    }
+}
+
 pub(crate) struct LDDR();
 
 impl<T> Instruction<T> for LDDR
@@ -221,6 +271,12 @@ where
     }
 }
 
+impl Display for LDDR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "LDDR")
+    }
+}
+
 pub(crate) struct CPI();
 
 impl<T> Instruction<T> for CPI
@@ -234,7 +290,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().read(hl, Size::Byte).unwrap();
+        let data = cpu.bus_share().read(hl, Size::Byte as u32).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -256,6 +312,12 @@ where
         cpu.register_set.set_flag(Status::H, res & 0x4 != 0);
         cpu.register_set.set_flag(Status::PV, bc != 0);
         cpu.register_set.set_flag(Status::N, true);
+    }
+}
+
+impl Display for CPI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPI")
     }
 }
 
@@ -272,7 +334,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().read(hl, Size::Byte).unwrap();
+        let data = cpu.bus_share().read(hl, Size::Byte as u32).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -301,6 +363,12 @@ where
     }
 }
 
+impl Display for CPIR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPIR")
+    }
+}
+
 pub(crate) struct CPD();
 
 impl<T> Instruction<T> for CPD
@@ -314,7 +382,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().read(hl, Size::Byte).unwrap();
+        let data = cpu.bus_share().read(hl, Size::Byte as u32).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -339,6 +407,12 @@ where
     }
 }
 
+impl Display for CPD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPD")
+    }
+}
+
 pub(crate) struct CPDR();
 
 impl<T> Instruction<T> for CPDR
@@ -352,7 +426,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().read(hl, Size::Byte).unwrap();
+        let data = cpu.bus_share().read(hl, Size::Byte as u32).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -378,6 +452,12 @@ where
         if bc != 0 && res != 0 {
             cpu.program_counter = cpu.program_counter.wrapping_sub(2);
         }
+    }
+}
+
+impl Display for CPDR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPDR")
     }
 }
 
@@ -418,6 +498,12 @@ where
         cpu.register_set.set_flag(Status::PV, overflow);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for ADD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ADD")
     }
 }
 
@@ -464,6 +550,12 @@ where
     }
 }
 
+impl Display for ADC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ADC")
+    }
+}
+
 pub(crate) struct SUB();
 
 impl<T> Instruction<T> for SUB
@@ -501,6 +593,12 @@ where
         cpu.register_set.set_flag(Status::PV, overflow);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for SUB {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SUB")
     }
 }
 
@@ -547,6 +645,12 @@ where
     }
 }
 
+impl Display for SBC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SBC")
+    }
+}
+
 pub(crate) struct AND();
 
 impl<T> Instruction<T> for AND
@@ -570,6 +674,12 @@ where
         cpu.register_set.set_flag(Status::PV, result & 1 == 0);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, false);
+    }
+}
+
+impl Display for AND {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AND")
     }
 }
 
@@ -599,6 +709,12 @@ where
     }
 }
 
+impl Display for OR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OR")
+    }
+}
+
 pub(crate) struct XOR();
 
 impl<T> Instruction<T> for XOR
@@ -622,6 +738,12 @@ where
         cpu.register_set.set_flag(Status::PV, result & 1 == 0);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, false);
+    }
+}
+
+impl Display for XOR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "XOR")
     }
 }
 
@@ -664,6 +786,12 @@ where
     }
 }
 
+impl Display for CP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CP")
+    }
+}
+
 pub(crate) struct INC();
 
 impl<T> Instruction<T> for INC
@@ -686,8 +814,14 @@ where
                 cpu.register_set.set_flag(Status::PV, data == 0x7F);
                 cpu.register_set.set_flag(Status::N, false);
             }
-            Size::Word => panic!("Z80::INC: unexpected instruction size"),
+            Size::Word => (), // condition bits not affected
         }
+    }
+}
+
+impl Display for INC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INC")
     }
 }
 
@@ -713,8 +847,14 @@ where
                 cpu.register_set.set_flag(Status::PV, data == 0x80);
                 cpu.register_set.set_flag(Status::N, false);
             }
-            Size::Word => panic!("Z80::DEC: unexpected instruction size"),
+            Size::Word => (), // condition bits not affected
         }
+    }
+}
+
+impl Display for DEC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DEC")
     }
 }
 
@@ -731,6 +871,12 @@ where
     }
 }
 
+impl Display for DAA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DAA")
+    }
+}
+
 pub(crate) struct CPL();
 
 impl<T> Instruction<T> for CPL
@@ -744,6 +890,12 @@ where
 
         cpu.register_set.set_flag(Status::H, true);
         cpu.register_set.set_flag(Status::N, true);
+    }
+}
+
+impl Display for CPL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CPL")
     }
 }
 
@@ -769,6 +921,12 @@ where
     }
 }
 
+impl Display for NEG {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NEG")
+    }
+}
+
 pub(crate) struct CCF();
 
 impl<T> Instruction<T> for CCF
@@ -780,6 +938,12 @@ where
         cpu.register_set.set_flag(Status::H, carry);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, !carry);
+    }
+}
+
+impl Display for CCF {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CCF")
     }
 }
 
@@ -796,6 +960,12 @@ where
     }
 }
 
+impl Display for SCF {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SCF")
+    }
+}
+
 pub(crate) struct NOP();
 
 impl<T> Instruction<T> for NOP
@@ -804,6 +974,12 @@ where
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
         ()
+    }
+}
+
+impl Display for NOP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "NOP")
     }
 }
 
@@ -818,6 +994,12 @@ where
     }
 }
 
+impl Display for HALT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "HALT")
+    }
+}
+
 // // disable the maskable interrupt
 pub(crate) struct DI();
 
@@ -826,7 +1008,13 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        todo!()
+        // todo!()
+    }
+}
+
+impl Display for DI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DI")
     }
 }
 
@@ -838,19 +1026,39 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        todo!()
+        // todo!()
+    }
+}
+
+impl Display for EI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "EI")
     }
 }
 
 // // setup interrupt mode
-pub(crate) struct IM();
+pub(crate) struct IM {
+    interrupt_mode: u32,
+}
+
+impl IM {
+    pub(crate) fn new(interrupt_mode: u32) -> Self {
+        Self { interrupt_mode }
+    }
+}
 
 impl<T> Instruction<T> for IM
 where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        todo!()
+        // todo!()
+    }
+}
+
+impl Display for IM {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "IM")
     }
 }
 
@@ -873,6 +1081,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for RLCA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RLCA")
     }
 }
 
@@ -902,6 +1116,12 @@ where
     }
 }
 
+impl Display for RLA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RLA")
+    }
+}
+
 pub(crate) struct RRCA();
 
 impl<T> Instruction<T> for RRCA
@@ -921,6 +1141,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for RRCA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RRCA")
     }
 }
 
@@ -951,6 +1177,12 @@ where
     }
 }
 
+impl Display for RRA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RRA")
+    }
+}
+
 pub(crate) struct RLC();
 
 impl<T> Instruction<T> for RLC
@@ -970,6 +1202,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for RLC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RLC")
     }
 }
 
@@ -1000,6 +1238,12 @@ where
     }
 }
 
+impl Display for RL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RL")
+    }
+}
+
 pub(crate) struct RRC();
 
 impl<T> Instruction<T> for RRC
@@ -1019,6 +1263,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for RRC {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RRC")
     }
 }
 
@@ -1048,6 +1298,12 @@ where
     }
 }
 
+impl Display for RR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RR")
+    }
+}
+
 pub(crate) struct SLA();
 
 impl<T> Instruction<T> for SLA
@@ -1067,6 +1323,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for SLA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SLA")
     }
 }
 
@@ -1092,6 +1354,12 @@ where
     }
 }
 
+impl Display for SRA {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SRA")
+    }
+}
+
 pub(crate) struct SRL();
 
 impl<T> Instruction<T> for SRL
@@ -1110,6 +1378,12 @@ where
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
         cpu.register_set.set_flag(Status::C, carry);
+    }
+}
+
+impl Display for SRL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SRL")
     }
 }
 
@@ -1146,6 +1420,12 @@ where
     }
 }
 
+impl Display for RLD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RLD")
+    }
+}
+
 pub(crate) struct RRD();
 
 impl<T> Instruction<T> for RRD
@@ -1179,20 +1459,31 @@ where
     }
 }
 
-pub(crate) struct BIT();
+impl Display for RRD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RRD")
+    }
+}
+
+pub(crate) struct BIT {
+    bit_offset: u16,
+}
+
+impl BIT {
+    pub(crate) fn new(bit_offset: u16) -> Self {
+        Self {bit_offset}
+    }
+}
 
 impl<T> Instruction<T> for BIT
 where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let bit_offset = src_operand.read().unwrap();
-
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
         let data = dst_operand.read().unwrap();
 
-        let result = data & (1 << bit_offset) == 0;
+        let result = data & (1 << self.bit_offset) == 0;
 
         cpu.register_set.set_flag(Status::Z, result);
         cpu.register_set.set_flag(Status::H, true);
@@ -1200,39 +1491,67 @@ where
     }
 }
 
-pub(crate) struct SET();
+impl Display for BIT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "BIT")
+    }
+}
+
+pub(crate) struct SET{
+    bit_offset: u16,
+}
+
+impl SET {
+    pub(crate) fn new(bit_offset: u16) -> Self {
+        Self { bit_offset }
+    }
+}
 
 impl<T> Instruction<T> for SET
 where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let bit_offset = src_operand.read().unwrap();
-
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
         let data = dst_operand.read().unwrap();
 
-        let result = data | (1 << bit_offset);
+        let result = data | (1 << self.bit_offset);
         dst_operand.write(result).unwrap();
     }
 }
 
-pub(crate) struct RES();
+impl Display for SET {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SET")
+    }
+}
+
+pub(crate) struct RES{
+    bit_offset: u16,
+}
+
+impl RES {
+    pub(crate) fn new(bit_offset: u16) -> Self {
+        Self { bit_offset }
+    }
+}
 
 impl<T> Instruction<T> for RES
 where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let bit_offset = src_operand.read().unwrap();
-
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
         let data = dst_operand.read().unwrap();
 
-        let result = data & !(1 << bit_offset);
+        let result = data & !(1 << self.bit_offset);
         dst_operand.write(result).unwrap();
+    }
+}
+
+impl Display for RES {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RES")
     }
 }
 
@@ -1270,6 +1589,12 @@ where
     }
 }
 
+impl Display for JP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "JP")
+    }
+}
+
 pub(crate) struct JR {
     condition: Condition,
 }
@@ -1301,6 +1626,12 @@ where
     }
 }
 
+impl Display for JR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "JR")
+    }
+}
+
 pub(crate) struct DJNZ();
 
 impl<T> Instruction<T> for DJNZ
@@ -1320,6 +1651,12 @@ where
             let offset = operand.read().unwrap().sign_extend(Size::Byte);
             cpu.program_counter = cpu.program_counter.wrapping_add(offset);
         }
+    }
+}
+
+impl Display for DJNZ {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "DJNZ")
     }
 }
 
@@ -1360,6 +1697,12 @@ where
     }
 }
 
+impl Display for CALL {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "CALL")
+    }
+}
+
 pub(crate) struct RET {
     condition: Condition,
 }
@@ -1393,9 +1736,13 @@ where
     }
 }
 
-pub(crate) struct RETI {
-    condition: Condition,
+impl Display for RET {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RET")
+    }
 }
+
+pub(crate) struct RETI();
 
 impl<T> Instruction<T> for RETI
 where
@@ -1409,9 +1756,13 @@ where
     }
 }
 
-pub(crate) struct RETN {
-    condition: Condition,
+impl Display for RETI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RETI")
+    }
 }
+
+pub(crate) struct RETN();
 
 impl<T> Instruction<T> for RETN
 where
@@ -1422,6 +1773,12 @@ where
         cpu.program_counter = address;
 
         // TODO set an 'self.iff1 = self.iff2;'
+    }
+}
+
+impl Display for RETN {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RETN")
     }
 }
 
@@ -1447,6 +1804,12 @@ where
     }
 }
 
+impl Display for RST {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "RST {:04X}", self.address)
+    }
+}
+
 pub(crate) struct IN();
 
 impl<T> Instruction<T> for IN
@@ -1454,6 +1817,12 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
+    }
+}
+
+impl Display for IN {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "IN")
     }
 }
 
@@ -1467,6 +1836,12 @@ where
     }
 }
 
+impl Display for INI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INI")
+    }
+}
+
 pub(crate) struct INIR();
 
 impl<T> Instruction<T> for INIR
@@ -1474,6 +1849,12 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
+    }
+}
+
+impl Display for INIR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INIR")
     }
 }
 
@@ -1487,6 +1868,12 @@ where
     }
 }
 
+impl Display for IND {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "IND")
+    }
+}
+
 pub(crate) struct INDR();
 
 impl<T> Instruction<T> for INDR
@@ -1494,6 +1881,12 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
+    }
+}
+
+impl Display for INDR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INDR")
     }
 }
 
@@ -1507,6 +1900,12 @@ where
     }
 }
 
+impl Display for OUT {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OUT")
+    }
+}
+
 pub(crate) struct OUTI();
 
 impl<T> Instruction<T> for OUTI
@@ -1514,6 +1913,12 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
+    }
+}
+
+impl Display for OUTI {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OUTI")
     }
 }
 
@@ -1527,6 +1932,12 @@ where
     }
 }
 
+impl Display for OTIR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OTIR")
+    }
+}
+
 pub(crate) struct OUTD();
 
 impl<T> Instruction<T> for OUTD
@@ -1534,6 +1945,12 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
+    }
+}
+
+impl Display for OUTD {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OUTD")
     }
 }
 
@@ -1547,6 +1964,12 @@ where
     }
 }
 
+impl Display for OTDR {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "OTDR")
+    }
+}
+
 pub(crate) struct XEP();
 
 impl<T> Instruction<T> for XEP
@@ -1555,5 +1978,11 @@ where
 {
     fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
         println!("Z80::XEP: cpu fetched XEP function");
+    }
+}
+
+impl Display for XEP {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "XEP")
     }
 }

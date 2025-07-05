@@ -3,6 +3,9 @@ pub enum Signal {
     VInterrupt,
     HInterrupt,
     CpuHalt,
+    Z80BusRequest,
+    Z80BusFree,
+    Z80Reset,
 }
 
 pub struct SignalBus {

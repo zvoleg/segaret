@@ -26,11 +26,11 @@ where
     T: BusZ80,
 {
     fn read(&self, size: Size) -> Result<u16, ()> {
-        self.bus.read(self.address, size)
+        self.bus.read(self.address, size as u32)
     }
 
     fn write(&self, data: u16, size: Size) -> Result<(), ()> {
-        self.bus.write(data, self.address, size)
+        self.bus.write(data, self.address, size as u32)
     }
 }
 

@@ -100,8 +100,8 @@ where
 }
 
 pub(crate) struct Indexed {
-    index_reg: IndexRegister,
-    size: Size,
+    pub(crate) index_reg: IndexRegister,
+    pub(crate) size: Size,
 }
 
 impl<T> AddressingMode<T> for Indexed
