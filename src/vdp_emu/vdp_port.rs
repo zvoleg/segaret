@@ -34,7 +34,7 @@ where
                     *(self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
                         as *const u16)
                 }
-                _ => 0, // wron access mode just ignoring (by docks)
+                _ => 0, // wrong access mode just ignoring (by docks)
             }
         }
         .to_be();

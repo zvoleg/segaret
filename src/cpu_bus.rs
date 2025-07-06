@@ -5,7 +5,7 @@ use log::debug;
 use super::vdp_emu::vdp_port::VdpPorts;
 use m68k_emu::bus::BusM68k;
 
-use crate::{controller::Controller, memory_space::MemorySpace, signal_bus::{self, Signal, SignalBus}};
+use crate::{controller::Controller, memory_space::MemorySpace, signal_bus::{Signal, SignalBus}};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -18,9 +18,9 @@ const Z80_RESET: u32 = 0xA11200;
 
 pub struct CpuBus<T: VdpPorts> {
     memory_space: Rc<RefCell<MemorySpace>>,
-    // TODO rewrite after implementation of the peripheral devices
+
     vdp_ports: Option<Rc<RefCell<T>>>,
-    z80_bus_request_reg: RefCell<u32>,
+    z80_bus_reg: RefCell<u32>,
 
     controller_1: Rc<RefCell<Controller>>,
     controller_2: Rc<RefCell<Controller>>,
@@ -41,7 +41,8 @@ where
         Self {
             memory_space: memory_space,
             vdp_ports: None,
-            z80_bus_request_reg: RefCell::new(0),
+
+            z80_bus_reg: RefCell::new(0),
 
             controller_1: controller_1,
             controller_2: controller_2,
@@ -103,11 +104,9 @@ where
                     _ => panic!("unexpected program region code {:02X}", program_region),
                 }
             } else if address == Z80_REQUEST_BUS {
-                if *self.z80_bus_request_reg.borrow() == 0x0100 {
-                    return Ok(0);
-                } else {
-                    return Ok(1);
-                }
+                let bus_state = *self.z80_bus_reg.borrow();
+                debug!("Z80 bus state flag is {:04X}", bus_state);
+                Ok(bus_state)
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 Ok(self.controller_1.borrow().read() as u32)
             } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {
@@ -160,15 +159,17 @@ where
             self.write_ptr(data, amount, ptr);
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
-                *self.z80_bus_request_reg.borrow_mut() = data;
+                *self.z80_bus_reg.borrow_mut() = data;
                 if data == 0x100 {
+                    debug!("Z80_bus request");
                     self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusRequest);
                 } else {
+                    debug!("Z80_bus release");
                     self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusFree);
                 }
             } else if address == Z80_RESET {
+                debug!("Z80 send reset signal with data {:04X}", data);
                 self.signal_bus.borrow_mut().push_siganal(Signal::Z80Reset);
-                self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusFree);
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 self.controller_1.borrow_mut().write(data as u8);
             } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {

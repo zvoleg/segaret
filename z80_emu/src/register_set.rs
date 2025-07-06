@@ -175,8 +175,8 @@ pub(crate) struct RegisterSet {
     registers: [u8; 16],
     index_register: [u16; 2],
     stack_pointer: u16,
-    interrupt_vector: u8,
-    memory_refresh: u8,
+    pub(crate) interrupt_vector: u8,
+    pub(crate) memory_refresh: u8,
 }
 
 impl Display for RegisterSet {

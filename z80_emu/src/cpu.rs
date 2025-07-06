@@ -9,9 +9,6 @@ pub struct Z80<T: BusZ80> {
     stack_pointer: u16,
     pub(crate) program_counter: u16,
 
-    refresh_register: u8,
-    interrupt_vector: u16,
-
     bus: Option<Rc<T>>,
 }
 
@@ -26,8 +23,6 @@ where
             register_set: RegisterSet::new(),
             stack_pointer: 0,
             program_counter: 0,
-            refresh_register: 0,
-            interrupt_vector: 0,
             bus: None,
         }
     }
@@ -91,7 +86,7 @@ where
     }
 
     fn write_interrupt_vector(&mut self, data: u8) {
-        self.interrupt_vector |= (data as u16) << 8;
+        self.register_set.interrupt_vector = data;
     }
 
     fn nmi(&mut self) {

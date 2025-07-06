@@ -201,6 +201,9 @@ fn main() {
                 if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
                     m68k.interrupt(6);
                 }
+                if signal_bus.borrow_mut().handle_signal(Signal::HInterrupt) {
+                    m68k.interrupt(4);
+                }
                 if signal_bus.borrow_mut().handle_signal(Signal::Z80BusRequest) {
                     z80_bus_request = true;
                 }
@@ -245,7 +248,19 @@ fn main() {
         } else if manual_clock {
             let mut vdp_clocks = 1;
             if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
-                m68k.interrupt(6);
+                    m68k.interrupt(6);
+            }
+            if signal_bus.borrow_mut().handle_signal(Signal::HInterrupt) {
+                m68k.interrupt(4);
+            }
+            if signal_bus.borrow_mut().handle_signal(Signal::Z80BusRequest) {
+                z80_bus_request = true;
+            }
+            if signal_bus.borrow_mut().handle_signal(Signal::Z80BusFree) {
+                z80_bus_request = false;
+            }
+            if signal_bus.borrow_mut().handle_signal(Signal::Z80Reset) {
+                z80.restart();
             }
             if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
                 let vdp_clocks_rational =

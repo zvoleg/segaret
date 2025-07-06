@@ -180,6 +180,12 @@ where
         } else {
             self.h_counter += 1;
             if self.h_counter >= 320 {
+                let hinterrupt_counter = self.register_set.hinterrupt_counter.hinterrupt_counter() as u16;
+                if self.register_set.mode_register.hinterrupt_enabled() && self.v_counter % hinterrupt_counter == 0 {
+                    self.signal_bus
+                        .borrow_mut()
+                        .push_siganal(Signal::HInterrupt);
+                }
                 self.h_counter = 0;
                 self.v_counter += 1;
             }
