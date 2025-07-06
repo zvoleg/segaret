@@ -134,7 +134,7 @@ macro_rules! am {
         Box::new(Relative())
     };
 
-    (RR) => {
-        Box::new(Extended { size: Size::Word } )
+    (RR.$s:ident) => {
+        Box::new(Extended { size: sz!($s) } )
     };
 }
