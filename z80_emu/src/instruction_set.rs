@@ -35,8 +35,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_ptr = &operands[0];
-        let dst_ptr = &operands[1];
+        let dst_ptr = &operands[0];
+        let src_ptr = &operands[1];
 
         dst_ptr.write(src_ptr.read().unwrap()).unwrap();
     }
@@ -136,40 +136,32 @@ where
 {
     fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
         // transfer data from memory to memory
-        let data = cpu
-            .register_set
-            .read_register(Register::General(RegisterType::HL), Size::Byte);
-        cpu.register_set
-            .write_register(data, Register::General(RegisterType::DE), Size::Byte);
+        let src_register = Register::General(RegisterType::HL);
+        let dst_register = Register::General(RegisterType::DE);
+        let counter_register = Register::General(RegisterType::BC);
 
-        let hl = cpu
+        let src_address = cpu
             .register_set
-            .read_register(Register::General(RegisterType::HL), Size::Word);
-        cpu.register_set.write_register(
-            hl.wrapping_add(1),
-            Register::General(RegisterType::HL),
-            Size::Word,
-        );
+            .read_register(src_register, Size::Word);
+        let dst_address = cpu
+            .register_set
+            .read_register(dst_register, Size::Word);
+        let counter_value = cpu
+            .register_set
+            .read_register(counter_register, Size::Word)
+            .wrapping_sub(1);
 
-        let de = cpu
-            .register_set
-            .read_register(Register::General(RegisterType::DE), Size::Word);
-        cpu.register_set.write_register(
-            de.wrapping_add(1),
-            Register::General(RegisterType::DE),
-            Size::Word,
-        );
+        let bus = (cpu.bus_share()).clone();
+        let src_data = bus.read(src_address, Size::Byte as u32).unwrap();
+        bus.write(src_data, dst_address, Size::Byte as u32).unwrap();
 
-        let mut bc = cpu
-            .register_set
-            .read_register(Register::General(RegisterType::BC), Size::Word);
-        bc = bc.wrapping_sub(1);
-        cpu.register_set
-            .write_register(bc, Register::General(RegisterType::BC), Size::Word);
+        cpu.register_set.write_register(src_address.wrapping_add(1), src_register, Size::Word);
+        cpu.register_set.write_register(dst_address.wrapping_add(1), dst_register, Size::Word);
+        cpu.register_set.write_register(counter_value, counter_register, Size::Word);
 
         cpu.register_set.set_flag(Status::H, false);
         cpu.register_set.set_flag(Status::N, false);
-        cpu.register_set.set_flag(Status::PV, bc != 0);
+        cpu.register_set.set_flag(Status::PV, counter_value != 0);
     }
 }
 
@@ -191,7 +183,7 @@ where
         let bc = cpu
             .register_set
             .read_register(Register::General(RegisterType::BC), Size::Word);
-        if bc.wrapping_sub(1) != 0 {
+        if bc != 0 {
             cpu.program_counter = cpu.program_counter.wrapping_sub(2);
         }
     }

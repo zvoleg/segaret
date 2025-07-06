@@ -1,5 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
+use log::debug;
 use z80_emu::bus::BusZ80;
 
 use crate::memory_space::MemorySpace;
@@ -17,7 +18,7 @@ impl Z80Bus {
         unsafe {
             match amount {
                 1 => *ptr as u16,
-                2 => (*(ptr as *const u16)).to_be() as u16,
+                2 => *(ptr as *const u16) as u16,
                 _ => panic!("Bus: read: wrong size"),
             }
         }
@@ -27,7 +28,7 @@ impl Z80Bus {
         unsafe {
             match amount {
                 1 => *ptr = data as u8,
-                2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
+                2 => *(ptr as *mut _ as *mut u16) = data as u16,
                 _ => panic!("Bus: write: wrong size"),
             }
         }
@@ -40,6 +41,7 @@ impl BusZ80 for Z80Bus {
             amount,
             &self.memory_space.borrow().z80_ram[address as usize],
         );
+        debug!("Z80 bus: reading address: {:04X}\tsize: {}\tdata: {:04X}", address, amount, data);
         Ok(data)
     }
 
@@ -49,6 +51,7 @@ impl BusZ80 for Z80Bus {
             amount,
             &mut self.memory_space.borrow_mut().z80_ram[address as usize]
         );
+        debug!("Z80 bus: writing address: {:04X}\tsize: {}\tdata: {:04X}", address, amount, data);
         Ok(())
     }
 }
