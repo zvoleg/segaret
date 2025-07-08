@@ -1302,34 +1302,6 @@ impl Display for SLA {
     }
 }
 
-pub(crate) struct SLL();
-
-impl<T> Instruction<T> for SLL
-where
-    T: 'static + BusZ80,
-{
-    fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let operand = &operands[0];
-        let data = operand.read().unwrap();
-
-        let msb = if data.get_msb(Size::Byte) { 1 } else { 0 };
-        let carry = msb == 1;
-
-        let result = data << 1;
-        operand.write(result).unwrap();
-
-        cpu.register_set.set_flag(Status::H, false);
-        cpu.register_set.set_flag(Status::N, false);
-        cpu.register_set.set_flag(Status::C, carry);
-    }
-}
-
-impl Display for SLL {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SLL")
-    }
-}
-
 pub(crate) struct SRA();
 
 impl<T> Instruction<T> for SRA
@@ -1975,9 +1947,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
-        let pc = cpu.program_counter - 2;
-        let opcode = cpu.bus_share().read(pc, 2).unwrap();
-        info!("Z80::XEP: cpu fetched XEP function by address {:04X} and opcode is {:04X}", pc, opcode);
+        let pc = cpu.program_counter;
+        info!("Z80::XEP: cpu fetched XEP function by address {:04X} (after instruction) and opcode is {:04X}", pc, cpu.current_opcode);
     }
 }
 

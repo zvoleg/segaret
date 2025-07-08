@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use log::debug;
+use log::{debug, info};
 
 use super::vdp_emu::vdp_port::VdpPorts;
 use m68k_emu::bus::BusM68k;

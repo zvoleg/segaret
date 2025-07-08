@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use log::debug;
+use log::{debug, info};
 use z80_emu::bus::BusZ80;
 
 use crate::memory_space::MemorySpace;
@@ -51,6 +51,9 @@ impl BusZ80 for Z80Bus {
             amount,
             &mut self.memory_space.borrow_mut().z80_ram[address as usize]
         );
+        if address == 0x6000 {
+            info!("Z80 bus: setup m68k bank: {:04X}", data);
+        }
         debug!("Z80 bus: writing address: {:04X}\tsize: {}\tdata: {:04X}", address, amount, data);
         Ok(())
     }

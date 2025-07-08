@@ -6,8 +6,9 @@ use crate::{bus::BusZ80, opcode_table_generator::tables::{cb_opcode_table, dd_op
 
 pub struct Z80<T: BusZ80> {
     pub(crate) register_set: RegisterSet,
-    stack_pointer: u16,
     pub(crate) program_counter: u16,
+    pub(crate) current_opcode: u32,
+    stack_pointer: u16,
 
     bus: Option<Rc<T>>,
 }
@@ -21,8 +22,9 @@ where
     pub fn new() -> Self {
         Self {
             register_set: RegisterSet::new(),
-            stack_pointer: 0,
             program_counter: 0,
+            current_opcode: 0,
+            stack_pointer: 0,
             bus: None,
         }
     }
@@ -38,21 +40,34 @@ where
 
     pub fn clock(&mut self) {
         let pc = self.program_counter;
+        self.current_opcode = 0;
         let mut opcode = self.read_pc(Size::Byte);
+        self.current_opcode |= opcode as u32;
         let opcodes = match opcode {
             0xED => {
                 opcode = self.read_pc(Size::Byte);
+                self.current_opcode <<= 8;
+                self.current_opcode |= opcode as u32;
                 ed_opcode_table()
             },
             0xCB => {
                 opcode = self.read_pc(Size::Byte);
+                self.current_opcode <<= 8;
+                self.current_opcode |= opcode as u32;
                 cb_opcode_table()
             },
             0xDD => {
                 opcode = self.read_pc(Size::Byte);
+                self.current_opcode <<= 8;
+                self.current_opcode |= opcode as u32;
                 match opcode {
                     0xCB => {
                         opcode = self.read_pc(Size::Byte);
+                        self.current_opcode <<= 8;
+                        self.current_opcode |= opcode as u32;
+                        opcode = self.read_pc(Size::Byte);
+                        self.current_opcode <<= 8;
+                        self.current_opcode |= opcode as u32;
                         ddcb_opcode_table()
                     }
                     _ => dd_opcode_table(),
@@ -60,9 +75,16 @@ where
             },
             0xFD => {
                 opcode = self.read_pc(Size::Byte);
+                self.current_opcode <<= 8;
+                self.current_opcode |= opcode as u32;
                 match opcode {
                     0xCB => {
                         opcode = self.read_pc(Size::Byte);
+                        self.current_opcode <<= 8;
+                        self.current_opcode |= opcode as u32;
+                        opcode = self.read_pc(Size::Byte);
+                        self.current_opcode <<= 8;
+                        self.current_opcode |= opcode as u32;
                         fdcb_opcode_table()
                     }
                     _ => fd_opcode_table(),

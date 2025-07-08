@@ -141,7 +141,11 @@ where
     T: 'static + BusZ80,
 {
     fn fetch(&self, cpu: &mut Z80<T>) -> Operand {
-        let displacement = cpu.read_pc(Size::Byte).sign_extend(Size::Byte);
+        let displacement = if cpu.current_opcode & 0xFDCB0000 == 0xFDCB00 || cpu.current_opcode & 0xDDCB0000 == 0xDDCB0000 {
+            (cpu.current_opcode >> 8) & 0xFF
+        } else {
+            cpu.current_opcode & 0xFF
+        } as u16;
         let index = cpu
             .register_set
             .read_register(Register::Index(self.index_reg), Size::Word);
