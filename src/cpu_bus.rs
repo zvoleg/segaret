@@ -106,7 +106,7 @@ where
             } else if address == Z80_REQUEST_BUS {
                 let bus_state = *self.z80_bus_reg.borrow();
                 debug!("Z80 bus state flag is {:04X}", bus_state);
-                Ok(bus_state)
+                if bus_state == 0x100 { Ok(0) } else { Ok(1) }
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 Ok(self.controller_1.borrow().read() as u32)
             } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {
