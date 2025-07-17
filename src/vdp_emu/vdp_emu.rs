@@ -4,7 +4,7 @@ use spriter::{window::Window, Canvas, Color};
 
 use log::debug;
 
-use crate::signal_bus::{Signal, SignalBus};
+use crate::{signal_bus::{Signal, SignalBus}, vdp_emu::{registers::{HCellMode, VCellMode}, DisplayMod}};
 
 use super::{
     bus::BusVdp,
@@ -18,9 +18,7 @@ use super::{
 };
 
 pub struct Vdp<T: BusVdp> {
-    screen: Canvas,
     pub(crate) vram_table: Canvas,
-
     pub(crate) register_set: RegisterSet,
 
     pub(crate) vram: [u8; 0x10000],
@@ -48,21 +46,25 @@ pub struct Vdp<T: BusVdp> {
     pub(crate) dma_src_address: u32,
     pub(crate) dma_length: u16,
 
+    screen: Canvas,
     sprites: Vec<Sprite>,
+    v_mode: VCellMode,
+    h_mode: HCellMode,
 }
 
 impl<T> Vdp<T>
 where
     T: BusVdp,
 {
-    pub fn new(window: &mut Window, signal_bus: Rc<RefCell<SignalBus>>) -> Self {
-        let mut screen = window.create_canvas(0, 0, 640, 448, 320, 224);
+    pub fn new(window: &mut Window, signal_bus: Rc<RefCell<SignalBus>>, display_mod: DisplayMod) -> Self {
+        let height = display_mod.line_amount();
+        let mut screen = window.create_canvas(0, 0, 640, height * 2, 320, height);
         screen.set_clear_color(Color::from_u32(0xAAAAAA));
         screen.clear();
         let mut vram_table = window.create_canvas(660, 0, 512, 1024, 256, 512);
         vram_table.set_clear_color(Color::from_u32(0xAAAACC));
         vram_table.clear();
-        let register_set = RegisterSet::new();
+        let register_set = RegisterSet::new(display_mod);
         Self {
             screen,
             vram_table,
@@ -95,6 +97,8 @@ where
             dma_length: 0,
 
             sprites: vec![],
+            v_mode: VCellMode::V30Cell,
+            h_mode: HCellMode::H40Cell,
         }
     }
 
@@ -153,14 +157,20 @@ where
                 .set_pixel(self.h_counter as i32, self.v_counter as i32, dot)
                 .unwrap();
             self.h_counter += 1;
-            if self.h_counter >= 320 {
+            if self.h_counter >= self.h_mode as u16 * 8 {
                 self.h_counter = 0;
                 self.v_counter += 1;
 
                 self.collect_sprites();
             }
             if self.v_counter == 0xE0 {
-                // self.v_counter = 0;
+                let v_mode = self.register_set.mode_register.vcell_mode();
+                let h_mode = self.register_set.mode_register.hcell_mode();
+                if self.v_mode != v_mode || self.h_mode != h_mode {
+                    self.screen.resize_texture(h_mode as u32 * 8, v_mode as u32 * 8);
+                    self.v_mode = v_mode;
+                    self.h_mode = h_mode;
+                }
                 update_screen = true;
                 self.update_vram_table_on_screen();
 
@@ -179,7 +189,7 @@ where
             }
         } else {
             self.h_counter += 1;
-            if self.h_counter >= 320 {
+            if self.h_counter >= self.h_mode as u16 * 8 {
                 let hinterrupt_counter = self.register_set.hinterrupt_counter.hinterrupt_counter() as u16;
                 if self.register_set.mode_register.hinterrupt_enabled() && self.v_counter % hinterrupt_counter == 0 {
                     self.signal_bus
@@ -401,7 +411,7 @@ where
 
         let h_hit = {
             let h_position = self.register_set.window_plane_hpostion.window_hpostion();
-            let h_offset = self.register_set.window_plane_hpostion.window_hoffset() * 8;
+            let h_offset = self.register_set.window_plane_hpostion.window_hoffset() * 8 * 2; // H coords corresponds to 2 dots
 
             match h_position {
                 WindowHPostion::LeftToVal => self.h_counter < h_offset,
@@ -411,8 +421,12 @@ where
 
         if h_hit || v_hit {
             let window_attribute_address = self.register_set.window_table_location.address();
+            let table_width = match self.register_set.mode_register.hcell_mode() {
+                HCellMode::H32Cell => 32,
+                HCellMode::H40Cell => 64,
+            };
             let plane_address_offset =
-                ((self.h_counter / 8 + (self.v_counter / 8) * 64 as u16) as usize) * 2;
+                ((self.h_counter / 8 + (self.v_counter / 8) * table_width) as usize) * 2;
             let attribute_data = unsafe {
                 *(self
                     .vram

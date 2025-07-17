@@ -9,8 +9,8 @@ pub mod vdp_port;
 
 mod registers;
 
-#[derive(PartialEq)]
-enum DisplayMod {
+#[derive(Clone, Copy)]
+pub enum DisplayMod {
     PAL,
     NTSC,
 }

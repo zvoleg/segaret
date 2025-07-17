@@ -22,7 +22,7 @@ use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 use z80_emu::cpu::Z80;
 
-use crate::z80_bus::Z80Bus;
+use crate::{vdp_emu::DisplayMod, z80_bus::Z80Bus};
 
 mod controller;
 mod cpu_bus;
@@ -47,17 +47,23 @@ fn main() {
     let mut file = File::open(&args[1]).unwrap();
     let mut rom = Vec::new();
     let _ = file.read_to_end(&mut rom);
+    let region_code = rom[0x1F0];
+    let display_mod = match region_code {
+        45 => DisplayMod::PAL, // "E" == 45
+        _ => DisplayMod::NTSC, // "JU"
+    };
+
     let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
 
     let mut m68k = M68k::new();
     let mut break_points: Vec<u32> = vec![];
     // let mut break_points = vec![0xB74, 0x1006, 0x1854];
     m68k.set_breakpoints(&break_points);
-
     let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
     let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(
         &mut window,
         signal_bus.clone(),
+        display_mod,
     )));
 
     let controller_a = Rc::new(RefCell::new(Controller::new()));

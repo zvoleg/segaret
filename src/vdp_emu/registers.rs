@@ -1,3 +1,5 @@
+use crate::vdp_emu::DisplayMod;
+
 use super::DmaMode;
 
 const MODE_REGISTER_I: usize = 0;
@@ -46,10 +48,16 @@ pub(crate) enum HScrollMode {
     Prohibited,
 }
 
+#[derive(PartialEq, Clone, Copy)]
 pub(crate) enum HCellMode {
-    H32Cell,
-    H40Cell,
-    Prohibited,
+    H32Cell = 32,
+    H40Cell = 40,
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub(crate) enum VCellMode {
+    V30Cell = 30,
+    V28Cell = 28,
 }
 
 pub(crate) enum VPlaneSize {
@@ -120,8 +128,12 @@ impl ModeRegister {
         unsafe { *self.data_ii & 0x10 != 0 }
     }
 
-    pub(crate) fn pal_mode(&self) -> bool {
-        unsafe { *self.data_ii & 0x08 != 0 }
+    pub(crate) fn vcell_mode(&self) -> VCellMode {
+        if unsafe { *self.data_ii & 0x08 != 0 } {
+            VCellMode::V30Cell
+        } else {
+            VCellMode::V28Cell
+        }
     }
 
     pub(crate) fn ext_interrupt_enabled(&self) -> bool {
@@ -156,7 +168,7 @@ impl ModeRegister {
             match mask {
                 0x81 => HCellMode::H40Cell,
                 0x00 => HCellMode::H32Cell,
-                _ => HCellMode::Prohibited,
+                _ => panic!("ModeRegister::hcell_mode: unexpected bit mask for HCellMode {:08b}", mask)
             }
         }
     }
@@ -466,12 +478,18 @@ impl DmaSource {
 }
 
 pub(crate) struct Status {
+    display_mod: DisplayMod,
     data: u16,
 }
 
 impl Status {
-    pub(crate) fn new() -> Self {
-        Self { data: 0x0200 }
+    pub(crate) fn new(display_mod: DisplayMod) -> Self {
+        let mut status = Self { 
+            display_mod: display_mod,
+            data: 0 ,
+        };
+        status.reset();
+        status
     }
 
     pub(crate) fn read(&self) -> u16 {
@@ -487,7 +505,11 @@ impl Status {
     }
 
     pub(crate) fn reset(&mut self) {
-        self.data = 0x0200;
+        let pal_flag = match self.display_mod {
+            DisplayMod::NTSC => 0,
+            DisplayMod::PAL => 1,
+        };
+        self.data = 0x0200 | pal_flag;
     }
 }
 
@@ -511,7 +533,7 @@ pub(crate) struct RegisterSet {
 }
 
 impl RegisterSet {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(display_mod: DisplayMod) -> Self {
         let raw_registers = Box::new([0u8; 24]);
         let mode_register = ModeRegister::new(raw_registers.as_ref());
         let plane_a_table_location = PlaneATableLocation::new(raw_registers.as_ref());
@@ -527,7 +549,7 @@ impl RegisterSet {
         let window_plane_vpostion = WindowPlaneVPostion::new(raw_registers.as_ref());
         let dma_lnegth = DmaLnegth::new(raw_registers.as_ref());
         let dma_source = DmaSource::new(raw_registers.as_ref());
-        let status = Status::new();
+        let status = Status::new(display_mod);
         Self {
             raw_registers,
             mode_register,

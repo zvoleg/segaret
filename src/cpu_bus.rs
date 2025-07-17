@@ -127,6 +127,13 @@ where
                 .unwrap()
                 .borrow_mut()
                 .read_control_port()
+        } else if address == 0xC00008 {
+            info!("Reading of VDP HVCounter");
+            self.vdp_ports
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .read_hv_counters_port()
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
             Ok(self.read_ptr(
