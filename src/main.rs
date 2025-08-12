@@ -31,6 +31,7 @@ mod signal_bus;
 mod vdp_bus;
 mod vdp_emu;
 mod z80_bus;
+mod ym2612;
 
 const VDP_CLOCK_PER_CPU: f32 = 1.75;
 
@@ -69,8 +70,10 @@ fn main() {
     let controller_a = Rc::new(RefCell::new(Controller::new()));
     let controller_b = Rc::new(RefCell::new(Controller::new()));
 
+    let z80_bus = Rc::new(Z80Bus::new(memory_space.clone()));
     let mut cpu_bus = CpuBus::init(
         memory_space.clone(),
+        z80_bus.clone(),
         controller_a.clone(),
         controller_b.clone(),
         signal_bus.clone(),
@@ -80,7 +83,6 @@ fn main() {
     m68k.set_bus(cpu_bus);
     m68k.reset();
 
-    let z80_bus = Rc::new(Z80Bus::new(memory_space.clone()));
     let mut z80 = Z80::new();
     z80.set_bus(z80_bus.clone());
 

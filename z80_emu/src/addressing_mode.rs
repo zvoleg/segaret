@@ -5,7 +5,7 @@ use crate::{
     cpu::Z80,
     primitives::{MemPtr, Operand},
     register_set::{IndexRegister, Register},
-    SignExtending, Size,
+    Size,
 };
 
 pub(crate) trait AddressingMode<T>: Display

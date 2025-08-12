@@ -1,11 +1,12 @@
 use std::{cell::RefCell, rc::Rc};
 
 use log::{debug, info};
+use z80_emu::bus::BusZ80;
 
 use super::vdp_emu::vdp_port::VdpPorts;
 use m68k_emu::bus::BusM68k;
 
-use crate::{controller::Controller, memory_space::MemorySpace, signal_bus::{Signal, SignalBus}};
+use crate::{controller::Controller, memory_space::MemorySpace, signal_bus::{Signal, SignalBus}, z80_bus::Z80Bus};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -18,6 +19,7 @@ const Z80_RESET: u32 = 0xA11200;
 
 pub struct CpuBus<T: VdpPorts> {
     memory_space: Rc<RefCell<MemorySpace>>,
+    z80_bus: Rc<Z80Bus>,
 
     vdp_ports: Option<Rc<RefCell<T>>>,
     z80_bus_reg: RefCell<u32>,
@@ -34,14 +36,16 @@ where
 {
     pub fn init(
         memory_space: Rc<RefCell<MemorySpace>>,
+        z80_bus: Rc<Z80Bus>,
         controller_1: Rc<RefCell<Controller>>,
         controller_2: Rc<RefCell<Controller>>,
         signal_bus: Rc<RefCell<SignalBus>>,
     ) -> Self {
         Self {
             memory_space: memory_space,
-            vdp_ports: None,
+            z80_bus,
 
+            vdp_ports: None,
             z80_bus_reg: RefCell::new(0),
 
             controller_1: controller_1,
@@ -89,10 +93,8 @@ where
             Ok(self.read_ptr(amount, &self.memory_space.borrow().rom[address as usize]))
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            let data = self.read_ptr(
-                amount,
-                &self.memory_space.borrow().z80_ram[address as usize],
-            );
+            // TODO may be there should be a z80 bus register check
+            let data = self.z80_bus.read(address as u16, amount)? as u32;
             Ok(data)
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == VERSION_REGISTER {
@@ -161,9 +163,8 @@ where
             self.write_ptr(data, amount, ptr);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = address & 0xFFFF;
-            let ptr = &self.memory_space.as_ref().borrow_mut().z80_ram[address as usize] as *const _
-                as *mut u8;
-            self.write_ptr(data, amount, ptr);
+            // TODO may be there should be a z80 bus register check
+            self.z80_bus.write(data as u16, address as u16, amount)?;
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_reg.borrow_mut() = data;
