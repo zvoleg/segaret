@@ -53,8 +53,8 @@ where
         self.breakpoints = Some(breakpoints.clone());
     }
 
-    pub fn set_bus(&mut self, bus: T) {
-        self.bus = Some(Rc::new(bus));
+    pub fn set_bus(&mut self, bus: Rc<T>) {
+        self.bus = Some(bus);
     }
 
     pub fn reset(&mut self) {

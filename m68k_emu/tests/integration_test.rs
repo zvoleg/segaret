@@ -1,4 +1,4 @@
-use std::{cell::RefCell, fs::File, io::Read};
+use std::{cell::RefCell, fs::File, io::Read, rc::Rc};
 
 use log::debug;
 use m68k_emu::{bus::BusM68k, cpu::M68k};
@@ -56,7 +56,7 @@ impl BusM68k for Bus {
 #[test]
 fn cpu_running() {
     env_logger::init();
-    let bus = Bus::new("test.bin");
+    let bus = Rc::new(Bus::new("test.bin"));
     let mut cpu: M68k<Bus> = M68k::new();
     cpu.set_bus(bus);
     cpu.reset();

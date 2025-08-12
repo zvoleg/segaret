@@ -17,7 +17,7 @@ use super::{
     DmaMode, RamAccessMode,
 };
 
-pub struct Vdp<T: BusVdp> {
+pub struct Vdp {
     pub(crate) vram_table: Canvas,
     pub(crate) register_set: RegisterSet,
 
@@ -40,7 +40,7 @@ pub struct Vdp<T: BusVdp> {
     pub(crate) address_setting_raw_word: u32,
     pub(crate) address_setting_latch: bool,
 
-    pub(crate) bus: Option<T>,
+    pub(crate) bus: Option<Rc<dyn BusVdp>>,
     pub(crate) signal_bus: Rc<RefCell<SignalBus>>,
 
     pub(crate) dma_src_address: u32,
@@ -52,10 +52,7 @@ pub struct Vdp<T: BusVdp> {
     h_mode: HCellMode,
 }
 
-impl<T> Vdp<T>
-where
-    T: BusVdp,
-{
+impl Vdp{
     pub fn new(window: &mut Window, signal_bus: Rc<RefCell<SignalBus>>, display_mod: DisplayMod) -> Self {
         let height = display_mod.line_amount();
         let mut screen = window.create_canvas(0, 0, 640, height * 2, 320, height);
@@ -102,7 +99,7 @@ where
         }
     }
 
-    pub fn set_bus(&mut self, bus: T) {
+    pub fn set_bus(&mut self, bus: Rc<dyn BusVdp>) {
         self.bus = Some(bus);
     }
 

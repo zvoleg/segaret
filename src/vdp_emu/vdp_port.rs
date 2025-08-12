@@ -1,6 +1,6 @@
 use log::debug;
 
-use super::{bus::BusVdp, vdp_emu::Vdp, DmaMode, RamAccessMode};
+use super::{vdp_emu::Vdp, DmaMode, RamAccessMode};
 
 const VDP_CTRL_OPERATION_TYPE_MASK: u16 = 0x7 << 13;
 const VDP_CTRL_REGISTER_SET_MODE_MASK: u16 = 0x1 << 15;
@@ -14,10 +14,7 @@ pub trait VdpPorts {
     fn read_hv_counters_port(&mut self) -> Result<u32, ()>;
 }
 
-impl<T> VdpPorts for Vdp<T>
-where
-    T: BusVdp,
-{
+impl VdpPorts for Vdp{
     fn read_data_port(&mut self) -> Result<u32, ()> {
         self.address_setting_latch = false;
         let data = unsafe {
@@ -100,10 +97,7 @@ where
     }
 }
 
-impl<T> Vdp<T>
-where
-    T: BusVdp,
-{
+impl Vdp{
     fn set_register(&mut self, data: u16) {
         let register_id = (data & VDP_CTRL_REGISTER_ID_MASK).swap_bytes() as usize;
         let register_data = data as u8;

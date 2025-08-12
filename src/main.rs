@@ -14,18 +14,16 @@ use controller::Controller;
 use log::info;
 use m68k_emu::cpu::M68k;
 
-use cpu_bus::CpuBus;
 use memory_space::MemorySpace;
 use signal_bus::{Signal, SignalBus};
 use spriter::{if_pressed, Key};
-use vdp_bus::VdpBus;
 use vdp_emu::vdp_emu::Vdp;
 use z80_emu::cpu::Z80;
 
-use crate::{vdp_emu::DisplayMod, z80_bus::Z80Bus};
+use crate::vdp_emu::DisplayMod;
 
 mod controller;
-mod cpu_bus;
+mod m68k_bus;
 mod memory_space;
 mod signal_bus;
 mod vdp_bus;
@@ -54,40 +52,33 @@ fn main() {
         _ => DisplayMod::NTSC, // "JU"
     };
 
-    let memory_space = Rc::new(RefCell::new(MemorySpace::new(rom)));
+    let controller_a = Rc::new(RefCell::new(Controller::new()));
+    let controller_b = Rc::new(RefCell::new(Controller::new()));
+    let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
+    let vdp = Rc::new(RefCell::new(Vdp::new(
+        &mut window,
+        signal_bus.clone(),
+        display_mod,
+    )));
+    let memory_space = Rc::new(MemorySpace::new(
+        rom,
+        vdp.clone(),
+        controller_a.clone(),
+        controller_b.clone(),
+        signal_bus.clone()));
+
+    vdp.borrow_mut().set_bus(memory_space.clone());
 
     let mut m68k = M68k::new();
     let mut break_points: Vec<u32> = vec![];
     // let mut break_points = vec![0xB74, 0x1006, 0x1854];
     m68k.set_breakpoints(&break_points);
-    let signal_bus = Rc::new(RefCell::new(SignalBus::new()));
-    let vdp = Rc::new(RefCell::new(Vdp::<VdpBus>::new(
-        &mut window,
-        signal_bus.clone(),
-        display_mod,
-    )));
 
-    let controller_a = Rc::new(RefCell::new(Controller::new()));
-    let controller_b = Rc::new(RefCell::new(Controller::new()));
-
-    let z80_bus = Rc::new(Z80Bus::new(memory_space.clone()));
-    let mut cpu_bus = CpuBus::init(
-        memory_space.clone(),
-        z80_bus.clone(),
-        controller_a.clone(),
-        controller_b.clone(),
-        signal_bus.clone(),
-    );
-    cpu_bus.set_vdp_ports(vdp.clone());
-
-    m68k.set_bus(cpu_bus);
+    m68k.set_bus(memory_space.clone());
     m68k.reset();
 
     let mut z80 = Z80::new();
-    z80.set_bus(z80_bus.clone());
-
-    let vdp_bus = VdpBus::new(memory_space.clone());
-    vdp.borrow_mut().set_bus(vdp_bus);
+    z80.set_bus(memory_space.clone());
 
     let mut auto = false;
     let mut by_frame = false;
@@ -146,7 +137,6 @@ fn main() {
                 1 => {
                     let byte = u8::from_str_radix(parts[0], 16).unwrap();
                     let addresses = memory_space
-                        .borrow()
                         .m68k_ram
                         .iter()
                         .enumerate()
@@ -162,7 +152,7 @@ fn main() {
                         .get(&last_value)
                         .unwrap()
                         .iter()
-                        .filter(|a| memory_space.borrow().m68k_ram[(**a) as usize] == new_value)
+                        .filter(|a| memory_space.m68k_ram[(**a) as usize] == new_value)
                         .map(|a| *a)
                         .collect::<Vec<u32>>();
                     values_map.insert(last_value, addresses);
@@ -176,16 +166,16 @@ fn main() {
         if_pressed!(Key::D, {
             info!("Searching values downgraded by one");
             if downgraded_values.len() == 0 {
-                downgraded_values = memory_space.borrow().m68k_ram.clone();
+                downgraded_values = memory_space.m68k_ram.clone();
             } else {
                 let addresses = downgraded_values
                     .iter()
                     .enumerate()
-                    .filter(|v| (*v.1 - 1) == memory_space.borrow().m68k_ram[v.0])
+                    .filter(|v| (*v.1 - 1) == memory_space.m68k_ram[v.0])
                     .map(|v| v.0 as u32)
                     .collect::<Vec<u32>>();
                 info!("downgraded addresses {:08X?}", addresses);
-                downgraded_values = memory_space.borrow().m68k_ram.clone();
+                downgraded_values = memory_space.m68k_ram.clone();
             }
         });
         if_pressed!(Key::C, {
@@ -195,7 +185,7 @@ fn main() {
         });
         if_pressed!(Key::Z, {
             let mut dump_file = File::create("z80_dump").unwrap();
-            dump_file.write_all(&memory_space.borrow().z80_ram).unwrap();
+            dump_file.write_all(&memory_space.z80_ram).unwrap();
         });
         if_pressed!(Key::Escape, {
             spriter::program_stop();

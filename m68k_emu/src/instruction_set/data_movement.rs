@@ -449,7 +449,7 @@ mod test {
     #[test]
     fn test_link() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
@@ -480,7 +480,7 @@ mod test {
     #[test]
     fn test_unlk() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
@@ -511,7 +511,7 @@ mod test {
     #[test]
     fn test_movem_predecremented() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
@@ -564,7 +564,7 @@ mod test {
     #[test]
     fn test_movem_postincremented_word() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
@@ -608,7 +608,7 @@ mod test {
     #[test]
     fn test_movem_postincremented_long() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
@@ -652,7 +652,7 @@ mod test {
     #[test]
     fn test_movem_memory_to_register() {
         let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = TestBus { ram: ram.clone() };
+        let bus = Rc::new(TestBus { ram: ram.clone() });
         let bus_stub = Rc::new(TestBus { ram: ram.clone() });
         let mut cpu = M68k::new();
         cpu.set_bus(bus);
