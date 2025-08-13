@@ -20,7 +20,7 @@ use spriter::{if_pressed, Key};
 use vdp_emu::vdp_emu::Vdp;
 use z80_emu::cpu::Z80;
 
-use crate::vdp_emu::DisplayMod;
+use crate::{vdp_emu::DisplayMod, ym2612::ym2612::Ym2612};
 
 mod controller;
 mod m68k_bus;
@@ -60,9 +60,11 @@ fn main() {
         signal_bus.clone(),
         display_mod,
     )));
+    let ym2612 = Rc::new(RefCell::new(Ym2612::new()));
     let memory_space = Rc::new(MemorySpace::new(
         rom,
         vdp.clone(),
+        ym2612.clone(),
         controller_a.clone(),
         controller_b.clone(),
         signal_bus.clone()));

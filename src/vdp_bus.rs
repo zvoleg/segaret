@@ -2,9 +2,9 @@ use log::debug;
 
 use super::vdp_emu::bus::BusVdp;
 
-use crate::{memory_space::MemorySpace, vdp_emu::vdp_port::VdpPorts};
+use crate::{memory_space::MemorySpace, vdp_emu::vdp_port::VdpPorts, ym2612::Ym2612Ports};
 
-impl<T> BusVdp for MemorySpace<T> where T: VdpPorts {
+impl<T, Y> BusVdp for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
     fn read(&self, address: u32) -> u16 {
         debug!("VDP reads address {:08X}", address);
         let data = unsafe {

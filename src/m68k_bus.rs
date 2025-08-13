@@ -2,7 +2,7 @@ use log::{debug, info};
 use m68k_emu::bus::BusM68k;
 use z80_emu::bus::BusZ80;
 
-use crate::{memory_space::MemorySpace, signal_bus::Signal, vdp_emu::vdp_port::VdpPorts};
+use crate::{memory_space::MemorySpace, signal_bus::Signal, vdp_emu::vdp_port::VdpPorts, ym2612::Ym2612Ports};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -13,7 +13,7 @@ const CONTROLLER_B_CONTROL: u32 = 0xA1000A;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
 const Z80_RESET: u32 = 0xA11200;
 
-impl<T> BusM68k for MemorySpace<T> where T: VdpPorts {
+impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
     fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
         debug!("CPU reads address {:08X}\tsize: {}", address, amount);
@@ -22,7 +22,7 @@ impl<T> BusM68k for MemorySpace<T> where T: VdpPorts {
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            let data = <MemorySpace<T> as BusZ80>::read(&self, address, amount)? as u32;
+            let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount)? as u32;
             Ok(data)
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == VERSION_REGISTER {
@@ -89,7 +89,7 @@ impl<T> BusM68k for MemorySpace<T> where T: VdpPorts {
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            <MemorySpace<T> as BusZ80>::write(self, data as u16, address, amount)?;
+            <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount)?;
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_reg.borrow_mut() = data;

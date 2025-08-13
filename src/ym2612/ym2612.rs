@@ -1,4 +1,6 @@
-use crate::ym2612::{channel::Channel, RegisterPart, Ym2612io};
+use log::warn;
+
+use crate::ym2612::{channel::Channel, RegisterPart, Ym2612Ports};
 
 pub struct Ym2612 {
     channels: Vec<Channel>,
@@ -75,7 +77,7 @@ impl Ym2612 {
     }
 }
 
-impl Ym2612io for Ym2612 {
+impl Ym2612Ports for Ym2612 {
     fn register_set(&mut self, part: RegisterPart, data: u8) {
         let register = match part {
             RegisterPart::Fm1 => &mut self.register_fm1,
@@ -104,7 +106,7 @@ impl Ym2612io for Ym2612 {
             0x50 => {} // 0x50+ setup rate scaling (RS) and atack rate (AR)
             0xA0 | 0xA1 | 0xA2  => self.set_channel_lsb_frequency(part, register, data),
             0xA4 | 0xA5 | 0xA6  => self.set_channel_msb_frequency(part, register, data),
-            _ => panic!("Ym2612: register number: {:02X}", register)
+            _ => warn!("Ym2612: set value to register number: {:02X}", register)
         }
     }
 
