@@ -19,6 +19,8 @@ pub struct MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
     pub(crate) controller_2: Rc<RefCell<Controller>>,
 
     pub(crate) signal_bus: Rc<RefCell<SignalBus>>,
+
+    pub(crate) bank_register: RefCell<u16>,
 }
 
 impl<T,Y> MemorySpace<T, Y>
@@ -53,6 +55,8 @@ where
             controller_2: controller_2,
 
             signal_bus: signal_bus,
+
+            bank_register: RefCell::new(0),
         }
     }
 
@@ -76,5 +80,12 @@ where
                 _ => panic!("Bus: write: wrong size"),
             }
         }
+    }
+
+    pub(crate) fn push_bank_register_bit(&self, data: u16) {
+        let mut bank_register = *self.bank_register.borrow();
+        bank_register = (bank_register << 1) | data & 0x01; // push single bit to the register end
+        bank_register &= 0x01FF; // remain only 9 bits
+        *self.bank_register.borrow_mut() = bank_register;
     }
 }
