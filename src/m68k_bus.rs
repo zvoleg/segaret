@@ -92,17 +92,18 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
             <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount)?;
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
+                let data = if amount == 1 { data << 8 } else { data };
                 *self.z80_bus_reg.borrow_mut() = data;
                 if data == 0x100 {
                     debug!("Z80_bus request");
-                    self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusRequest);
+                    self.signal_bus.borrow_mut().push_signal(Signal::Z80BusRequest);
                 } else {
                     debug!("Z80_bus release");
-                    self.signal_bus.borrow_mut().push_siganal(Signal::Z80BusFree);
+                    self.signal_bus.borrow_mut().push_signal(Signal::Z80BusFree);
                 }
             } else if address == Z80_RESET {
                 debug!("Z80 send reset signal with data {:04X}", data);
-                self.signal_bus.borrow_mut().push_siganal(Signal::Z80Reset);
+                self.signal_bus.borrow_mut().push_signal(Signal::Z80Reset);
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 self.controller_1.borrow_mut().write(data as u8);
             } else if address == CONTROLLER_B_DATA || address == CONTROLLER_B_DATA + 1 {

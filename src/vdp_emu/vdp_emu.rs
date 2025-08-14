@@ -174,7 +174,10 @@ impl Vdp{
                 if self.register_set.mode_register.vinterrupt_enabled() {
                     self.signal_bus
                         .borrow_mut()
-                        .push_siganal(Signal::VInterrupt);
+                        .push_signal(Signal::VInterrupt);
+                    self.signal_bus
+                        .borrow_mut()
+                        .push_signal(Signal::Z80NMI);
                     self.register_set
                         .status
                         .set_flag(StatusFlag::VInterruptPending, true);
@@ -191,7 +194,7 @@ impl Vdp{
                 if self.register_set.mode_register.hinterrupt_enabled() && self.v_counter % hinterrupt_counter == 0 {
                     self.signal_bus
                         .borrow_mut()
-                        .push_siganal(Signal::HInterrupt);
+                        .push_signal(Signal::HInterrupt);
                 }
                 self.h_counter = 0;
                 self.v_counter += 1;
@@ -249,7 +252,7 @@ impl Vdp{
         self.dma_src_address += 2;
         self.vdp_ram_address += self.register_set.autoincrement.autoincrement();
         self.dma_length -= 1;
-        self.signal_bus.borrow_mut().push_siganal(Signal::CpuHalt);
+        self.signal_bus.borrow_mut().push_signal(Signal::CpuHalt);
     }
 
     fn dma_ram_fill(&mut self) {

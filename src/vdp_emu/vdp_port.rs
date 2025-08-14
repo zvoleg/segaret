@@ -54,17 +54,20 @@ impl VdpPorts for Vdp{
             );
             match self.ram_access_mode {
                 RamAccessMode::VramW => unsafe {
-                    let ptr = self.vram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                    let address = self.vdp_ram_address & (self.vram.len() - 1) as u32; // clear msb in overflow cases
+                    let ptr = self.vram.as_ptr().offset(address as isize) as *const _
                         as *mut u16;
                     *ptr = data.to_be();
                 },
                 RamAccessMode::CramW => unsafe {
-                    let ptr = self.cram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                    let address = self.vdp_ram_address & (self.cram.len() - 1) as u32; // clear msb in overflow cases
+                    let ptr = self.cram.as_ptr().offset(address as isize) as *const _
                         as *mut u16;
                     *ptr = data.to_be();
                 },
                 RamAccessMode::VSramW => unsafe {
-                    let ptr = self.vsram.as_ptr().offset(self.vdp_ram_address as isize) as *const _
+                    let addres = self.vdp_ram_address % self.vsram.len() as u32; // clear msb in overflow cases
+                    let ptr = self.vsram.as_ptr().offset(addres as isize) as *const _
                         as *mut u16;
                     *ptr = data.to_be();
                 },
