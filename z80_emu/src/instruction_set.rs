@@ -3,11 +3,7 @@ use std::fmt::Display;
 use log::info;
 
 use crate::{
-    bus::BusZ80,
-    cpu::Z80,
-    primitives::Operand,
-    register_set::{Register, RegisterType, Status},
-    IsNegate, MostSignificantBit, SignExtending, Size,
+    bus::BusZ80, cpu::Z80, primitives::Operand, register_set::{Register, RegisterType, Status}, GetBit, IsNegate, MostSignificantBit, SignExtending, Size
 };
 
 pub(crate) trait Instruction<T>: Display
@@ -96,8 +92,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, _: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -438,8 +434,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -450,17 +446,21 @@ where
         let size = dst_operand.size;
         let dst_msb = dst_data.get_msb(size);
         let src_msb = src_data.get_msb(size);
-        let result_msb = result.get_msb(size);
+        let res_msb = result.get_msb(size);
 
-        let overflow = (dst_msb == src_msb) && (dst_msb != result_msb || src_msb != result_msb);
+        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;;
+        let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let (carry_bit_offset, h_bit_offset) = match size {
-            Size::Byte => (7, 3),
-            Size::Word => (15, 11),
+        let h_bit_offset = match size {
+            Size::Byte => 3,
+            Size::Word => 11,
         };
 
-        let carry = ((result >> carry_bit_offset) & 1) != 0;
-        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+        let dst_hb = dst_data.get_bit(h_bit_offset);
+        let src_hb = src_data.get_bit(h_bit_offset);
+        let res_hb = result.get_bit(h_bit_offset);
+
+        let half_carry = src_hb && dst_hb || !res_hb && dst_hb || src_hb && !res_hb;
 
         cpu.register_set.set_flag(Status::S, result.is_negate(size));
         cpu.register_set.set_flag(Status::Z, result == 0);
@@ -484,8 +484,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let carry_set = cpu.register_set.get_flag(Status::C);
         let carry = if carry_set { 1 } else { 0 };
@@ -499,17 +499,21 @@ where
         let size = dst_operand.size;
         let dst_msb = dst_data.get_msb(size);
         let src_msb = src_data.get_msb(size);
-        let result_msb = result.get_msb(size);
+        let res_msb = result.get_msb(size);
 
-        let overflow = (dst_msb == src_msb) && (dst_msb != result_msb || src_msb != result_msb);
+        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;;
+        let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
-        let (carry_bit_offset, h_bit_offset) = match size {
-            Size::Byte => (7, 3),
-            Size::Word => (15, 11),
+        let h_bit_offset = match size {
+            Size::Byte => 3,
+            Size::Word => 11,
         };
 
-        let carry = ((result >> carry_bit_offset) & 1) != 0;
-        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+        let dst_hb = dst_data.get_bit(h_bit_offset);
+        let src_hb = src_data.get_bit(h_bit_offset);
+        let res_hb = result.get_bit(h_bit_offset);
+
+        let half_carry = src_hb && dst_hb || !res_hb && dst_hb || src_hb && !res_hb;
 
         cpu.register_set.set_flag(Status::S, result.is_negate(size));
         cpu.register_set.set_flag(Status::Z, result == 0);
@@ -533,8 +537,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -545,23 +549,27 @@ where
         let size = dst_operand.size;
         let dst_msb = dst_data.get_msb(size);
         let src_msb = src_data.get_msb(size);
-        let result_msb = result.get_msb(size);
+        let res_msb = result.get_msb(size);
 
-        let overflow = (dst_msb != src_msb) && (dst_data == 0 && result_msb);
+        let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
+        let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let (carry_bit_offset, h_bit_offset) = match size {
-            Size::Byte => (7, 3),
-            Size::Word => (15, 11),
+        let h_bit_offset = match size {
+            Size::Byte => 3,
+            Size::Word => 11,
         };
 
-        let carry = ((result >> carry_bit_offset) & 1) != 0;
-        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+        let dst_hb = dst_data.get_bit(h_bit_offset);
+        let src_hb = src_data.get_bit(h_bit_offset);
+        let res_hb = result.get_bit(h_bit_offset);
+
+        let half_carry = src_hb && !dst_hb || res_hb && !dst_hb || src_hb && res_hb;
 
         cpu.register_set.set_flag(Status::S, result.is_negate(size));
         cpu.register_set.set_flag(Status::Z, result == 0);
         cpu.register_set.set_flag(Status::H, half_carry);
         cpu.register_set.set_flag(Status::PV, overflow);
-        cpu.register_set.set_flag(Status::N, false);
+        cpu.register_set.set_flag(Status::N, true);
         cpu.register_set.set_flag(Status::C, carry);
     }
 }
@@ -579,8 +587,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let carry_set = cpu.register_set.get_flag(Status::C);
         let carry = if carry_set { 1 } else { 0 };
@@ -594,23 +602,27 @@ where
         let size = dst_operand.size;
         let dst_msb = dst_data.get_msb(size);
         let src_msb = src_data.get_msb(size);
-        let result_msb = result.get_msb(size);
+        let res_msb = result.get_msb(size);
 
-        let overflow = (dst_msb != src_msb) && (dst_data == 0 && result_msb);
+        let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
+        let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let (carry_bit_offset, h_bit_offset) = match size {
-            Size::Byte => (7, 3),
-            Size::Word => (15, 11),
+        let h_bit_offset = match size {
+            Size::Byte => 3,
+            Size::Word => 11,
         };
 
-        let carry = ((result >> carry_bit_offset) & 1) != 0;
-        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+        let dst_hb = dst_data.get_bit(h_bit_offset);
+        let src_hb = src_data.get_bit(h_bit_offset);
+        let res_hb = result.get_bit(h_bit_offset);
+
+        let half_carry = src_hb && !dst_hb || res_hb && !dst_hb || src_hb && res_hb;
 
         cpu.register_set.set_flag(Status::S, result.is_negate(size));
         cpu.register_set.set_flag(Status::Z, result == 0);
         cpu.register_set.set_flag(Status::H, half_carry);
         cpu.register_set.set_flag(Status::PV, overflow);
-        cpu.register_set.set_flag(Status::N, false);
+        cpu.register_set.set_flag(Status::N, true);
         cpu.register_set.set_flag(Status::C, carry);
     }
 }
@@ -628,8 +640,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -660,8 +672,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -692,8 +704,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -724,8 +736,8 @@ where
     T: 'static + BusZ80,
 {
     fn execute(&self, cpu: &mut Z80<T>, operands: Vec<Operand>) {
-        let src_operand = &operands[0];
-        let dst_operand = &operands[1];
+        let dst_operand = &operands[0];
+        let src_operand = &operands[1];
 
         let src_data = src_operand.read().unwrap();
         let dst_data = dst_operand.read().unwrap();
@@ -1742,7 +1754,7 @@ where
         let address = cpu.pop(Size::Word).unwrap();
         cpu.program_counter = address;
 
-        // TODO set an 'self.iff1 = self.iff2;'
+        cpu.restore_iff();
     }
 }
 

@@ -1,4 +1,4 @@
-use log::warn;
+use log::{info, warn};
 
 use crate::ym2612::{channel::Channel, RegisterPart, Ym2612Ports};
 
@@ -21,7 +21,14 @@ pub struct Ym2612 {
 impl Ym2612 {
     pub fn new() -> Self {
         Self {
-            channels: vec![],
+            channels: vec![
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+                Channel { octave: 0, frequency: 0, operators: vec![] },
+            ],
 
             register_fm1: 0,
             register_fm2: 0,
@@ -91,6 +98,7 @@ impl Ym2612Ports for Ym2612 {
             RegisterPart::Fm1 => self.register_fm1,
             RegisterPart::Fm2 => self.register_fm2,
         };
+        info!("Ym2612: set value to register {:02X}", register);
         match register {
             0x22 => self.setup_lfo(data),
             0x24 => self.timer_a = (data as u16) << 2,

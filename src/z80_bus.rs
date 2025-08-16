@@ -20,13 +20,13 @@ where
             let m68k_address = msb_address | lsb_address;
             <MemorySpace<T, Y> as BusM68k>::read(self, m68k_address, amount)?
         } else {
-            self.read_ptr(amount, &self.z80_ram[address as usize])
+            self.read_ptr_to_le(amount, &self.z80_ram[address as usize])
         } as u16;
         debug!(
             "Z80 bus: reading address: {:04X}\tsize: {}\tdata: {:04X}",
             address, amount, data
         );
-        let data = self.read_ptr(amount, &self.z80_ram[address as usize]) as u16;
+        let data = self.read_ptr_to_le(amount, &self.z80_ram[address as usize]) as u16;
         Ok(data)
     }
 
@@ -48,7 +48,7 @@ where
             let m68k_address = msb_address | lsb_address;
             // <MemorySpace<T, Y> as BusM68k>::write(self, data as u32, m68k_address, amount)? // TODO z80 can override m68k programm?
         } else {
-            self.write_ptr(
+            self.write_ptr_to_le(
                 data as u32,
                 amount,
                 &self.z80_ram[address as usize] as *const _ as *mut u8,

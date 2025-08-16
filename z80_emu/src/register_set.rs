@@ -66,23 +66,23 @@ impl Display for RegisterType {
 impl RegisterType {
     pub(crate) fn idx(&self) -> usize {
         match self {
-            RegisterType::A | RegisterType::AF => 0,
-            RegisterType::F => 1,
-            RegisterType::B | RegisterType::BC => 2,
-            RegisterType::C => 3,
-            RegisterType::D | RegisterType::DE => 4,
-            RegisterType::E => 5,
-            RegisterType::H | RegisterType::HL => 6,
-            RegisterType::L => 7,
+            RegisterType::F | RegisterType::AF => 0,
+            RegisterType::A => 1,
+            RegisterType::C | RegisterType::BC => 2,
+            RegisterType::B => 3,
+            RegisterType::E | RegisterType::DE => 4,
+            RegisterType::D => 5,
+            RegisterType::L | RegisterType::HL => 6,
+            RegisterType::H => 7,
 
-            RegisterType::A_ | RegisterType::AF_ => 8,
-            RegisterType::F_ => 9,
-            RegisterType::B_ | RegisterType::BC_ => 10,
-            RegisterType::C_ => 11,
-            RegisterType::D_ | RegisterType::DE_ => 12,
-            RegisterType::E_ => 13,
-            RegisterType::H_ | RegisterType::HL_ => 14,
-            RegisterType::L_ => 15,
+            RegisterType::F_ | RegisterType::AF_ => 8,
+            RegisterType::A_ => 9,
+            RegisterType::C_ | RegisterType::BC_ => 10,
+            RegisterType::B_ => 11,
+            RegisterType::E_ | RegisterType::DE_ => 12,
+            RegisterType::D_ => 13,
+            RegisterType::L_ | RegisterType::HL_ => 14,
+            RegisterType::H_ => 15,
         }
     }
 }
@@ -285,5 +285,13 @@ impl RegisterSet {
             self.registers[i] = b;
             self.registers[i + 8] = a;
         }
+    }
+
+    pub(crate) fn get_stack_ptr(&self) -> u16 {
+        self.stack_pointer
+    }
+
+    pub(crate) fn set_stack_ptr(&mut self, address: u16) {
+        self.stack_pointer = address;
     }
 }

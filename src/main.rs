@@ -213,6 +213,9 @@ fn main() {
                 if signal_bus.borrow_mut().handle_signal(Signal::Z80Reset) {
                     z80.restart();
                 }
+                // if signal_bus.borrow_mut().handle_signal(Signal::Z80NMI) {
+                //     z80.nmi(); // TODO there shoud be standart interrupt signal
+                // }
                 if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
                     let vdp_clocks_rational =
                         m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;

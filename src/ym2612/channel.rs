@@ -2,7 +2,7 @@ pub(crate) struct Channel {
     pub(crate) octave: u16,
     pub(crate) frequency: u16,
     
-    operators: Vec<Opperator>,
+    pub(crate) operators: Vec<Opperator>,
 }
 
 impl Channel {
@@ -15,6 +15,6 @@ impl Channel {
     }
 }
 
-struct Opperator {
+pub(crate) struct Opperator {
 
 }

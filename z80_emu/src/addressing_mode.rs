@@ -91,8 +91,7 @@ where
     T: 'static + BusZ80,
 {
     fn fetch(&self, cpu: &mut Z80<T>) -> Operand {
-        let address = cpu.program_counter;
-        cpu.increment_pc(Size::Byte);
+        let address = cpu.read_pc(Size::Byte);
         Operand::new(
             Box::new(MemPtr::new(address, cpu.bus_share())),
             Size::Byte,

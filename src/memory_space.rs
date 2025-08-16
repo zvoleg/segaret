@@ -7,7 +7,8 @@ pub struct MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
     pub(crate) m68k_ram: Vec<u8>,
     pub(crate) z80_ram: Vec<u8>,
 
-    pub(crate) z80_bus_reg: RefCell<u32>,
+    pub(crate) z80_bus_req: RefCell<bool>,
+    pub(crate) z80_res_req: RefCell<bool>,
 
     pub(crate) io_area_read: [u8; 0x20],
     pub(crate) io_area_m68k: [u8; 0x20],
@@ -43,7 +44,8 @@ where
             z80_ram: vec![0; 0x10000],  // $A00000	$A0FFFF
             m68k_ram: vec![0; 0x10000], // $FF0000	$FFFFFF
 
-            z80_bus_reg: RefCell::new(0),
+            z80_bus_req: RefCell::new(false),
+            z80_res_req: RefCell::new(false),
 
             io_area_read: [0; 0x20],
             io_area_m68k: [0; 0x20],
@@ -60,7 +62,7 @@ where
         }
     }
 
-    pub(crate) fn read_ptr(&self, amount: u32, ptr: *const u8) -> u32 {
+    pub(crate) fn read_ptr_to_be(&self, amount: u32, ptr: *const u8) -> u32 {
         unsafe {
             match amount {
                 1 => *ptr as u32,
@@ -71,12 +73,34 @@ where
         }
     }
 
-    pub(crate) fn write_ptr(&self, data: u32, amount: u32, ptr: *mut u8) {
+    pub(crate) fn write_ptr_to_be(&self, data: u32, amount: u32, ptr: *mut u8) {
         unsafe {
             match amount {
                 1 => *ptr = data as u8,
                 2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
                 4 => *(ptr as *mut _ as *mut u32) = data.to_be(),
+                _ => panic!("Bus: write: wrong size"),
+            }
+        }
+    }
+
+    pub(crate) fn read_ptr_to_le(&self, amount: u32, ptr: *const u8) -> u32 {
+        unsafe {
+            match amount {
+                1 => *ptr as u32,
+                2 => (*(ptr as *const u16)) as u32,
+                4 => (*(ptr as *const u32)) as u32,
+                _ => panic!("Bus: read: wrong size"),
+            }
+        }
+    }
+
+    pub(crate) fn write_ptr_to_le(&self, data: u32, amount: u32, ptr: *mut u8) {
+        unsafe {
+            match amount {
+                1 => *ptr = data as u8,
+                2 => *(ptr as *mut _ as *mut u16) = data as u16,
+                4 => *(ptr as *mut _ as *mut u32) = data,
                 _ => panic!("Bus: write: wrong size"),
             }
         }

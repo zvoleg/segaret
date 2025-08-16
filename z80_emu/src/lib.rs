@@ -58,3 +58,13 @@ impl MostSignificantBit for u16 {
         }
     }
 }
+
+trait GetBit {
+    fn get_bit(&self, position: u16) -> bool;
+}
+
+impl GetBit for u16 {
+    fn get_bit(&self, position: u16) -> bool {
+        self & (1 << position) != 0
+    }
+}

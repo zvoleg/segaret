@@ -175,9 +175,9 @@ impl Vdp{
                     self.signal_bus
                         .borrow_mut()
                         .push_signal(Signal::VInterrupt);
-                    self.signal_bus
-                        .borrow_mut()
-                        .push_signal(Signal::Z80NMI);
+                    // self.signal_bus
+                    //     .borrow_mut()
+                    //     .push_signal(Signal::Z80NMI);
                     self.register_set
                         .status
                         .set_flag(StatusFlag::VInterruptPending, true);

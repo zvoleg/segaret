@@ -1,14 +1,15 @@
 use std::rc::Rc;
 
-use log::debug;
+use log::{debug, info};
 
-use crate::{bus::BusZ80, opcode_table_generator::tables::{cb_opcode_table, dd_opcode_table, ddcb_opcode_table, ed_opcode_table, fd_opcode_table, fdcb_opcode_table, opcode_table}, register_set::RegisterSet, Size};
+use crate::{bus::BusZ80, opcode_table_generator::tables::{cb_opcode_table, dd_opcode_table, ddcb_opcode_table, ed_opcode_table, fd_opcode_table, fdcb_opcode_table, opcode_table}, register_set::{Register, RegisterSet, RegisterType}, Size};
 
 pub struct Z80<T: BusZ80> {
     pub(crate) register_set: RegisterSet,
-    pub(crate) program_counter: u16,
+    pub  program_counter: u16,
     pub(crate) current_opcode: u32,
-    stack_pointer: u16,
+    iff1: u8,
+    iff2: u8,
 
     bus: Option<Rc<T>>,
 }
@@ -24,7 +25,8 @@ where
             register_set: RegisterSet::new(),
             program_counter: 0,
             current_opcode: 0,
-            stack_pointer: 0,
+            iff1: 0,
+            iff2: 0,
             bus: None,
         }
     }
@@ -36,6 +38,13 @@ where
     pub fn restart(&mut self) {
          self.program_counter = 0;
          debug!("Z80: restart")
+    }
+
+    pub fn nmi(&mut self) {
+        self.push(self.program_counter, Size::Word).unwrap();
+        self.program_counter = NMI_VECTOR;
+        self.iff2 = self.iff1;
+        self.iff1 = 0;
     }
 
     pub fn clock(&mut self) {
@@ -111,23 +120,21 @@ where
         self.register_set.interrupt_vector = data;
     }
 
-    fn nmi(&mut self) {
-        self.restart();
-        self.program_counter = NMI_VECTOR;
-    }
-
     pub(crate) fn push(&mut self, data: u16, size: Size) -> Result<(), ()> {
+        let stack_pointer = self.register_set.get_stack_ptr().wrapping_sub(size as u16);
+        self.register_set.set_stack_ptr(stack_pointer);
         self.bus
             .as_ref()
             .unwrap()
-            .write(data, self.stack_pointer, size as u32)?;
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+            .write(data, stack_pointer, size as u32)?;
         Ok(())
     }
 
     pub(crate) fn pop(&mut self, size: Size) -> Result<u16, ()> {
-        self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        self.bus.as_ref().unwrap().read(self.stack_pointer, size as u32)
+        let stack_pointer = self.register_set.get_stack_ptr();
+        let data = self.bus.as_ref().unwrap().read(stack_pointer, size as u32)?;
+        self.register_set.set_stack_ptr(stack_pointer.wrapping_add(size as u16));
+        Ok(data)
     }
 
     pub(crate) fn increment_pc(&mut self, size: Size) {
@@ -147,5 +154,39 @@ where
 
     pub(crate) fn bus_share(&self) -> Rc<T> {
         self.bus.as_ref().unwrap().clone()
+    }
+    
+    pub(crate) fn restore_iff(&mut self) {
+        self.iff1 = self.iff2;
+    }
+    
+    pub fn cpm_bdos(&mut self) {
+        let mut buff = vec![];
+        match self.register_set.read_register(Register::General(RegisterType::C), Size::Byte) {
+            2 => {
+                // output character in register E
+                let e_val = self.register_set.read_register(Register::General(RegisterType::E), Size::Byte);
+                buff.push(e_val as u8 as char);
+            },
+            9 => {
+                // output a string at register DE until '$'
+                let mut addr = self.register_set.read_register(Register::General(RegisterType::DE), Size::Word);
+                loop {
+                    let c = self.bus_share().read(addr, Size::Byte as u32).unwrap() as u8 as char;
+                    addr = (addr + 1) & 0xFFFF;
+                    if c != '$' {
+                        buff.push(c);
+                    }
+                    else {
+                        break;
+                    }
+                }
+            },
+            _ => {
+                panic!("Unknown CP/M call {}!", self.register_set.read_register(Register::General(RegisterType::C), Size::Byte));
+            }
+        }
+        info!("{}", buff.iter().collect::<String>());
+        self.program_counter = self.pop(Size::Word).unwrap();
     }
 }
