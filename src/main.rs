@@ -82,23 +82,29 @@ fn main() {
     let mut z80 = Z80::new();
     z80.set_bus(memory_space.clone());
 
-    let mut auto = false;
+    let mut clock_allowed = false;
+    let mut manual_clock = false;
     let mut by_frame = false;
     let mut vdp_clocks_remainder = 0.0f32;
-    let mut manual_clock_counter = 0;
 
     let mut values_map: HashMap<u8, Vec<u32>> = HashMap::new();
     let mut downgraded_values: Vec<u8> = vec![];
 
     let mut z80_bus_request = false;
+    let mut clock_counter = 0;
+
     runner.run(window, move |_| {
-        let mut manual_clock = false;
         if_pressed!(Key::A, {
-            auto = !auto;
-            info!("Auto Clock mode = {}", auto);
+            clock_allowed = !clock_allowed;
+            info!("Auto Clock mode = {}", clock_allowed);
+        });
+        if_pressed!(Key::C, {
+            clock_allowed = true;
+            manual_clock = true;
+            info!("Manual clock");
         });
         if_pressed!(Key::F, {
-            auto = !auto;
+            clock_allowed = !clock_allowed;
             by_frame = true;
         });
         if_pressed!(Key::U, {
@@ -180,11 +186,6 @@ fn main() {
                 downgraded_values = memory_space.m68k_ram.clone();
             }
         });
-        if_pressed!(Key::C, {
-            auto = false;
-            manual_clock = true;
-            info!("Manual clock");
-        });
         if_pressed!(Key::Z, {
             let mut dump_file = File::create("z80_dump").unwrap();
             dump_file.write_all(&memory_space.z80_ram).unwrap();
@@ -193,9 +194,8 @@ fn main() {
             spriter::program_stop();
             info!("Exit from segaret");
         });
-        if auto {
+        if clock_allowed {
             let mut update_screen = false;
-            let mut clock_counter = 0;
             while !update_screen && clock_counter < 71680 {
                 let mut vdp_clocks = 1;
                 if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
@@ -237,50 +237,24 @@ fn main() {
                 clock_counter += vdp_clocks;
                 if m68k.breakpoint_hit {
                     info!("CPU hits breakpoint");
-                    auto = false;
+                    clock_allowed = false;
+                    break;
+                }
+                if manual_clock {
+                    clock_allowed = false;
+                    manual_clock = false;
                     break;
                 }
             }
             if by_frame {
-                auto = !auto;
+                clock_allowed = !clock_allowed;
                 by_frame = false;
                 info!("Frame done")
             }
+            if clock_counter >= 71680 {
+                clock_counter = 0;
+            }
             controller_a.borrow_mut().clock();
-            true
-        } else if manual_clock {
-            let mut vdp_clocks = 1;
-            if signal_bus.borrow_mut().handle_signal(Signal::VInterrupt) {
-                    m68k.interrupt(6);
-            }
-            if signal_bus.borrow_mut().handle_signal(Signal::HInterrupt) {
-                m68k.interrupt(4);
-            }
-            if signal_bus.borrow_mut().handle_signal(Signal::Z80BusRequest) {
-                z80_bus_request = true;
-            }
-            if signal_bus.borrow_mut().handle_signal(Signal::Z80BusFree) {
-                z80_bus_request = false;
-            }
-            if signal_bus.borrow_mut().handle_signal(Signal::Z80Reset) {
-                z80.restart();
-            }
-            if !signal_bus.borrow_mut().handle_signal(Signal::CpuHalt) {
-                let vdp_clocks_rational =
-                    m68k.clock() as f32 * VDP_CLOCK_PER_CPU + vdp_clocks_remainder;
-                vdp_clocks = vdp_clocks_rational.trunc() as i32;
-                vdp_clocks_remainder = vdp_clocks_rational.fract();
-
-                if manual_clock_counter % 15 == 0 {
-                    if !z80_bus_request {
-                        z80.clock();
-                    }
-                }
-            }
-            for _ in 0..vdp_clocks {
-                vdp.borrow_mut().clock();
-            }
-            manual_clock_counter += 1;
             true
         } else {
             false
