@@ -4,10 +4,28 @@ use log::{debug, info};
 
 use crate::{bus::BusZ80, opcode_table_generator::tables::{cb_opcode_table, dd_opcode_table, ddcb_opcode_table, ed_opcode_table, fd_opcode_table, fdcb_opcode_table, opcode_table}, register_set::{Register, RegisterSet, RegisterType}, Size};
 
+enum IntMode {
+    Mode0 = 0,
+    Mode1 = 1,
+    Mode2 = 2,
+}
+
+impl IntMode {
+    fn from_u32(d: u32) -> Self {
+        match d {
+            0 => IntMode::Mode0,
+            1 => IntMode::Mode1,
+            2 => IntMode::Mode2,
+            _ => panic!("Unexpected value for IntMode"),
+        }
+    }
+}
+
 pub struct Z80<T: BusZ80> {
     pub(crate) register_set: RegisterSet,
     pub  program_counter: u16,
     pub(crate) current_opcode: u32,
+    interrupt_mode: IntMode,
     iff1: u8,
     iff2: u8,
 
@@ -15,6 +33,7 @@ pub struct Z80<T: BusZ80> {
 }
 
 const NMI_VECTOR: u16 = 0x0066;
+const INT_MODE1_VECTOR: u16 = 0x0038;
 
 impl<T> Z80<T>
 where
@@ -25,6 +44,7 @@ where
             register_set: RegisterSet::new(),
             program_counter: 0,
             current_opcode: 0,
+            interrupt_mode: IntMode::Mode0,
             iff1: 0,
             iff2: 0,
             bus: None,
@@ -45,6 +65,18 @@ where
         self.program_counter = NMI_VECTOR;
         self.iff2 = self.iff1;
         self.iff1 = 0;
+    }
+
+    pub fn int(&mut self, data: u16) {
+        if self.iff1 == 1 {
+            self.reset_iff();
+            self.push(self.program_counter, Size::Word).unwrap();
+            match self.interrupt_mode {
+                IntMode::Mode0 => {}, // TODO caller should pass a single byte instruction RES or CALL
+                IntMode::Mode1 => self.program_counter = INT_MODE1_VECTOR,
+                IntMode::Mode2 => {}, // TODO hsb of vector's address is I register, lsb of vector's address is value from caller
+            }
+        }
     }
 
     pub fn clock(&mut self) {
@@ -156,8 +188,22 @@ where
         self.bus.as_ref().unwrap().clone()
     }
     
+    pub(crate) fn set_interrupt_mode(&mut self, interrupt_mode: u32) {
+        self.interrupt_mode = IntMode::from_u32(interrupt_mode);
+    }
+
     pub(crate) fn restore_iff(&mut self) {
         self.iff1 = self.iff2;
+    }
+
+    pub(crate) fn reset_iff(&mut self) {
+        self.iff1 = 0;
+        self.iff2 = 0;
+    }
+
+    pub(crate) fn set_iff(&mut self) {
+        self.iff1 = 1;
+        self.iff2 = 1;
     }
     
     pub fn cpm_bdos(&mut self) {

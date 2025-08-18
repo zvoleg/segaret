@@ -159,7 +159,7 @@ where
 
 impl Display for Indexed {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.index_reg)
+        write!(f, "({})", self.index_reg)
     }
 }
 

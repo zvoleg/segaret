@@ -448,7 +448,7 @@ where
         let src_msb = src_data.get_msb(size);
         let res_msb = result.get_msb(size);
 
-        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;;
+        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
         let h_bit_offset = match size {
@@ -501,7 +501,7 @@ where
         let src_msb = src_data.get_msb(size);
         let res_msb = result.get_msb(size);
 
-        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;;
+        let overflow = src_msb && dst_msb && !res_msb || !src_msb && !dst_msb && res_msb;
         let carry = src_msb && dst_msb || !res_msb && dst_msb || src_msb && !res_msb;
 
         let h_bit_offset = match size {
@@ -747,17 +747,21 @@ where
         let size = dst_operand.size;
         let dst_msb = dst_data.get_msb(size);
         let src_msb = src_data.get_msb(size);
-        let result_msb = result.get_msb(size);
+        let res_msb = result.get_msb(size);
 
-        let overflow = (dst_msb != src_msb) && (dst_data == 0 && result_msb);
+        let overflow = !src_msb && dst_msb && !res_msb || src_msb && !dst_msb && res_msb;
+        let carry = src_msb && !dst_msb || res_msb && !dst_msb || src_msb && res_msb;
 
-        let (carry_bit_offset, h_bit_offset) = match size {
-            Size::Byte => (7, 3),
-            Size::Word => (15, 11),
+        let h_bit_offset = match size {
+            Size::Byte => 3,
+            Size::Word => 11,
         };
 
-        let carry = ((result >> carry_bit_offset) & 1) != 0;
-        let half_carry = ((result >> h_bit_offset) & 1) != 0;
+        let dst_hb = dst_data.get_bit(h_bit_offset);
+        let src_hb = src_data.get_bit(h_bit_offset);
+        let res_hb = result.get_bit(h_bit_offset);
+
+        let half_carry = src_hb && !dst_hb || res_hb && !dst_hb || src_hb && res_hb;
 
         cpu.register_set.set_flag(Status::S, result.is_negate(size));
         cpu.register_set.set_flag(Status::Z, result == 0);
@@ -789,10 +793,13 @@ where
 
         match operand.size {
             Size::Byte => {
+                let src_hb = data & 0x04 != 0;
+                let res_hb = result & 0x04 != 0;
+
                 cpu.register_set
                     .set_flag(Status::S, result.is_negate(operand.size));
                 cpu.register_set.set_flag(Status::Z, result == 0);
-                cpu.register_set.set_flag(Status::H, (result >> 3) & 1 == 1);
+                cpu.register_set.set_flag(Status::H, src_hb != res_hb);
                 cpu.register_set.set_flag(Status::PV, data == 0x7F);
                 cpu.register_set.set_flag(Status::N, false);
             }
@@ -822,10 +829,13 @@ where
 
         match operand.size {
             Size::Byte => {
+                let src_hb = data & 0x08 != 0;
+                let res_hb = result & 0x08 != 0;
+
                 cpu.register_set
                     .set_flag(Status::S, result.is_negate(operand.size));
                 cpu.register_set.set_flag(Status::Z, result == 0);
-                cpu.register_set.set_flag(Status::H, (result >> 3) & 1 == 1);
+                cpu.register_set.set_flag(Status::H, src_hb != res_hb);
                 cpu.register_set.set_flag(Status::PV, data == 0x80);
                 cpu.register_set.set_flag(Status::N, false);
             }
@@ -989,8 +999,8 @@ impl<T> Instruction<T> for DI
 where
     T: 'static + BusZ80,
 {
-    fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        // todo!()
+    fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
+        cpu.reset_iff();
     }
 }
 
@@ -1007,8 +1017,8 @@ impl<T> Instruction<T> for EI
 where
     T: 'static + BusZ80,
 {
-    fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        // todo!()
+    fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
+        cpu.set_iff();
     }
 }
 
@@ -1033,8 +1043,8 @@ impl<T> Instruction<T> for IM
 where
     T: 'static + BusZ80,
 {
-    fn execute(&self, _: &mut Z80<T>, _: Vec<Operand>) {
-        // todo!()
+    fn execute(&self, cpu: &mut Z80<T>, _: Vec<Operand>) {
+        cpu.set_interrupt_mode(self.interrupt_mode);
     }
 }
 

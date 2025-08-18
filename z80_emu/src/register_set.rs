@@ -183,11 +183,13 @@ impl Display for RegisterSet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         unsafe {
             write!(f, 
-                "\nAF: {:04X}\tAF_: {:04X}\nBC: {:04X}\tBC_: {:04X}\nDE: {:04X}\tDE_: {:04X}\nHL: {:04X}\tHL_: {:04X}\n",
+                "\nAF: {:04X}\tAF_: {:04X}\nBC: {:04X}\tBC_: {:04X}\nDE: {:04X}\tDE_: {:04X}\nHL: {:04X}\tHL_: {:04X}\nIX: {:04X}\t IY: {:04X}\nSP: {:04X}",
                 *(&self.registers[0] as *const _ as *const u16), *(&self.registers[8] as *const _ as *const u16),
                 *(&self.registers[2] as *const _ as *const u16), *(&self.registers[10] as *const _ as *const u16),
                 *(&self.registers[4] as *const _ as *const u16), *(&self.registers[12] as *const _ as *const u16),
                 *(&self.registers[6] as *const _ as *const u16), *(&self.registers[14] as *const _ as *const u16),
+                self.index_register[0], self.index_register[1],
+                self.stack_pointer,
             )
         }
     }

@@ -6,7 +6,7 @@ pub enum Signal {
     Z80BusRequest,
     Z80BusFree,
     Z80Reset,
-    Z80NMI,
+    Z80INT,
 }
 
 pub struct SignalBus {

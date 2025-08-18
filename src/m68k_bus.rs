@@ -23,6 +23,7 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
             let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount)? as u32;
+            info!("BusM68k::read: M68000 read value from Z80 memory space (address: {:04x}, data: {:04X}), size: {}", address, data, amount);
             Ok(data)
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == VERSION_REGISTER {
