@@ -26,11 +26,11 @@ where
     T: BusZ80,
 {
     fn read(&self, size: Size) -> Result<u16, ()> {
-        self.bus.borrow().read(self.address, size as u32)
+        self.bus.borrow().read(self.address, size.into())
     }
 
     fn write(&self, data: u16, size: Size) -> Result<(), ()> {
-        self.bus.borrow().write(data, self.address, size as u32)
+        self.bus.borrow_mut().write(data, self.address, size.into())
     }
 }
 

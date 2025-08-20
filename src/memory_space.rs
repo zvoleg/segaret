@@ -62,28 +62,6 @@ where
         }
     }
 
-    pub(crate) fn read_ptr_to_le(&self, amount: u32, ptr: *const u8) -> u32 {
-        unsafe {
-            match amount {
-                1 => *ptr as u32,
-                2 => (*(ptr as *const u16)) as u32,
-                4 => (*(ptr as *const u32)) as u32,
-                _ => panic!("Bus: read: wrong size"),
-            }
-        }
-    }
-
-    pub(crate) fn write_ptr_to_le(&self, data: u32, amount: u32, ptr: *mut u8) {
-        unsafe {
-            match amount {
-                1 => *ptr = data as u8,
-                2 => *(ptr as *mut _ as *mut u16) = data as u16,
-                4 => *(ptr as *mut _ as *mut u32) = data,
-                _ => panic!("Bus: write: wrong size"),
-            }
-        }
-    }
-
     pub(crate) fn push_bank_register_bit(&self, data: u16) {
         let mut bank_register = *self.bank_register.borrow();
         bank_register = (bank_register << 1) | data & 0x01; // push single bit to the register end

@@ -150,8 +150,8 @@ where
             .wrapping_sub(1);
 
         let bus = (cpu.bus_share()).clone();
-        let src_data = bus.borrow().read(src_address, Size::Byte as u32).unwrap();
-        bus.borrow().write(src_data, dst_address, Size::Byte as u32).unwrap();
+        let src_data = bus.borrow().read(src_address, Size::Byte.into()).unwrap();
+        bus.borrow_mut().write(src_data, dst_address, Size::Byte.into()).unwrap();
 
         cpu.register_set.write_register(src_address.wrapping_add(1), src_register, Size::Word);
         cpu.register_set.write_register(dst_address.wrapping_add(1), dst_register, Size::Word);
@@ -280,7 +280,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().borrow().read(hl, Size::Byte as u32).unwrap();
+        let data = cpu.bus_share().borrow().read(hl, Size::Byte.into()).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -348,7 +348,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().borrow().read(hl, Size::Byte as u32).unwrap();
+        let data = cpu.bus_share().borrow().read(hl, Size::Byte.into()).unwrap();
 
         let res = acc.wrapping_sub(data);
 
@@ -392,7 +392,7 @@ where
         let hl = cpu
             .register_set
             .read_register(Register::General(RegisterType::HL), Size::Word);
-        let data = cpu.bus_share().borrow().read(hl, Size::Byte as u32).unwrap();
+        let data = cpu.bus_share().borrow().read(hl, Size::Byte.into()).unwrap();
 
         let res = acc.wrapping_sub(data);
 

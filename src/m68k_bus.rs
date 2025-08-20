@@ -23,15 +23,16 @@ where
     fn read(&self, address: u32, amount: usize) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
         let mut buff = [0u8; 4];
-        let buff_chunk = &mut buff[4 - amount as usize..];
+        // for Size::Word/Size::Byte, actual information contains in last buffer bytes
+        let buff_chunk = &mut buff[size_of::<u32>() - amount..];
         debug!("CPU reads address {:08X}\tsize: {}", address, amount);
         if address <= 0x3FFFFF {
-            let memory_chunk = self.rom[address as usize..].split_at(amount as usize).0;
+            let memory_chunk = self.rom[address as usize..].split_at(amount).0;
             buff_chunk.copy_from_slice(memory_chunk);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount as u32)? as u32;
+            let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount)? as u32;
             debug!("BusM68k::read: M68000 read value from Z80 memory space (address: {:04x}, data: {:04X}), size: {}", address, data, amount);
             return Ok(data);
         } else if address >= 0xA10000 && address < 0xA20000 {
@@ -58,7 +59,7 @@ where
                 Ok(self.controller_2.borrow().read() as u32)
             } else {
                 let address = (address & 0x3f) as usize;
-                let memory_chunk = self.io_area_read[address..].split_at(amount as usize).0;
+                let memory_chunk = self.io_area_read[address..].split_at(amount).0;
                 buff_chunk.copy_from_slice(memory_chunk);
                 Ok(u32::from_be_bytes(buff))
             };
@@ -72,12 +73,12 @@ where
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
             let memory_chunk = self.m68k_ram[address as usize..]
-                .split_at(amount as usize)
+                .split_at(amount)
                 .0;
             buff_chunk.copy_from_slice(memory_chunk);
         } else {
             let address = (address & 0x1f) as usize;
-            let memory_chunk = self.io_area_read[address..].split_at(amount as usize).0;
+            let memory_chunk = self.io_area_read[address..].split_at(amount).0;
             buff_chunk.copy_from_slice(memory_chunk);
         }
         Ok(u32::from_be_bytes(buff))
@@ -86,18 +87,19 @@ where
     fn write(&mut self, data: u32, address: u32, amount: usize) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
         let bytes = data.to_be_bytes();
-        let chunk = &bytes[4 - amount as usize..]; // 4 it is u32 size
+        // for Size::Word/Size::Byte, actual information contains in last data bytes
+        let chunk = &bytes[size_of::<u32>() - amount..];
         debug!(
             "CPU writes address {:08X}\tdata {:08X}\tsize: {}",
             address, data, amount
         );
         if address <= 0x3FFFFF {
             let address = address as usize;
-            self.rom[address..address + amount as usize].copy_from_slice(chunk);
+            self.rom[address..address + amount].copy_from_slice(chunk);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount as u32)?;
+            <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount)?;
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_req.borrow_mut() = data != 0;
@@ -120,7 +122,7 @@ where
                 self.controller_2.borrow_mut().write(data as u8);
             } else {
                 let address = (address & 0x3f) as usize;
-                self.io_area_m68k[address..address + amount as usize].copy_from_slice(chunk);
+                self.io_area_m68k[address..address + amount].copy_from_slice(chunk);
             }
         } else if address == 0xC00000 || address == 0xC00002 {
             let mut vdp_port_ref = self.vdp_ports.as_ref().borrow_mut();
@@ -140,10 +142,10 @@ where
             }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = (address & 0xFFFF) as usize;
-            self.m68k_ram[address..address + amount as usize].copy_from_slice(chunk);
+            self.m68k_ram[address..address + amount].copy_from_slice(chunk);
         } else {
             let address = (address & 0x1f) as usize;
-            self.io_area_m68k[address..address + amount as usize].copy_from_slice(chunk);
+            self.io_area_m68k[address..address + amount].copy_from_slice(chunk);
         };
         Ok(())
     }

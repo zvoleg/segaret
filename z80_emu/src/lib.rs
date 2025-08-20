@@ -14,6 +14,12 @@ pub(crate) enum Size {
     Word = 2,
 }
 
+impl Into<usize> for Size {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
+
 enum InterruptMode {
     Mode0,
     Mode1,

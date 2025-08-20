@@ -158,14 +158,14 @@ where
         self.bus
             .as_ref()
             .unwrap()
-            .borrow()
-            .write(data, stack_pointer, size as u32)?;
+            .borrow_mut()
+            .write(data, stack_pointer, size.into())?;
         Ok(())
     }
 
     pub(crate) fn pop(&mut self, size: Size) -> Result<u16, ()> {
         let stack_pointer = self.register_set.get_stack_ptr();
-        let data = self.bus.as_ref().unwrap().borrow().read(stack_pointer, size as u32)?;
+        let data = self.bus.as_ref().unwrap().borrow().read(stack_pointer, size.into())?;
         self.register_set.set_stack_ptr(stack_pointer.wrapping_add(size as u16));
         Ok(data)
     }
@@ -180,7 +180,7 @@ where
             .as_ref()
             .unwrap()
             .borrow()
-            .read(self.program_counter, size as u32)
+            .read(self.program_counter, size.into())
             .unwrap();
         self.increment_pc(size);
         data
@@ -220,7 +220,7 @@ where
                 // output a string at register DE until '$'
                 let mut addr = self.register_set.read_register(Register::General(RegisterType::DE), Size::Word);
                 loop {
-                    let c = self.bus_share().borrow().read(addr, Size::Byte as u32).unwrap() as u8 as char;
+                    let c = self.bus_share().borrow().read(addr, Size::Byte.into()).unwrap() as u8 as char;
                     addr = (addr + 1) & 0xFFFF;
                     if c != '$' {
                         buff.push(c);

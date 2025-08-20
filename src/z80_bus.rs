@@ -1,5 +1,3 @@
-use std::{fmt::write, fs::read};
-
 use log::{debug, info};
 use m68k_emu::bus::BusM68k;
 use z80_emu::bus::BusZ80;
@@ -11,26 +9,30 @@ where
     T: VdpPorts,
     Y: Ym2612Ports,
 {
-    fn read(&self, address: u16, amount: u32) -> Result<u16, ()> {
+    fn read(&self, address: u16, amount: usize) -> Result<u16, ()> {
+        let mut buff = [0u8; 2];
+        // for Size::Byte, actual information contains in last buffer bytes
+        let buff_chunk = &mut buff[..amount];
         let data = if 0x4000 <= address && address < 0x4004 {
-            self.ym2612_ports.borrow().read_status() as u32
+            self.ym2612_ports.borrow().read_status() as u16
         } else if 0x8000 <= address && address <= 0xFFFF {
             let msb_address = (*self.bank_register.borrow() as u32) << 15;
             let lsb_address = (address & 0x7FFF) as u32;
             let m68k_address = msb_address | lsb_address;
-            <MemorySpace<T, Y> as BusM68k>::read(self, m68k_address, amount as usize)?
+            <MemorySpace<T, Y> as BusM68k>::read(self, m68k_address, amount)? as u16
         } else {
-            self.read_ptr_to_le(amount, &self.z80_ram[address as usize])
-        } as u16;
+            let memory_chunk = &self.z80_ram[address as usize..address as usize + amount];
+            buff_chunk.copy_from_slice(&memory_chunk);
+            <u16>::from_le_bytes(buff)
+        };
         debug!(
             "Z80 bus: reading address: {:04X}\tsize: {}\tdata: {:04X}",
             address, amount, data
         );
-        let data = self.read_ptr_to_le(amount, &self.z80_ram[address as usize]) as u16;
         Ok(data)
     }
 
-    fn write(&self, data: u16, address: u16, amount: u32) -> Result<(), ()> {
+    fn write(&mut self, data: u16, address: u16, amount: usize) -> Result<(), ()> {
         if address == 0x4000 {
             self.ym2612_ports.borrow_mut().register_set(RegisterPart::Fm1, data as u8);
         } else if address == 0x4001 {
@@ -48,11 +50,10 @@ where
             let m68k_address = msb_address | lsb_address;
             // <MemorySpace<T, Y> as BusM68k>::write(self, data as u32, m68k_address, amount)? // TODO z80 can override m68k programm?
         } else {
-            self.write_ptr_to_le(
-                data as u32,
-                amount,
-                &self.z80_ram[address as usize] as *const _ as *mut u8,
-            );
+            let bytes = data.to_le_bytes();
+            // for Size::Byte, actual information contains in last data bytes
+            let chunk = &bytes[..amount];
+            self.z80_ram[address as usize..address as usize + amount].copy_from_slice(chunk);
             debug!(
                 "Z80 bus: writing address: {:04X}\tsize: {}\tdata: {:04X}",
                 address, amount, data
