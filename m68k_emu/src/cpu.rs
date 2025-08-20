@@ -1,4 +1,4 @@
-use std::{fmt::Display, rc::Rc};
+use std::{cell::RefCell, fmt::Display, rc::Rc};
 
 use log::debug;
 
@@ -19,7 +19,7 @@ pub struct M68k<T: 'static + BusM68k> {
     pub(crate) cycles_counter: i32,
 
     operation_set: Vec<Operation<T>>,
-    bus: Option<Rc<T>>,
+    bus: Option<Rc<RefCell<T>>>,
 
     breakpoints: Option<Vec<u32>>,
     pub breakpoint_hit: bool,
@@ -53,7 +53,7 @@ where
         self.breakpoints = Some(breakpoints.clone());
     }
 
-    pub fn set_bus(&mut self, bus: Rc<T>) {
+    pub fn set_bus(&mut self, bus: Rc<RefCell<T>>) {
         self.bus = Some(bus);
     }
 
@@ -201,7 +201,7 @@ where
     }
 
     fn read_header(&self, vector: u32) -> u32 {
-        match self.bus.as_ref().unwrap().read(vector, Size::Long as u32) {
+        match self.bus.as_ref().unwrap().borrow().read(vector, Size::Long as u32) {
             Ok(header) => header,
             Err(_) => panic!(
                 "M68k: read_header: can't read header by vector: {:08X}",

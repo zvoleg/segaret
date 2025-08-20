@@ -62,28 +62,6 @@ where
         }
     }
 
-    pub(crate) fn read_ptr_to_be(&self, amount: u32, ptr: *const u8) -> u32 {
-        unsafe {
-            match amount {
-                1 => *ptr as u32,
-                2 => (*(ptr as *const u16)).to_be() as u32,
-                4 => (*(ptr as *const u32)).to_be() as u32,
-                _ => panic!("Bus: read: wrong size"),
-            }
-        }
-    }
-
-    pub(crate) fn write_ptr_to_be(&self, data: u32, amount: u32, ptr: *mut u8) {
-        unsafe {
-            match amount {
-                1 => *ptr = data as u8,
-                2 => *(ptr as *mut _ as *mut u16) = (data as u16).to_be(),
-                4 => *(ptr as *mut _ as *mut u32) = data.to_be(),
-                _ => panic!("Bus: write: wrong size"),
-            }
-        }
-    }
-
     pub(crate) fn read_ptr_to_le(&self, amount: u32, ptr: *const u8) -> u32 {
         unsafe {
             match amount {

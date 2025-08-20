@@ -55,7 +55,7 @@ impl BusZ80 for Bus {
 fn cpu_running() {
     println!("Start Z80 test");
     env_logger::init();
-    let bus = Rc::new(Bus::new("zexdoc.com"));
+    let bus = Rc::new(RefCell::new(Bus::new("zexdoc.com")));
     let mut cpu = Z80::new();
     cpu.set_bus(bus);
     cpu.restart();

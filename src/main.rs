@@ -61,13 +61,14 @@ fn main() {
         display_mod,
     )));
     let ym2612 = Rc::new(RefCell::new(Ym2612::new()));
-    let memory_space = Rc::new(MemorySpace::new(
+    let memory_space = Rc::new(RefCell::new(MemorySpace::new(
         rom,
         vdp.clone(),
         ym2612.clone(),
         controller_a.clone(),
         controller_b.clone(),
-        signal_bus.clone()));
+        signal_bus.clone(),
+    )));
 
     vdp.borrow_mut().set_bus(memory_space.clone());
 
@@ -145,6 +146,7 @@ fn main() {
                 1 => {
                     let byte = u8::from_str_radix(parts[0], 16).unwrap();
                     let addresses = memory_space
+                        .borrow()
                         .m68k_ram
                         .iter()
                         .enumerate()
@@ -160,7 +162,7 @@ fn main() {
                         .get(&last_value)
                         .unwrap()
                         .iter()
-                        .filter(|a| memory_space.m68k_ram[(**a) as usize] == new_value)
+                        .filter(|a| memory_space.borrow().m68k_ram[(**a) as usize] == new_value)
                         .map(|a| *a)
                         .collect::<Vec<u32>>();
                     values_map.insert(last_value, addresses);
@@ -174,21 +176,21 @@ fn main() {
         if_pressed!(Key::D, {
             info!("Searching values downgraded by one");
             if downgraded_values.len() == 0 {
-                downgraded_values = memory_space.m68k_ram.clone();
+                downgraded_values = memory_space.borrow().m68k_ram.clone();
             } else {
                 let addresses = downgraded_values
                     .iter()
                     .enumerate()
-                    .filter(|v| (*v.1 - 1) == memory_space.m68k_ram[v.0])
+                    .filter(|v| (*v.1 - 1) == memory_space.borrow().m68k_ram[v.0])
                     .map(|v| v.0 as u32)
                     .collect::<Vec<u32>>();
                 info!("downgraded addresses {:08X?}", addresses);
-                downgraded_values = memory_space.m68k_ram.clone();
+                downgraded_values = memory_space.borrow().m68k_ram.clone();
             }
         });
         if_pressed!(Key::Z, {
             let mut dump_file = File::create("z80_dump").unwrap();
-            dump_file.write_all(&memory_space.z80_ram).unwrap();
+            dump_file.write_all(&memory_space.borrow().z80_ram).unwrap();
         });
         if_pressed!(Key::Escape, {
             spriter::program_stop();

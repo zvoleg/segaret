@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::{bus::BusZ80, Size};
 
@@ -9,14 +9,14 @@ pub(crate) trait Pointer {
 
 pub(crate) struct MemPtr<T> {
     address: u16,
-    bus: Rc<T>,
+    bus: Rc<RefCell<T>>,
 }
 
 impl<T> MemPtr<T>
 where
     T: BusZ80,
 {
-    pub(crate) fn new(address: u16, bus: Rc<T>) -> Self {
+    pub(crate) fn new(address: u16, bus: Rc<RefCell<T>>) -> Self {
         Self { address, bus }
     }
 }
@@ -26,11 +26,11 @@ where
     T: BusZ80,
 {
     fn read(&self, size: Size) -> Result<u16, ()> {
-        self.bus.read(self.address, size as u32)
+        self.bus.borrow().read(self.address, size as u32)
     }
 
     fn write(&self, data: u16, size: Size) -> Result<(), ()> {
-        self.bus.write(data, self.address, size as u32)
+        self.bus.borrow().write(data, self.address, size as u32)
     }
 }
 

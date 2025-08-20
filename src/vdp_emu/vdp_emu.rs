@@ -40,7 +40,7 @@ pub struct Vdp {
     pub(crate) address_setting_raw_word: u32,
     pub(crate) address_setting_latch: bool,
 
-    pub(crate) bus: Option<Rc<dyn BusVdp>>,
+    pub(crate) bus: Option<Rc<RefCell<dyn BusVdp>>>,
     pub(crate) signal_bus: Rc<RefCell<SignalBus>>,
 
     pub(crate) dma_src_address: u32,
@@ -99,7 +99,7 @@ impl Vdp{
         }
     }
 
-    pub fn set_bus(&mut self, bus: Rc<dyn BusVdp>) {
+    pub fn set_bus(&mut self, bus: Rc<RefCell<dyn BusVdp>>) {
         self.bus = Some(bus);
     }
 
@@ -235,7 +235,7 @@ impl Vdp{
     }
 
     fn dma_bus_to_ram_copy(&mut self) {
-        let data = self.bus.as_ref().unwrap().read(self.dma_src_address);
+        let data = self.bus.as_ref().unwrap().borrow().read(self.dma_src_address);
         debug!("VDP: dma_bus_to_ram_copy: transfer word: {:04X}", data);
         unsafe {
             let ptr = match self.ram_access_mode {

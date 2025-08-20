@@ -2,7 +2,9 @@ use log::{debug, info};
 use m68k_emu::bus::BusM68k;
 use z80_emu::bus::BusZ80;
 
-use crate::{memory_space::MemorySpace, signal_bus::Signal, vdp_emu::vdp_port::VdpPorts, ym2612::Ym2612Ports};
+use crate::{
+    memory_space::MemorySpace, signal_bus::Signal, vdp_emu::vdp_port::VdpPorts, ym2612::Ym2612Ports,
+};
 
 const VERSION_REGISTER: u32 = 0xA10001;
 const CONTROLLER_A_DATA: u32 = 0xA10002;
@@ -13,20 +15,27 @@ const CONTROLLER_B_DATA: u32 = 0xA10004;
 const Z80_REQUEST_BUS: u32 = 0xA11100;
 const Z80_RESET: u32 = 0xA11200;
 
-impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
+impl<T, Y> BusM68k for MemorySpace<T, Y>
+where
+    T: VdpPorts,
+    Y: Ym2612Ports,
+{
     fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
+        let mut buff = [0u8; 4];
+        let buff_chunk = &mut buff[4 - amount as usize..];
         debug!("CPU reads address {:08X}\tsize: {}", address, amount);
         if address <= 0x3FFFFF {
-            Ok(self.read_ptr_to_be(amount, &self.rom[address as usize]))
+            let memory_chunk = self.rom[address as usize..].split_at(amount as usize).0;
+            buff_chunk.copy_from_slice(memory_chunk);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
             let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount)? as u32;
-            info!("BusM68k::read: M68000 read value from Z80 memory space (address: {:04x}, data: {:04X}), size: {}", address, data, amount);
-            Ok(data)
+            debug!("BusM68k::read: M68000 read value from Z80 memory space (address: {:04x}, data: {:04X}), size: {}", address, data, amount);
+            return Ok(data);
         } else if address >= 0xA10000 && address < 0xA20000 {
-            if address == VERSION_REGISTER {
+            return if address == VERSION_REGISTER {
                 let program_region = self.rom[0x1F0];
                 match program_region {
                     0x55 => Ok(0x80),
@@ -38,7 +47,10 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
                 let bus_state = *self.z80_bus_req.borrow();
                 debug!("Z80 bus state flag is {}", bus_state);
                 let bus_status_bit = if bus_state { Ok(0) } else { Ok(1) };
-                debug!("Z80 bus status bit: {:04x}", bus_status_bit.as_ref().unwrap());
+                debug!(
+                    "Z80 bus status bit: {:04x}",
+                    bus_status_bit.as_ref().unwrap()
+                );
                 bus_status_bit
             } else if address == CONTROLLER_A_DATA || address == CONTROLLER_A_DATA + 1 {
                 Ok(self.controller_1.borrow().read() as u32)
@@ -46,49 +58,42 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
                 Ok(self.controller_2.borrow().read() as u32)
             } else {
                 let address = (address & 0x3f) as usize;
-                Ok(self.read_ptr_to_be(amount, &self.io_area_read[address]))
-            }
+                let memory_chunk = self.io_area_read[address..].split_at(amount as usize).0;
+                buff_chunk.copy_from_slice(memory_chunk);
+                Ok(u32::from_be_bytes(buff))
+            };
         } else if address == 0xC00000 || address == 0xC00002 {
-            self.vdp_ports
-                .as_ref()
-                .borrow_mut()
-                .read_data_port()
+            return self.vdp_ports.as_ref().borrow_mut().read_data_port();
         } else if address == 0xC00004 || address == 0xC00006 {
-            self.vdp_ports
-                .as_ref()
-                .borrow_mut()
-                .read_control_port()
+            return self.vdp_ports.as_ref().borrow_mut().read_control_port();
         } else if address == 0xC00008 {
             info!("Reading of VDP HVCounter");
-            self.vdp_ports
-                .as_ref()
-                .borrow_mut()
-                .read_hv_counters_port()
+            return self.vdp_ports.as_ref().borrow_mut().read_hv_counters_port();
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
             let address = address & 0xFFFF;
-            Ok(self.read_ptr_to_be(
-                amount,
-                &self.m68k_ram[address as usize],
-            ))
+            let memory_chunk = self.m68k_ram[address as usize..]
+                .split_at(amount as usize)
+                .0;
+            buff_chunk.copy_from_slice(memory_chunk);
         } else {
-            let address = address & 0x1f;
-            Ok(self.read_ptr_to_be(
-                amount,
-                &self.io_area_read[address as usize],
-            ))
+            let address = (address & 0x1f) as usize;
+            let memory_chunk = self.io_area_read[address..].split_at(amount as usize).0;
+            buff_chunk.copy_from_slice(memory_chunk);
         }
+        Ok(u32::from_be_bytes(buff))
     }
 
-    fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+    fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
+        let bytes = data.to_be_bytes();
+        let chunk = &bytes[4 - amount as usize..]; // 4 it is u32 size
         debug!(
             "CPU writes address {:08X}\tdata {:08X}\tsize: {}",
             address, data, amount
         );
         if address <= 0x3FFFFF {
-            let ptr = &self.rom[address as usize] as *const _
-                as *mut u8;
-            self.write_ptr_to_be(data, amount, ptr);
+            let address = address as usize;
+            self.rom[address..address + amount as usize].copy_from_slice(chunk);
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
@@ -98,7 +103,9 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
                 *self.z80_bus_req.borrow_mut() = data != 0;
                 if data != 0 {
                     debug!("Z80_bus requested");
-                    self.signal_bus.borrow_mut().push_signal(Signal::Z80BusRequest);
+                    self.signal_bus
+                        .borrow_mut()
+                        .push_signal(Signal::Z80BusRequest);
                 } else {
                     debug!("Z80_bus released");
                     self.signal_bus.borrow_mut().push_signal(Signal::Z80BusFree);
@@ -113,12 +120,7 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
                 self.controller_2.borrow_mut().write(data as u8);
             } else {
                 let address = (address & 0x3f) as usize;
-                self.write_ptr_to_be(
-                    data,
-                    amount,
-                    &self.io_area_m68k[address] as *const _
-                        as *mut u8,
-                )
+                self.io_area_m68k[address..address + amount as usize].copy_from_slice(chunk);
             }
         } else if address == 0xC00000 || address == 0xC00002 {
             let mut vdp_port_ref = self.vdp_ports.as_ref().borrow_mut();
@@ -137,15 +139,11 @@ impl<T, Y> BusM68k for MemorySpace<T, Y> where T: VdpPorts, Y: Ym2612Ports {
                 vdp_port_ref.write_control_port(data as u16)?;
             }
         } else if address >= 0xFF0000 && address <= 0xFFFFFF {
-            let address = address & 0xFFFF;
-            let ptr = &self.m68k_ram[address as usize]
-                as *const _ as *mut u8;
-            self.write_ptr_to_be(data, amount, ptr);
+            let address = (address & 0xFFFF) as usize;
+            self.m68k_ram[address..address + amount as usize].copy_from_slice(chunk);
         } else {
-            let address = address & 0x1f;
-            let ptr = &self.io_area_m68k[address as usize]
-                as *const _ as *mut u8;
-            self.write_ptr_to_be(data, amount, ptr);
+            let address = (address & 0x1f) as usize;
+            self.io_area_m68k[address..address + amount as usize].copy_from_slice(chunk);
         };
         Ok(())
     }

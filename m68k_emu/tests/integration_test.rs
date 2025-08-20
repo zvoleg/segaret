@@ -35,7 +35,7 @@ impl BusM68k for Bus {
         }
     }
 
-    fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+    fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
         let ptr = &mut self.ram.borrow_mut()[address as usize] as *mut u8;
         debug!(
             "CPU writes address {:08X}\tdata {:08X}\tsize: {}",
@@ -56,7 +56,7 @@ impl BusM68k for Bus {
 #[test]
 fn cpu_running() {
     env_logger::init();
-    let bus = Rc::new(Bus::new("test.bin"));
+    let bus = Rc::new(RefCell::new(Bus::new("test.bin")));
     let mut cpu: M68k<Bus> = M68k::new();
     cpu.set_bus(bus);
     cpu.reset();

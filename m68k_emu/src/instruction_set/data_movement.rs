@@ -346,12 +346,12 @@ mod test {
     use std::{cell::RefCell, rc::Rc};
 
     struct TestBus {
-        pub(crate) ram: Rc<RefCell<[u8; 0xFF]>>,
+        pub(crate) ram: [u8; 0xFF],
     }
 
     impl BusM68k for TestBus {
         fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
-            let ptr = &self.ram.borrow()[address as usize] as *const u8;
+            let ptr = &self.ram[address as usize] as *const u8;
             unsafe {
                 match amount {
                     1 => Ok(*ptr as u32),
@@ -362,8 +362,8 @@ mod test {
             }
         }
 
-        fn write(&self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
-            let ptr = &mut self.ram.borrow_mut()[address as usize] as *mut u8;
+        fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+            let ptr = &mut self.ram[address as usize] as *mut u8;
             unsafe {
                 match amount {
                     1 => *ptr = data as u8,
@@ -400,7 +400,7 @@ mod test {
 
     fn prepare_link_operands(
         cpu: &mut M68k<TestBus>,
-        ram: Rc<RefCell<[u8; 0xFF]>>,
+        bus: Rc<RefCell<TestBus>>,
     ) -> Vec<Operand> {
         // be cause test runs without opcode, we don't have to prepare properly placed or aranged in the memory the values
         let mut operand_set = Vec::new();
@@ -421,7 +421,6 @@ mod test {
 
         // and offset value
         // it just value in some place of memory
-        let bus = Rc::new(TestBus { ram: ram.clone() });
         let offset_ptr = MemoryPtr::new_boxed(OFFSET_ADDRESS as u32, bus);
         offset_ptr.write(OFFSET_VALUE, Size::Word).unwrap();
         operand_set.push(Operand::new(offset_ptr, None, 0, Size::Word));
@@ -448,18 +447,17 @@ mod test {
 
     #[test]
     fn test_link() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
-        let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
+        let link_operand_set = prepare_link_operands(&mut cpu, bus.clone());
         let link = LINK();
         link.execute(link_operand_set, &mut cpu).unwrap();
 
         let old_stack_address = STACK_INIT_ADDDRESS - (Size::Long as u32); // stack address should be decremented after pushing data to it
-        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
-        let mem_ptr = MemoryPtr::new(old_stack_address, bus_stub); // pointer to memory where data had been to push on the stack
+        let mem_ptr = MemoryPtr::new(old_stack_address, bus.clone()); // pointer to memory where data had been to push on the stack
         assert_eq!(mem_ptr.read(Size::Long).unwrap(), ADDRESS_REGISTER_VALUE);
         assert_eq!(
             cpu.register_set
@@ -479,12 +477,12 @@ mod test {
 
     #[test]
     fn test_unlk() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
         cpu.set_stack_address(STACK_INIT_ADDDRESS);
-        let link_operand_set = prepare_link_operands(&mut cpu, ram.clone());
+        let link_operand_set = prepare_link_operands(&mut cpu, bus.clone());
         let link = LINK();
         link.execute(link_operand_set, &mut cpu).unwrap();
 
@@ -510,11 +508,10 @@ mod test {
 
     #[test]
     fn test_movem_predecremented() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
-        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
 
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         d2.write(0xDDDD2222, Size::Long).unwrap();
@@ -524,8 +521,8 @@ mod test {
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus_stub.write(0x2010, 0, Size::Word as u32).unwrap();
-        let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
+        bus.borrow_mut().write(0x2010, 0, Size::Word as u32).unwrap();
+        let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
 
@@ -534,7 +531,7 @@ mod test {
             size: Size::Word,
         };
         let operand = am
-            .get_operand(&mut cpu.register_set, bus_stub.clone())
+            .get_operand(&mut cpu.register_set, bus.clone())
             .unwrap();
         operand_set.push(operand);
 
@@ -551,11 +548,11 @@ mod test {
         );
         unsafe {
             assert_eq!(
-                *(&ram.borrow()[0xA - 2] as *const _ as *const u16),
+                *(&bus.borrow().ram[0xA - 2] as *const _ as *const u16),
                 0x3333u16
             );
             assert_eq!(
-                *(&ram.borrow()[0xA - 4] as *const _ as *const u16),
+                *(&bus.borrow().ram[0xA - 4] as *const _ as *const u16),
                 0x2222u16
             );
         }
@@ -563,22 +560,21 @@ mod test {
 
     #[test]
     fn test_movem_postincremented_word() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
-        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
 
-        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x2222u16 };
-        unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x3333u16 };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 0] as *mut _ as *mut u16) = 0x2222u16 };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 2] as *mut _ as *mut u16) = 0x3333u16 };
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
-        let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
+        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
 
@@ -587,7 +583,7 @@ mod test {
             size: Size::Word,
         };
         let operand = am
-            .get_operand(&mut cpu.register_set, bus_stub.clone())
+            .get_operand(&mut cpu.register_set, bus.clone())
             .unwrap();
         operand_set.push(operand);
 
@@ -607,22 +603,21 @@ mod test {
 
     #[test]
     fn test_movem_postincremented_long() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
-        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
 
-        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u32) = 0x11112222u32.to_be() };
-        unsafe { *(&mut ram.borrow_mut()[0xA + 4] as *mut _ as *mut u32) = 0x33334444u32.to_be() };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 0] as *mut _ as *mut u32) = 0x11112222u32.to_be() };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 4] as *mut _ as *mut u32) = 0x33334444u32.to_be() };
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
-        let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
+        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
 
@@ -631,7 +626,7 @@ mod test {
             size: Size::Word,
         };
         let operand = am
-            .get_operand(&mut cpu.register_set, bus_stub.clone())
+            .get_operand(&mut cpu.register_set, bus.clone())
             .unwrap();
         operand_set.push(operand);
 
@@ -651,22 +646,21 @@ mod test {
 
     #[test]
     fn test_movem_memory_to_register() {
-        let ram = Rc::new(RefCell::new([0; 0xFF]));
-        let bus = Rc::new(TestBus { ram: ram.clone() });
-        let bus_stub = Rc::new(TestBus { ram: ram.clone() });
+        let ram = [0; 0xFF];
+        let bus = Rc::new(RefCell::new(TestBus { ram: ram }));
         let mut cpu = M68k::new();
-        cpu.set_bus(bus);
+        cpu.set_bus(bus.clone());
 
-        unsafe { *(&mut ram.borrow_mut()[0xA + 0] as *mut _ as *mut u16) = 0x00007055u16.to_be() };
-        unsafe { *(&mut ram.borrow_mut()[0xA + 2] as *mut _ as *mut u16) = 0x00008099u16.to_be() };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 0] as *mut _ as *mut u16) = 0x00007055u16.to_be() };
+        unsafe { *(&mut bus.borrow_mut().ram[0xA + 2] as *mut _ as *mut u16) = 0x00008099u16.to_be() };
         let d2 = cpu.register_set.get_register_ptr(2, RegisterType::Data);
         let a3 = cpu.register_set.get_register_ptr(3, RegisterType::Address);
         let a5_am = cpu.register_set.get_register_ptr(5, RegisterType::Address);
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus_stub.write(0x0804, 0, Size::Word as u32).unwrap();
-        let mem_ptr = MemoryPtr::new_boxed(0, bus_stub.clone());
+        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
 
@@ -675,7 +669,7 @@ mod test {
             size: Size::Word,
         };
         let operand = am
-            .get_operand(&mut cpu.register_set, bus_stub.clone())
+            .get_operand(&mut cpu.register_set, bus.clone())
             .unwrap();
         operand_set.push(operand);
 
