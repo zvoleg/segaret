@@ -1,3 +1,5 @@
+use std::slice;
+
 use crate::SignExtending;
 
 use super::{Pointer, Size};
@@ -14,27 +16,25 @@ impl AddressRegisterPtr {
     }
 
     fn read_ptr(ptr: *mut u32, size: Size) -> u32 {
-        unsafe {
-            match size {
-                Size::Byte => panic!(
-                    "AddressRegisterPtr: read: address register can't be to addressed by Byte size"
-                ),
-                Size::Word => *ptr as u16 as u32,
-                Size::Long => *ptr,
-            }
+        if size == Size::Byte {
+            panic!("AddressRegisterPtr: read: address register can't be to addressed by Byte size");
         }
+        let mut buff = [0u8; 4];
+        let buff_chunk = &mut buff[..size.into()];
+        let register = unsafe { slice::from_raw_parts::<u8>(ptr as *const u8, size_of::<u32>()) };
+        buff_chunk.copy_from_slice(&register[..size.into()]);
+        <u32>::from_le_bytes(buff)
     }
 
     fn write_ptr(ptr: *mut u32, data: u32, size: Size) {
-        unsafe {
-            match size {
-                Size::Byte => panic!(
-                    "AddressRegisterPtr: write: address register can't be to addressed by Byte size"
-                ),
-                Size::Word => *(ptr as *mut u32) = data.sign_extend(size),
-                Size::Long => *(ptr as *mut u32) = data,
-            }
+        if size == Size::Byte {
+            panic!(
+                "AddressRegisterPtr: write: address register can't be to addressed by Byte size"
+            );
         }
+        let data = data.sign_extend(size);
+        let register = unsafe { slice::from_raw_parts_mut::<u8>(ptr as *mut u8, size_of::<u32>()) };
+        register.copy_from_slice(&data.to_le_bytes());
     }
 }
 

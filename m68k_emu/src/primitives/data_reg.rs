@@ -1,3 +1,5 @@
+use std::slice;
+
 use super::{Pointer, Size};
 
 pub(crate) struct DataRegisterPtr(*mut u32);
@@ -12,23 +14,16 @@ impl DataRegisterPtr {
     }
 
     fn read_ptr(ptr: *mut u32, size: Size) -> u32 {
-        unsafe {
-            match size {
-                Size::Byte => *ptr as u8 as u32,
-                Size::Word => *ptr as u16 as u32,
-                Size::Long => *ptr,
-            }
-        }
+        let mut buff = [0u8; 4];
+        let buff_chunk = &mut buff[..size.into()];
+        let register = unsafe { slice::from_raw_parts::<u8>(ptr as *const u8, size_of::<u32>()) };
+        buff_chunk.copy_from_slice(&register[..size.into()]);
+        <u32>::from_le_bytes(buff)
     }
 
     fn write_ptr(ptr: *mut u32, data: u32, size: Size) {
-        unsafe {
-            match size {
-                Size::Byte => *(ptr as *mut u8) = data as u8,
-                Size::Word => *(ptr as *mut u16) = data as u16,
-                Size::Long => *ptr = data,
-            }
-        }
+        let register = unsafe { slice::from_raw_parts_mut::<u8>(ptr as *mut u8, size.into()) };
+        register.copy_from_slice(&data.to_le_bytes()[..size.into()]);
     }
 }
 
