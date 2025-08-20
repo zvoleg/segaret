@@ -19,7 +19,7 @@ impl Bus {
 }
 
 impl BusM68k for Bus {
-    fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
+    fn read(&self, address: u32, amount: usize) -> Result<u32, ()> {
         let address = if address == 0x2d16 { 0x2e2a } else { address }; // skip ABCD
         let address = if address == 0x2E2C { 0x2f40 } else { address }; // skip SBCD
         let address = if address == 0x2F42 { 0x2fDE } else { address }; // skip NBCD
@@ -35,7 +35,7 @@ impl BusM68k for Bus {
         }
     }
 
-    fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+    fn write(&mut self, data: u32, address: u32, amount: usize) -> Result<(), ()> {
         let ptr = &mut self.ram.borrow_mut()[address as usize] as *mut u8;
         debug!(
             "CPU writes address {:08X}\tdata {:08X}\tsize: {}",

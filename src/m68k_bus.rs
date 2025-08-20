@@ -20,7 +20,7 @@ where
     T: VdpPorts,
     Y: Ym2612Ports,
 {
-    fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
+    fn read(&self, address: u32, amount: usize) -> Result<u32, ()> {
         let address = address & 0x00FFFFFF;
         let mut buff = [0u8; 4];
         let buff_chunk = &mut buff[4 - amount as usize..];
@@ -31,7 +31,7 @@ where
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount)? as u32;
+            let data = <MemorySpace<T, Y> as BusZ80>::read(&self, address, amount as u32)? as u32;
             debug!("BusM68k::read: M68000 read value from Z80 memory space (address: {:04x}, data: {:04X}), size: {}", address, data, amount);
             return Ok(data);
         } else if address >= 0xA10000 && address < 0xA20000 {
@@ -83,7 +83,7 @@ where
         Ok(u32::from_be_bytes(buff))
     }
 
-    fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+    fn write(&mut self, data: u32, address: u32, amount: usize) -> Result<(), ()> {
         let address = address & 0x00FFFFFF;
         let bytes = data.to_be_bytes();
         let chunk = &bytes[4 - amount as usize..]; // 4 it is u32 size
@@ -97,7 +97,7 @@ where
         } else if address >= 0xA00000 && address <= 0xA0FFFF {
             let address = (address & 0xFFFF) as u16;
             // TODO may be there should be a z80 bus register check
-            <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount)?;
+            <MemorySpace<T, Y> as BusZ80>::write(self, data as u16, address, amount as u32)?;
         } else if address >= 0xA10000 && address < 0xA20000 {
             if address == Z80_REQUEST_BUS {
                 *self.z80_bus_req.borrow_mut() = data != 0;

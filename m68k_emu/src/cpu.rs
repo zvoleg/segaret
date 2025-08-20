@@ -201,7 +201,7 @@ where
     }
 
     fn read_header(&self, vector: u32) -> u32 {
-        match self.bus.as_ref().unwrap().borrow().read(vector, Size::Long as u32) {
+        match self.bus.as_ref().unwrap().borrow().read(vector, Size::Long.into()) {
             Ok(header) => header,
             Err(_) => panic!(
                 "M68k: read_header: can't read header by vector: {:08X}",

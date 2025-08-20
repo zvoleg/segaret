@@ -108,9 +108,9 @@ impl AddressingMode for AddressRegisterPostIncrement {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let address = address_register_ptr.read(Size::Long)?;
         let increment = if self.reg == STACK_REGISTER && self.size == Size::Byte {
-            Size::Word as u32
+            Size::Word.into()
         } else {
-            self.size as u32
+            self.size.into()
         };
         address_register_ptr
             .write(address.wrapping_add(increment), Size::Long)
@@ -143,9 +143,9 @@ impl AddressingMode for AddressRegisterPreDecrement {
         let address_register_ptr = rs.get_register_ptr(self.reg, RegisterType::Address);
         let mut address = address_register_ptr.read(Size::Long)?;
         let decrement = if self.reg == STACK_REGISTER && self.size == Size::Byte {
-            Size::Word as u32
+            Size::Word.into()
         } else {
-            self.size as u32
+            self.size.into()
         };
         address = address.wrapping_sub(decrement);
         address_register_ptr.write(address, Size::Long).unwrap();

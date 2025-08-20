@@ -18,7 +18,7 @@ where
             let msb_address = (*self.bank_register.borrow() as u32) << 15;
             let lsb_address = (address & 0x7FFF) as u32;
             let m68k_address = msb_address | lsb_address;
-            <MemorySpace<T, Y> as BusM68k>::read(self, m68k_address, amount)?
+            <MemorySpace<T, Y> as BusM68k>::read(self, m68k_address, amount as usize)?
         } else {
             self.read_ptr_to_le(amount, &self.z80_ram[address as usize])
         } as u16;

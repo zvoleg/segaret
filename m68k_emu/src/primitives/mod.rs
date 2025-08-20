@@ -21,6 +21,19 @@ impl Display for Size {
     }
 }
 
+impl Into<usize> for Size {
+    fn into(self) -> usize {
+        self as usize
+    }
+}
+
+impl Into<u32> for Size {
+    fn into(self) -> u32 {
+        self as u32
+    }
+}
+
+
 pub(crate) trait Pointer {
     fn read(&self, size: Size) -> Result<u32, ()>;
     fn write(&self, data: u32, size: Size) -> Result<(), ()>;

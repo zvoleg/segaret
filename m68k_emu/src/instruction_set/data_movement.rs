@@ -350,7 +350,7 @@ mod test {
     }
 
     impl BusM68k for TestBus {
-        fn read(&self, address: u32, amount: u32) -> Result<u32, ()> {
+        fn read(&self, address: u32, amount: usize) -> Result<u32, ()> {
             let ptr = &self.ram[address as usize] as *const u8;
             unsafe {
                 match amount {
@@ -362,7 +362,7 @@ mod test {
             }
         }
 
-        fn write(&mut self, data: u32, address: u32, amount: u32) -> Result<(), ()> {
+        fn write(&mut self, data: u32, address: u32, amount: usize) -> Result<(), ()> {
             let ptr = &mut self.ram[address as usize] as *mut u8;
             unsafe {
                 match amount {
@@ -395,7 +395,7 @@ mod test {
     const ADDRESS_REGISTER_IDX: usize = 0;
     const ADDRESS_REGISTER_VALUE: u32 = 0x00FF8855;
     const STACK_INIT_ADDDRESS: u32 = 0x50;
-    const OFFSET_ADDRESS: usize = 0x00;
+    const OFFSET_ADDRESS: u32 = 0x00;
     const OFFSET_VALUE: u32 = 0x10;
 
     fn prepare_link_operands(
@@ -521,7 +521,7 @@ mod test {
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus.borrow_mut().write(0x2010, 0, Size::Word as u32).unwrap();
+        bus.borrow_mut().write(0x2010, 0, Size::Word.into()).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
@@ -573,7 +573,7 @@ mod test {
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        bus.borrow_mut().write(0x0804, 0, Size::Word.into()).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
@@ -616,7 +616,7 @@ mod test {
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        bus.borrow_mut().write(0x0804, 0, Size::Word.into()).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);
@@ -659,7 +659,7 @@ mod test {
         a5_am.write(0x0000000A, Size::Long).unwrap();
 
         let mut operand_set = Vec::new();
-        bus.borrow_mut().write(0x0804, 0, Size::Word as u32).unwrap();
+        bus.borrow_mut().write(0x0804, 0, Size::Word.into()).unwrap();
         let mem_ptr = MemoryPtr::new_boxed(0, bus.clone());
         let operand = Operand::new(mem_ptr, None, 0, Size::Word);
         operand_set.push(operand);

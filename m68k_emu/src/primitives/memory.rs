@@ -27,22 +27,22 @@ impl MemoryPtr {
 
 impl Pointer for MemoryPtr {
     fn read(&self, size: Size) -> Result<u32, ()> {
-        self.bus.borrow().read(self.address, size as u32)
+        self.bus.borrow().read(self.address, size.into())
     }
 
     fn write(&self, data: u32, size: Size) -> Result<(), ()> {
-        self.bus.borrow_mut().write(data, self.address, size as u32)
+        self.bus.borrow_mut().write(data, self.address, size.into())
     }
 
     fn read_offset(&self, size: Size, offset: isize) -> Result<u32, ()> {
         self.bus
             .borrow()
-            .read(self.address.wrapping_add(offset as u32), size as u32)
+            .read(self.address.wrapping_add(offset as u32), size.into())
     }
 
     fn write_offset(&self, data: u32, size: Size, offset: isize) -> Result<(), ()> {
         self.bus
             .borrow_mut()
-            .write(data, self.address.wrapping_add(offset as u32), size as u32)
+            .write(data, self.address.wrapping_add(offset as u32), size.into())
     }
 }
