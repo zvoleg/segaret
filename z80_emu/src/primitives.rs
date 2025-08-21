@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, slice};
 
 use crate::{bus::BusZ80, Size};
 
@@ -46,23 +46,18 @@ impl RegisterPtr {
 
 impl Pointer for RegisterPtr {
     fn read(&self, size: Size) -> Result<u16, ()> {
-        unsafe {
-            let data = match size {
-                Size::Byte => (*self.register_ptr) as u16,
-                Size::Word => *(self.register_ptr as *const _ as *const u16),
-            };
-            Ok(data)
-        }
+        let mut buff = [0u8; 2];
+        let buff_chunk = &mut buff[..size.into()];
+        let register = unsafe { slice::from_raw_parts(self.register_ptr, size.into()) };
+        buff_chunk.copy_from_slice(register);
+        Ok(<u16>::from_le_bytes(buff))
     }
 
     fn write(&self, data: u16, size: Size) -> Result<(), ()> {
-        unsafe {
-            match size {
-                Size::Byte => *self.register_ptr = data as u8,
-                Size::Word => *(self.register_ptr as *mut _ as *mut u16) = data,
-            }
-            Ok(())
-        }
+        let register = unsafe { slice::from_raw_parts_mut(self.register_ptr, size.into()) };
+        let data_chunk = &data.to_le_bytes()[..size.into()];
+        register.copy_from_slice(data_chunk);
+        Ok(())
     }
 }
 
